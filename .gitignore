@@ -1,0 +1,14 @@
+node_modules/
+.next/
+out/
+dist/
+.env
+.env.*
+!.env.example
+*.log
+.vercel/
+.DS_Store
+
+# Private memories
+private-assets/
+personal-photos/
