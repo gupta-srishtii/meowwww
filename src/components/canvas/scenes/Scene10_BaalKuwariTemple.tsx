@@ -9,7 +9,7 @@ import {
   type FriendCompanionId,
 } from '@/components/canvas/characters/CompanionGroup';
 import { StylizedPlaceholderCharacter } from '@/components/canvas/characters/StylizedPlaceholderCharacter';
-import { animateSrishtiWalkRig } from '@/components/canvas/characters/animateCharacterRig';
+import { animateIshaanWalkRig } from '@/components/canvas/characters/animateCharacterRig';
 import {
   BAAL_KUWARI_TEMPLE_HOTSPOTS,
   BAAL_KUWARI_TEMPLE_OBSTACLES,
@@ -49,29 +49,29 @@ export interface Scene10BaalKuwariTempleProps {
 }
 
 const TEMPLE_COMPANION_INIT: Record<FriendCompanionId, { x: number; z: number; yaw: number }> = {
-  ishaan: { x: -1.1, z: 3.1, yaw: 0.1 },
+  srishti: { x: -1.05, z: 3.1, yaw: 0.1 },
   friend_black_tee: { x: 1.2, z: 3.3, yaw: -0.15 },
   friend_plaid: { x: -0.45, z: 3.9, yaw: 0.05 },
 };
 
 const TEMPLE_COMPANION_CONFIGS: readonly CompanionAgentConfig[] = [
   {
-    id: 'ishaan',
-    followAngleOffset: -0.45,
+    id: 'srishti',
+    followAngleOffset: -0.58,
     followDistance: 1.45,
     idlePose: 'chat_nod',
     gesturePhase: 0.4,
   },
   {
     id: 'friend_black_tee',
-    followAngleOffset: 0.42,
+    followAngleOffset: 0.62,
     followDistance: 1.6,
     idlePose: 'look_around',
     gesturePhase: 1.8,
   },
   {
     id: 'friend_plaid',
-    followAngleOffset: 0.08,
+    followAngleOffset: -0.12,
     followDistance: 2.0,
     idlePose: 'look_around',
     gesturePhase: 3.1,
@@ -82,6 +82,7 @@ const CAM_DISTANCE = 5.1;
 
 /**
  * Scene 10 — Peaceful Summit Sanctuary at Baal Kuwari Temple.
+ * Third-person exploration as Ishaan arriving with Srishti, Manish & Yash.
  */
 export function Scene10_BaalKuwariTemple({
   walkInputRef,
@@ -108,8 +109,6 @@ export function Scene10_BaalKuwariTemple({
   const playerGroupRef = useRef<THREE.Group>(null);
   const playerTorsoRef = useRef<THREE.Group>(null);
   const playerHeadRef = useRef<THREE.Group>(null);
-  const playerHairRef = useRef<THREE.Group>(null);
-  const playerBagRef = useRef<THREE.Group>(null);
   const leftLegRef = useRef<THREE.Group>(null);
   const leftKneeRef = useRef<THREE.Group>(null);
   const rightLegRef = useRef<THREE.Group>(null);
@@ -198,7 +197,7 @@ export function Scene10_BaalKuwariTemple({
     let walkSpeed = 0;
 
     if (arrivalCinematicActive) {
-      const dur = reducedMotion ? 0.65 : 4.6;
+      const dur = reducedMotion ? 0.65 : 4.2;
       sim.arrivalTimer += delta;
       sim.velX = 0;
       sim.velZ = 0;
@@ -224,13 +223,11 @@ export function Scene10_BaalKuwariTemple({
       if (strideRatio > 0.03) sim.stridePhase += moveDist * 3.8;
     }
 
-    animateSrishtiWalkRig({
+    animateIshaanWalkRig({
       refs: {
         group: playerGroupRef.current,
         torso: playerTorsoRef.current,
         head: playerHeadRef.current,
-        hairTail: playerHairRef.current,
-        bag: playerBagRef.current,
         leftLeg: leftLegRef.current,
         leftKnee: leftKneeRef.current,
         rightLeg: rightLegRef.current,
@@ -280,7 +277,7 @@ export function Scene10_BaalKuwariTemple({
     }
 
     if (arrivalCinematicActive) {
-      const sweepU = Math.min(1, sim.arrivalTimer / 4.6);
+      const sweepU = Math.min(1, sim.arrivalTimer / 4.2);
       scratch.camPos.set(
         THREE.MathUtils.lerp(-4.2, 3.8, sweepU),
         THREE.MathUtils.lerp(4.6, 2.35, sweepU),
@@ -333,12 +330,10 @@ export function Scene10_BaalKuwariTemple({
       />
 
       <StylizedPlaceholderCharacter
-        characterVariant="srishti"
+        characterVariant="ishaan"
         groupRef={playerGroupRef}
         torsoRef={playerTorsoRef}
         headRef={playerHeadRef}
-        hairTailRef={playerHairRef}
-        bagRef={playerBagRef}
         leftLegRef={leftLegRef}
         leftKneeRef={leftKneeRef}
         rightLegRef={rightLegRef}

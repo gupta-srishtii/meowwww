@@ -11,7 +11,7 @@ import {
 } from '@/components/canvas/characters/CompanionGroup';
 import { StylizedPlaceholderCharacter } from '@/components/canvas/characters/StylizedPlaceholderCharacter';
 import {
-  animateSrishtiWalkRig,
+  animateIshaanWalkRig,
   computeRelativeHeadLookYaw,
   type CharacterIdlePose,
 } from '@/components/canvas/characters/animateCharacterRig';
@@ -64,7 +64,7 @@ const CINEMATIC_DURATION_SEC = 20.0;
 const CINEMATIC_REDUCED_DURATION_SEC = 2.6;
 
 const DHABA_COMPANION_INIT: Record<FriendCompanionId, { x: number; z: number; yaw: number }> = {
-  ishaan: { x: DHABA_SEAT_SLOTS.ishaan.x, z: DHABA_SEAT_SLOTS.ishaan.z, yaw: DHABA_SEAT_SLOTS.ishaan.facingYaw },
+  srishti: { x: DHABA_SEAT_SLOTS.srishti.x, z: DHABA_SEAT_SLOTS.srishti.z, yaw: DHABA_SEAT_SLOTS.srishti.facingYaw },
   friend_black_tee: {
     x: DHABA_SEAT_SLOTS.friend_black_tee.x,
     z: DHABA_SEAT_SLOTS.friend_black_tee.z,
@@ -79,7 +79,7 @@ const DHABA_COMPANION_INIT: Record<FriendCompanionId, { x: number; z: number; ya
 
 const DHABA_COMPANION_CONFIGS: readonly CompanionAgentConfig[] = [
   {
-    id: 'ishaan',
+    id: 'srishti',
     followAngleOffset: -0.58,
     followDistance: 1.55,
     idlePose: 'chat_nod',
@@ -102,13 +102,13 @@ const DHABA_COMPANION_CONFIGS: readonly CompanionAgentConfig[] = [
 ];
 
 const TABLE_COMPANION_SLOTS: Record<FriendCompanionId, CompanionTargetSlot> = {
-  ishaan: DHABA_SEAT_SLOTS.ishaan,
+  srishti: DHABA_SEAT_SLOTS.srishti,
   friend_black_tee: DHABA_SEAT_SLOTS.friend_black_tee,
   friend_plaid: DHABA_SEAT_SLOTS.friend_plaid,
 };
 
 const DHABA_SCOOTER_RETURN_TARGETS: Record<FriendCompanionId, CompanionTargetSlot> = {
-  ishaan: { x: 1.35, z: 2.55, facingYaw: Math.PI },
+  srishti: { x: 1.35, z: 2.55, facingYaw: Math.PI },
   friend_black_tee: { x: -0.75, z: 2.55, facingYaw: Math.PI },
   friend_plaid: { x: -1.75, z: 2.6, facingYaw: Math.PI },
 };
@@ -246,12 +246,10 @@ export function Scene06_MaggiChai({
   const shadowsEnabled = QUALITY_PRESETS[qualityProfile].shadows;
   const reducedMotion = useReducedMotion();
 
-  // Srishti player limb & hair refs
+  // Ishaan player limb refs
   const playerGroupRef = useRef<THREE.Group>(null);
   const playerTorsoRef = useRef<THREE.Group>(null);
   const playerHeadRef = useRef<THREE.Group>(null);
-  const playerHairRef = useRef<THREE.Group>(null);
-  const playerBagRef = useRef<THREE.Group>(null);
   const leftLegRef = useRef<THREE.Group>(null);
   const leftKneeRef = useRef<THREE.Group>(null);
   const rightLegRef = useRef<THREE.Group>(null);
@@ -331,9 +329,9 @@ export function Scene06_MaggiChai({
       cinematicTimeRef.current = null;
       if (simRef.current.wasFoodCinematicActive) {
         simRef.current.wasFoodCinematicActive = false;
-        // Return Srishti politely beside her seat (`z = -0.68`) facing table after standing up
-        simRef.current.posX = DHABA_SEAT_SLOTS.srishti.x;
-        simRef.current.posZ = -0.66;
+        // Return Ishaan cleanly beside his seat (south of South stool, clear of obstacle radius) after standing up
+        simRef.current.posX = DHABA_SEAT_SLOTS.ishaan.x;
+        simRef.current.posZ = -0.12;
         simRef.current.velX = 0;
         simRef.current.velZ = 0;
       }
@@ -413,10 +411,10 @@ export function Scene06_MaggiChai({
         });
       }
 
-      // Walk Srishti smoothly onto the South stool, sit, eat/sip/laugh, then stand cleanly
+      // Walk Ishaan smoothly onto the South stool, sit, eat/sip/laugh, then stand cleanly
       if (mappedTime < 3.6) {
-        const dx = DHABA_SEAT_SLOTS.srishti.x - sim.posX;
-        const dz = DHABA_SEAT_SLOTS.srishti.z - sim.posZ;
+        const dx = DHABA_SEAT_SLOTS.ishaan.x - sim.posX;
+        const dz = DHABA_SEAT_SLOTS.ishaan.z - sim.posZ;
         const dist = Math.hypot(dx, dz);
         if (dist > 0.06) {
           const step = Math.min(dist, 2.6 * delta);
@@ -430,17 +428,17 @@ export function Scene06_MaggiChai({
           while (diff < -Math.PI) diff += Math.PI * 2;
           sim.facingYaw += diff * (1 - Math.exp(-10 * delta));
         } else {
-          sim.posX = THREE.MathUtils.damp(sim.posX, DHABA_SEAT_SLOTS.srishti.x, 10, delta);
-          sim.posZ = THREE.MathUtils.damp(sim.posZ, DHABA_SEAT_SLOTS.srishti.z, 10, delta);
-          let diff = DHABA_SEAT_SLOTS.srishti.facingYaw - sim.facingYaw;
+          sim.posX = THREE.MathUtils.damp(sim.posX, DHABA_SEAT_SLOTS.ishaan.x, 10, delta);
+          sim.posZ = THREE.MathUtils.damp(sim.posZ, DHABA_SEAT_SLOTS.ishaan.z, 10, delta);
+          let diff = DHABA_SEAT_SLOTS.ishaan.facingYaw - sim.facingYaw;
           while (diff > Math.PI) diff -= Math.PI * 2;
           while (diff < -Math.PI) diff += Math.PI * 2;
           sim.facingYaw += diff * (1 - Math.exp(-10 * delta));
         }
       } else if (mappedTime < 18.2) {
-        sim.posX = THREE.MathUtils.damp(sim.posX, DHABA_SEAT_SLOTS.srishti.x, 10, delta);
-        sim.posZ = THREE.MathUtils.damp(sim.posZ, DHABA_SEAT_SLOTS.srishti.z, 10, delta);
-        let diff = DHABA_SEAT_SLOTS.srishti.facingYaw - sim.facingYaw;
+        sim.posX = THREE.MathUtils.damp(sim.posX, DHABA_SEAT_SLOTS.ishaan.x, 10, delta);
+        sim.posZ = THREE.MathUtils.damp(sim.posZ, DHABA_SEAT_SLOTS.ishaan.z, 10, delta);
+        let diff = DHABA_SEAT_SLOTS.ishaan.facingYaw - sim.facingYaw;
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
         sim.facingYaw += diff * (1 - Math.exp(-10 * delta));
@@ -463,8 +461,8 @@ export function Scene06_MaggiChai({
             ? { x: -2.2, z: -2.2 }
             : { x: DHABA_TABLE_CENTER.x, z: DHABA_TABLE_CENTER.z };
       } else {
-        // Gentle stand up after dining before handing back control
-        sim.posZ = THREE.MathUtils.damp(sim.posZ, -0.68, 5, delta);
+        // Gentle stand up cleanly behind the South stool before handing back control
+        sim.posZ = THREE.MathUtils.damp(sim.posZ, -0.12, 5, delta);
         playerIdlePose = 'chat_nod';
         diningCompanionPose = 'chat_nod';
       }
@@ -615,8 +613,8 @@ export function Scene06_MaggiChai({
       camera.lookAt(scratch.smoothedLookAt);
     }
 
-    // Apply articulated Srishti animation (walking / gathering / sitting / eating / sipping / laughing)
-    const srishtiLookYaw = diningHeadLookTarget
+    // Apply articulated Ishaan animation (walking / gathering / sitting / eating / sipping / laughing)
+    const ishaanLookYaw = diningHeadLookTarget
       ? computeRelativeHeadLookYaw(
           sim.posX,
           sim.posZ,
@@ -626,13 +624,11 @@ export function Scene06_MaggiChai({
         )
       : 0;
 
-    animateSrishtiWalkRig({
+    animateIshaanWalkRig({
       refs: {
         group: playerGroupRef.current,
         torso: playerTorsoRef.current,
         head: playerHeadRef.current,
-        hairTail: playerHairRef.current,
-        bag: playerBagRef.current,
         leftLeg: leftLegRef.current,
         leftKnee: leftKneeRef.current,
         rightLeg: rightLegRef.current,
@@ -649,7 +645,7 @@ export function Scene06_MaggiChai({
       elapsed: t,
       delta,
       idlePose: playerIdlePose,
-      headTargetYawOffset: srishtiLookYaw,
+      headTargetYawOffset: ishaanLookYaw,
       armGesturePhase: 0.7,
       reducedMotion,
     });
@@ -668,7 +664,7 @@ export function Scene06_MaggiChai({
         const lookX =
           diningHeadLookTarget !== null
             ? i === 0
-              ? DHABA_SEAT_SLOTS.srishti.x
+              ? DHABA_SEAT_SLOTS.ishaan.x
               : lookPeer.posX
             : i % 2 === 0
               ? sim.posX
@@ -676,7 +672,7 @@ export function Scene06_MaggiChai({
         const lookZ =
           diningHeadLookTarget !== null
             ? i === 0
-              ? DHABA_SEAT_SLOTS.srishti.z
+              ? DHABA_SEAT_SLOTS.ishaan.z
               : lookPeer.posZ
             : i % 2 === 0
               ? sim.posZ
@@ -733,14 +729,12 @@ export function Scene06_MaggiChai({
         <PrototypeScooter variant="companion" hideRiders castShadow={shadowsEnabled} />
       </group>
 
-      {/* Playable Srishti avatar styled from verified local Rishikesh trip photos */}
+      {/* Playable Ishaan avatar walking & dining with friends */}
       <StylizedPlaceholderCharacter
-        characterVariant="srishti"
+        characterVariant="ishaan"
         groupRef={playerGroupRef}
         torsoRef={playerTorsoRef}
         headRef={playerHeadRef}
-        hairTailRef={playerHairRef}
-        bagRef={playerBagRef}
         leftLegRef={leftLegRef}
         leftKneeRef={leftKneeRef}
         rightLegRef={rightLegRef}

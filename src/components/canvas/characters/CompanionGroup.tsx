@@ -8,7 +8,7 @@ import {
   type CharacterVariant,
 } from '@/components/canvas/characters/StylizedPlaceholderCharacter';
 
-export type FriendCompanionId = 'ishaan' | 'friend_black_tee' | 'friend_plaid';
+export type FriendCompanionId = 'srishti' | 'friend_black_tee' | 'friend_plaid';
 
 export type CompanionRigMap = Record<FriendCompanionId, HumanRigRefs>;
 
@@ -38,6 +38,8 @@ function FriendRigInstance({
   const groupRef = useRef<THREE.Group | null>(null);
   const torsoRef = useRef<THREE.Group | null>(null);
   const headRef = useRef<THREE.Group | null>(null);
+  const hairTailRef = useRef<THREE.Group | null>(null);
+  const bagRef = useRef<THREE.Group | null>(null);
   const leftLegRef = useRef<THREE.Group | null>(null);
   const leftKneeRef = useRef<THREE.Group | null>(null);
   const rightLegRef = useRef<THREE.Group | null>(null);
@@ -56,6 +58,12 @@ function FriendRigInstance({
       },
       get head() {
         return headRef.current;
+      },
+      get hairTail() {
+        return hairTailRef.current;
+      },
+      get bag() {
+        return bagRef.current;
       },
       get leftLeg() {
         return leftLegRef.current;
@@ -87,6 +95,8 @@ function FriendRigInstance({
       groupRef={groupRef}
       torsoRef={torsoRef}
       headRef={headRef}
+      hairTailRef={id === 'srishti' ? hairTailRef : undefined}
+      bagRef={id === 'srishti' ? bagRef : undefined}
       leftLegRef={leftLegRef}
       leftKneeRef={leftKneeRef}
       rightLegRef={rightLegRef}
@@ -115,8 +125,9 @@ export interface CompanionGroupProps {
 }
 
 /**
- * Shared articulated group of Srishti's three traveling friends (`Ishaan` plus the two
- * verified Scooter 2 companions without inventing unconfirmed individual driver/name assignments).
+ * Shared articulated group of Ishaan's three companions:
+ * Srishti (verified floral peplum outfit, denim, hair clip & crossbody sling bag) plus
+ * the two verified Scooter 2 friends (`friend_black_tee` and `friend_plaid`).
  */
 export function CompanionGroup({
   initialPositions,
@@ -130,7 +141,7 @@ export function CompanionGroup({
     () => (id: FriendCompanionId, refs: HumanRigRefs) => {
       rigMapRef.current[id] = refs;
       if (
-        rigMapRef.current.ishaan &&
+        rigMapRef.current.srishti &&
         rigMapRef.current.friend_black_tee &&
         rigMapRef.current.friend_plaid
       ) {
@@ -143,16 +154,16 @@ export function CompanionGroup({
   return (
     <>
       <FriendRigInstance
-        id="ishaan"
-        variant="ishaan"
+        id="srishti"
+        variant="srishti"
         hairColor="#18181b"
-        scale={0.99}
+        scale={1.0}
         initialPosition={[
-          initialPositions.ishaan.x,
-          initialPositions.ishaan.y ?? 0,
-          initialPositions.ishaan.z,
+          initialPositions.srishti.x,
+          initialPositions.srishti.y ?? 0,
+          initialPositions.srishti.z,
         ]}
-        initialYaw={initialPositions.ishaan.yaw}
+        initialYaw={initialPositions.srishti.yaw}
         holdingChaiCup={holdingChaiCup}
         holdingFork={holdingFork}
         onRegisterRefs={handleRegister}
@@ -190,4 +201,3 @@ export function CompanionGroup({
     </>
   );
 }
-

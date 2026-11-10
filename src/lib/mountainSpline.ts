@@ -22,9 +22,9 @@ export const SCOOTER_COAST_DRAG = 0.34; // /s smooth deceleration
 export const SCOOTER_STEER_SPEED = 4.2; // m/s max lateral response
 
 export const LEAD_START_DISTANCE = 8.0;
-export const LEAD_START_LATERAL = 1.1;
+export const LEAD_START_LATERAL = -1.25; // India LHT: left lane relative to travel (+tangent)
 export const COMPANION_START_DISTANCE = 3.5;
-export const COMPANION_LANE_LATERAL = -1.2;
+export const COMPANION_LANE_LATERAL = -2.05; // India LHT staggered left formation behind Scooter 1
 
 export const FOLLOW_TARGET_GAP = 4.5;
 export const FOLLOW_MIN_GAP = 3.0;

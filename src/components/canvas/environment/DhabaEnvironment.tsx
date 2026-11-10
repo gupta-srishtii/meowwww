@@ -26,8 +26,8 @@ export const DHABA_WALK_BOUNDS: WalkBounds = {
 export const DHABA_TABLE_CENTER = { x: 0.55, z: -1.75 } as const;
 
 export const DHABA_SEAT_SLOTS = {
-  srishti: { x: 0.55, z: -0.86, facingYaw: 0 },
-  ishaan: { x: 0.55, z: -2.64, facingYaw: Math.PI },
+  ishaan: { x: 0.55, z: -0.86, facingYaw: 0 },
+  srishti: { x: 0.55, z: -2.64, facingYaw: Math.PI },
   friend_plaid: { x: -0.82, z: -1.75, facingYaw: -Math.PI / 2 },
   friend_black_tee: { x: 1.92, z: -1.75, facingYaw: Math.PI / 2 },
 } as const;
@@ -40,8 +40,13 @@ export const DHABA_OBSTACLES: readonly WalkObstacle[] = [
   // Neighboring extra parked visitor scooters along outer road pull-off
   { kind: 'box', minX: -5.45, maxX: -3.25, minZ: 3.15, maxZ: 4.15 },
   { kind: 'box', minX: 3.1, maxX: 5.3, minZ: 3.15, maxZ: 4.15 },
-  // 4-person rustic Maggi & Chai table (`[-0.48..1.58, -2.35..-1.15]`, stools unobstructed around sides)
+  // 4-person rustic Maggi & Chai table (`[-0.48..1.58, -2.35..-1.15]`)
   { kind: 'box', minX: -0.48, maxX: 1.58, minZ: -2.35, maxZ: -1.15 },
+  // Circular stool colliders preventing characters from walking onto stools during free walk
+  { kind: 'circle', x: 0.55, z: -0.88, radius: 0.27 },
+  { kind: 'circle', x: 0.55, z: -2.62, radius: 0.27 },
+  { kind: 'circle', x: -0.8, z: -1.75, radius: 0.27 },
+  { kind: 'circle', x: 1.9, z: -1.75, radius: 0.27 },
   // Parked Scooter 1 & Scooter 2 facing onward (+X)
   { kind: 'box', minX: 0.35, maxX: 2.25, minZ: 3.15, maxZ: 4.05 },
   { kind: 'box', minX: -2.15, maxX: -0.25, minZ: 3.15, maxZ: 4.05 },
@@ -58,9 +63,9 @@ export const DHABA_HOTSPOTS: readonly WalkHotspot[] = [
   },
   {
     id: 'maggi',
-    label: 'Join Friends & Eat Hot Maggi',
+    label: 'Join Everyone & Eat Hot Maggi',
     x: 0.55,
-    z: -0.68,
+    z: -0.15,
     radius: 1.75,
     actionType: 'interact',
   },

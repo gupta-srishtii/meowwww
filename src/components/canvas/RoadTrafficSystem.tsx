@@ -52,7 +52,7 @@ export interface ParkedShoulderVehicleSpec {
 
 export function buildRoadTrafficFleet(segment: MountainRoadSegmentId): TrafficVehicleSpec[] {
   if (segment === 'to_baalkuwari') {
-    // Rugged dirt track carries sparse calm local bikes & mountain hill SUVs instead of city highway cars
+    // Rugged dirt track: oncoming keeps its own left (+right), forward keeps hero left (-right)
     return [
       {
         id: 'offroad-onc-moto-1',
@@ -63,7 +63,7 @@ export function buildRoadTrafficFleet(segment: MountainRoadSegmentId): TrafficVe
         helmetColor: '#dc2626',
         direction: -1,
         initialDist: 108,
-        baseLateral: -1.8,
+        baseLateral: 1.8,
         speedMps: 6.8,
         color: '#b91c1c',
       },
@@ -73,7 +73,7 @@ export function buildRoadTrafficFleet(segment: MountainRoadSegmentId): TrafficVe
         vehicleStyle: 'hill_suv',
         direction: -1,
         initialDist: 224,
-        baseLateral: -1.95,
+        baseLateral: 1.95,
         speedMps: 6.2,
         color: '#d97706',
       },
@@ -86,7 +86,7 @@ export function buildRoadTrafficFleet(segment: MountainRoadSegmentId): TrafficVe
         helmetColor: '#0f172a',
         direction: 1,
         initialDist: 64,
-        baseLateral: 1.65,
+        baseLateral: -1.65,
         speedMps: 6.6,
         color: '#0f766e',
       },
@@ -100,14 +100,14 @@ export function buildRoadTrafficFleet(segment: MountainRoadSegmentId): TrafficVe
         ? 12
         : 28;
   return [
-    // Oncoming outer-left mountain traffic (`-Z` direction -> coming toward scooters)
+    // India LHT: Oncoming traffic (`-tangent`) travels in ITS left lane (`+right` relative to hero)
     {
       id: 'onc-car-1',
       kind: 'car',
       vehicleStyle: 'sedan',
       direction: -1,
       initialDist: 78 + seedShift,
-      baseLateral: -1.95,
+      baseLateral: 1.95,
       speedMps: 8.6,
       color: '#e2e8f0',
     },
@@ -120,7 +120,7 @@ export function buildRoadTrafficFleet(segment: MountainRoadSegmentId): TrafficVe
       helmetColor: '#dc2626',
       direction: -1,
       initialDist: 146 + seedShift,
-      baseLateral: -1.75,
+      baseLateral: 1.75,
       speedMps: 9.4,
       color: '#b91c1c',
     },
@@ -130,7 +130,7 @@ export function buildRoadTrafficFleet(segment: MountainRoadSegmentId): TrafficVe
       vehicleStyle: 'hill_suv',
       direction: -1,
       initialDist: 218 + seedShift,
-      baseLateral: -1.98,
+      baseLateral: 1.98,
       speedMps: 8.1,
       color: '#f59e0b',
     },
@@ -143,7 +143,7 @@ export function buildRoadTrafficFleet(segment: MountainRoadSegmentId): TrafficVe
       helmetColor: '#e2e8f0',
       direction: -1,
       initialDist: 288 + seedShift,
-      baseLateral: -1.72,
+      baseLateral: 1.72,
       speedMps: 9.8,
       color: '#1e293b',
     },
@@ -153,11 +153,11 @@ export function buildRoadTrafficFleet(segment: MountainRoadSegmentId): TrafficVe
       vehicleStyle: 'hatchback',
       direction: -1,
       initialDist: 356,
-      baseLateral: -1.95,
+      baseLateral: 1.95,
       speedMps: 8.4,
       color: '#93c5fd',
     },
-    // Same-direction slower local vehicles cruising ahead (overtake cleanly or follow)
+    // India LHT: Same-direction slower vehicles (`+tangent`) stay on LEFT (`-right`), hero overtakes on right
     {
       id: 'fwd-moto-1',
       kind: 'moto',
@@ -167,7 +167,7 @@ export function buildRoadTrafficFleet(segment: MountainRoadSegmentId): TrafficVe
       helmetColor: '#f8fafc',
       direction: 1,
       initialDist: 44,
-      baseLateral: 1.55,
+      baseLateral: -1.65,
       speedMps: 7.4,
       color: '#334155',
     },
@@ -177,7 +177,7 @@ export function buildRoadTrafficFleet(segment: MountainRoadSegmentId): TrafficVe
       vehicleStyle: 'hill_suv',
       direction: 1,
       initialDist: 164 + seedShift,
-      baseLateral: 1.5,
+      baseLateral: -1.85,
       speedMps: 6.8,
       color: '#cbd5e1',
     },
@@ -190,7 +190,7 @@ export function buildRoadTrafficFleet(segment: MountainRoadSegmentId): TrafficVe
       helmetColor: '#0f172a',
       direction: 1,
       initialDist: 238,
-      baseLateral: 1.65,
+      baseLateral: -1.72,
       speedMps: 7.8,
       color: '#0f766e',
     },
@@ -329,13 +329,15 @@ export function stepTrafficSimulation({
           : Math.min(totalLength - 18, leadDist + 66);
     }
 
-    // Keep vehicles politely away from stationary pull-off bays along `+X` side
+    // Keep vehicles politely away from pull-off turnouts along `+X` apron and left stalls
     const nearStop = Math.abs(v.dist - stopDist) < ARRIVAL_ZONE_DISTANCE;
     const nearViewpoint =
       v.dist >= VIEWPOINT_TURNOUT_START - 6 && v.dist <= VIEWPOINT_TURNOUT_END + 6;
     const targetLat =
-      v.spec.direction === 1 && (nearStop || nearViewpoint)
-        ? Math.min(v.spec.baseLateral, 0.9)
+      nearStop || nearViewpoint
+        ? v.spec.direction === 1
+          ? Math.min(v.spec.baseLateral, -1.65)
+          : Math.min(v.spec.baseLateral, 1.35)
         : v.spec.baseLateral;
     const prevLat = v.lateral;
     v.lateral = THREE.MathUtils.damp(v.lateral, targetLat, 3.8, delta);

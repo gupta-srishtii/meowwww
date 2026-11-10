@@ -258,6 +258,7 @@ export function applyCompanionRigFrame({
   delta,
   groundY = 0,
   climbingStairs = false,
+  downhillJogging = false,
   idlePoseOverride,
   forcePrayBow = false,
   reducedMotion = false,
@@ -271,12 +272,13 @@ export function applyCompanionRigFrame({
   delta: number;
   groundY?: number;
   climbingStairs?: boolean;
+  downhillJogging?: boolean;
   idlePoseOverride?: CharacterIdlePose;
   forcePrayBow?: boolean;
   reducedMotion?: boolean;
 }): void {
   const speed = Math.hypot(agent.velX, agent.velZ);
-  const strideRatio = THREE.MathUtils.clamp(speed / 2.55, 0, 1);
+  const strideRatio = THREE.MathUtils.clamp(speed / 2.55, 0, downhillJogging ? 1.25 : 1);
 
   const resolvedIdle: CharacterIdlePose = forcePrayBow
     ? 'pray_bow'
@@ -303,8 +305,9 @@ export function applyCompanionRigFrame({
     delta,
     groundY,
     climbingStairs,
+    downhillJogging,
     idlePose: resolvedIdle,
-    torsoBaseY: 0.82,
+    torsoBaseY: agent.id === 'srishti' ? 0.78 : 0.82,
     headTargetYawOffset,
     armGesturePhase: config.gesturePhase,
     reducedMotion,

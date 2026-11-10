@@ -20,7 +20,10 @@ import {
 import { Scene06_MaggiChai } from '@/components/canvas/scenes/Scene06_MaggiChai';
 import { Scene07_NeelkanthTemple } from '@/components/canvas/scenes/Scene07_NeelkanthTemple';
 import { Scene08_BaalKuwariApproach } from '@/components/canvas/scenes/Scene08_BaalKuwariApproach';
-import { Scene09_BaalKuwariStairs } from '@/components/canvas/scenes/Scene09_BaalKuwariStairs';
+import {
+  Scene09_BaalKuwariStairs,
+  type StairTelemetryRefs,
+} from '@/components/canvas/scenes/Scene09_BaalKuwariStairs';
 import { Scene10_BaalKuwariTemple } from '@/components/canvas/scenes/Scene10_BaalKuwariTemple';
 import { Scene11_SafeReturnRide } from '@/components/canvas/scenes/Scene11_SafeReturnRide';
 import { Scene12_HotelReturn } from '@/components/canvas/scenes/Scene12_HotelReturn';
@@ -314,11 +317,11 @@ export interface SceneStageProps {
   ateTrailheadMaggi: boolean;
   trailheadEatingActive: boolean;
   onTrailheadMaggiComplete: () => void;
-  onStairStepCountChange: (steps: number) => void;
+  stairTelemetryRefs: StairTelemetryRefs;
+  onEnterStaircaseFromFootpath: () => void;
   onStairHalfwayMilestone: () => void;
-  capturedStairLandingPolaroid: boolean;
-  stairAssistPulseNonce: number;
-  onStairAssistActiveChange: (active: boolean) => void;
+  onStairAscentComplete: () => void;
+  onStairDescentComplete: () => void;
   summitArrivalCinematicActive: boolean;
   onSummitArrivalCinematicComplete: () => void;
   rangBaalKuwariBell: boolean;
@@ -361,11 +364,11 @@ export function SceneStage({
   ateTrailheadMaggi,
   trailheadEatingActive,
   onTrailheadMaggiComplete,
-  onStairStepCountChange,
+  stairTelemetryRefs,
+  onEnterStaircaseFromFootpath,
   onStairHalfwayMilestone,
-  capturedStairLandingPolaroid,
-  stairAssistPulseNonce,
-  onStairAssistActiveChange,
+  onStairAscentComplete,
+  onStairDescentComplete,
   summitArrivalCinematicActive,
   onSummitArrivalCinematicComplete,
   rangBaalKuwariBell,
@@ -390,7 +393,7 @@ export function SceneStage({
   const mountainRoadSegment = useProgressStore((s) => s.mountainRoadSegment);
   const roadSubStage = useProgressStore((s) => s.roadSubStage);
   const baalKuwariSubStage = useProgressStore((s) => s.baalKuwariSubStage);
-  const stairStepCount = useProgressStore((s) => s.stairStepCount);
+  const baalKuwariStairDirection = useProgressStore((s) => s.baalKuwariStairDirection);
   const roadResumeDistance = useProgressStore((s) => s.roadResumeDistance);
   const downgradeQualityProfile = useProgressStore((s) => s.downgradeQualityProfile);
   const isPaused = useProgressStore(selectIsSimulationPaused);
@@ -417,7 +420,9 @@ export function SceneStage({
       ? roadSubStage
       : mountedSceneId === 8
         ? baalKuwariSubStage
-        : 'base'
+        : mountedSceneId === 9
+          ? baalKuwariStairDirection
+          : 'base'
   }-${retryNonce}`;
 
   return (
@@ -509,23 +514,21 @@ export function SceneStage({
               onArrivedChange={onArrivedChange}
               onAutoDowngradeQuality={downgradeQualityProfile}
               onNearbyHotspotChange={onNearbyHotspotChange}
+              onEnterStaircase={onEnterStaircaseFromFootpath}
               onSceneReady={controller.onMountedSceneReady}
               telemetryRefs={telemetryRefs}
             />
           ) : mountedSceneId === 9 ? (
             <Scene09_BaalKuwariStairs
-              walkInputRef={walkInputRef}
+              direction={baalKuwariStairDirection}
               qualityProfile={qualityProfile}
               paused={scenePaused}
               transitionToken={transitionToken}
               simulateMountFailure={simulateMountFailure}
-              initialStepCount={stairStepCount}
-              capturedLandingPolaroid={capturedStairLandingPolaroid}
-              assistPulseNonce={stairAssistPulseNonce}
-              onStepCountChange={onStairStepCountChange}
+              stairTelemetryRefs={stairTelemetryRefs}
               onReachHalfwayMilestone={onStairHalfwayMilestone}
-              onAssistActiveChange={onStairAssistActiveChange}
-              onNearbyHotspotChange={onNearbyHotspotChange}
+              onAscentComplete={onStairAscentComplete}
+              onDescentComplete={onStairDescentComplete}
               onSceneReady={controller.onMountedSceneReady}
             />
           ) : mountedSceneId === 10 ? (

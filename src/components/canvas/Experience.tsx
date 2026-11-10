@@ -97,15 +97,25 @@ export default function Experience() {
   // Scene 8/9/10 (Baal Kuwari Route, Pre-Climb Maggi, ~400 Stairs & Temple) UI state
   const [ateTrailheadMaggi, setAteTrailheadMaggi] = useState(false);
   const [trailheadEatingActive, setTrailheadEatingActive] = useState(false);
-  const [liveStairSteps, setLiveStairSteps] = useState(0);
-  const [stairAssistCount, setStairAssistCount] = useState(0);
-  const [stairAssistPulseNonce, setStairAssistPulseNonce] = useState(0);
-  const [stairAssistActive, setStairAssistActive] = useState(false);
   const [summitArrivalCinematicActive, setSummitArrivalCinematicActive] = useState(false);
   const [rangBaalKuwariBell, setRangBaalKuwariBell] = useState(false);
   const [baalKuwariBellNonce, setBaalKuwariBellNonce] = useState(0);
   const [baalKuwariToastKind, setBaalKuwariToastKind] = useState<'stairs' | 'summit' | null>(null);
   const baalKuwariToastTimerRef = useRef<number | null>(null);
+
+  const stairStepCountEl = useRef<HTMLSpanElement | null>(null);
+  const stairBarFillEl = useRef<HTMLDivElement | null>(null);
+  const stairPhaseLabelEl = useRef<HTMLParagraphElement | null>(null);
+  const stairFlightEl = useRef<HTMLSpanElement | null>(null);
+  const stairTelemetryRefs = useMemo(
+    () => ({
+      stepCountEl: stairStepCountEl,
+      barFillEl: stairBarFillEl,
+      phaseLabelEl: stairPhaseLabelEl,
+      flightEl: stairFlightEl,
+    }),
+    []
+  );
 
   // Scene 12 (Rishikesh Hotel Return & Reunion) state
   const [hotelFarewellDone, setHotelFarewellDone] = useState(false);
@@ -142,6 +152,8 @@ export default function Experience() {
   const setRoadSubStage = useProgressStore((s) => s.setRoadSubStage);
   const baalKuwariSubStage = useProgressStore((s) => s.baalKuwariSubStage);
   const setBaalKuwariSubStage = useProgressStore((s) => s.setBaalKuwariSubStage);
+  const baalKuwariStairDirection = useProgressStore((s) => s.baalKuwariStairDirection);
+  const setBaalKuwariStairDirection = useProgressStore((s) => s.setBaalKuwariStairDirection);
   const setStairStepCount = useProgressStore((s) => s.setStairStepCount);
   const setRoadResumeDistance = useProgressStore((s) => s.setRoadResumeDistance);
 
@@ -167,14 +179,12 @@ export default function Experience() {
     isNeelkanthWalkActive ||
     isBaalKuwariMaggiActive ||
     isBaalKuwariFootpathActive ||
-    isBaalKuwariStairsActive ||
     isBaalKuwariTempleActive ||
     isHotelReturnWalkActive;
   const capturedDhabaPolaroid = collectedPolaroids.includes('scene06_dhaba');
   const capturedNeelkanthPolaroid = collectedPolaroids.includes('scene07_neelkanth');
   const capturedViewpointSolo = collectedPolaroids.includes('scene05_viewpoint_solo');
   const capturedViewpointGroup = collectedPolaroids.includes('scene05_viewpoint_group');
-  const capturedStairLandingPolaroid = collectedPolaroids.includes('scene09_stairs_landing');
   const capturedBaalKuwariPolaroid = collectedPolaroids.includes('scene10_baalkuwari');
   const capturedHotelPolaroid = collectedPolaroids.includes('scene12_hotel_farewell');
 
@@ -571,26 +581,9 @@ export default function Experience() {
       if (!nearbyHotspot || useProgressStore.getState().activeNarration !== null) return;
       if (nearbyHotspot.id === 'enter_stairs') {
         clearInputsRef.current();
+        setBaalKuwariStairDirection('ascent');
         setStairStepCount(0);
-        setLiveStairSteps(0);
         sceneController.requestSceneTransition(9, { clearInputs: clearInputsRef.current });
-      }
-      return;
-    }
-    if (isBaalKuwariStairsActive) {
-      if (stairAssistActive || !nearbyHotspot || useProgressStore.getState().activeNarration !== null) {
-        return;
-      }
-      if (nearbyHotspot.id === 'ishaan_assist') {
-        clearInputsRef.current();
-        setStairAssistCount((n) => n + 1);
-        setStairAssistPulseNonce((n) => n + 1);
-        ambientAudio.playDiyaChime();
-      } else if (nearbyHotspot.id === 'stairs_polaroid') {
-        handleCaptureBaalKuwariPolaroid('stairs');
-      } else if (nearbyHotspot.id === 'enter_temple') {
-        clearInputsRef.current();
-        sceneController.requestSceneTransition(10, { clearInputs: clearInputsRef.current });
       }
       return;
     }
@@ -610,9 +603,9 @@ export default function Experience() {
         handleCaptureBaalKuwariPolaroid('summit');
       } else if (nearbyHotspot.id === 'descent') {
         clearInputsRef.current();
-        setMountainRoadSegment('to_hotel_return');
-        setRoadResumeDistance(LEAD_START_DISTANCE);
-        sceneController.requestSceneTransition(11, { clearInputs: clearInputsRef.current });
+        setBaalKuwariStairDirection('descent');
+        setStairStepCount(400);
+        sceneController.requestSceneTransition(9, { clearInputs: clearInputsRef.current });
       }
       return;
     }
@@ -653,7 +646,6 @@ export default function Experience() {
     hotelSummaryOpen,
     isBaalKuwariFootpathActive,
     isBaalKuwariMaggiActive,
-    isBaalKuwariStairsActive,
     isBaalKuwariTempleActive,
     isHotelReturnWalkActive,
     isNeelkanthWalkActive,
@@ -661,11 +653,9 @@ export default function Experience() {
     nearbyHotspot,
     reducedMotion,
     sceneController,
-    setMountainRoadSegment,
-    setRoadResumeDistance,
+    setBaalKuwariStairDirection,
     setStairStepCount,
     showNarration,
-    stairAssistActive,
     summitArrivalCinematicActive,
     trailheadEatingActive,
     triggerViewpointPhoto,
@@ -681,10 +671,6 @@ export default function Experience() {
       } else if (nearbyHotspot.id === 'viewpoint_solo') {
         triggerViewpointPhoto('solo');
       }
-      return;
-    }
-    if (isBaalKuwariStairsActive) {
-      handleCaptureBaalKuwariPolaroid('stairs');
       return;
     }
     if (isBaalKuwariTempleActive) {
@@ -707,7 +693,6 @@ export default function Experience() {
     handleCaptureDhabaPolaroid,
     handleCaptureHotelPolaroid,
     handleCaptureNeelkanthPolaroid,
-    isBaalKuwariStairsActive,
     isBaalKuwariTempleActive,
     isDhabaWalkActive,
     isHotelReturnWalkActive,
@@ -736,7 +721,6 @@ export default function Experience() {
     !activeDarshanPan &&
     !foodCinematicActive &&
     !trailheadEatingActive &&
-    !stairAssistActive &&
     !summitArrivalCinematicActive &&
     !hotelSummaryOpen;
 
@@ -820,6 +804,35 @@ export default function Experience() {
     });
   }, [sceneController]);
 
+  const handleEnterStaircaseFromFootpath = useCallback(() => {
+    clearInputsRef.current();
+    setBaalKuwariStairDirection('ascent');
+    setStairStepCount(0);
+    sceneController.requestSceneTransition(9, { clearInputs: clearInputsRef.current });
+  }, [sceneController, setBaalKuwariStairDirection, setStairStepCount]);
+
+  const handleStairAscentComplete = useCallback(() => {
+    if (useProgressStore.getState().committedSceneId !== 9) return;
+    clearInputsRef.current();
+    setStairStepCount(400);
+    capturePolaroidAndSave('scene09_stairs_landing');
+    sceneController.requestSceneTransition(10, { clearInputs: clearInputsRef.current });
+  }, [capturePolaroidAndSave, sceneController, setStairStepCount]);
+
+  const handleStairDescentComplete = useCallback(() => {
+    if (useProgressStore.getState().committedSceneId !== 9) return;
+    clearInputsRef.current();
+    setBaalKuwariStairDirection('ascent');
+    setMountainRoadSegment('to_hotel_return');
+    setRoadResumeDistance(LEAD_START_DISTANCE);
+    sceneController.requestSceneTransition(11, { clearInputs: clearInputsRef.current });
+  }, [
+    sceneController,
+    setBaalKuwariStairDirection,
+    setMountainRoadSegment,
+    setRoadResumeDistance,
+  ]);
+
   const handleEnterHotelCourtyard = useCallback(() => {
     clearInputsRef.current();
     sceneController.requestSceneTransition(12, {
@@ -833,20 +846,27 @@ export default function Experience() {
       id: 'scene10-evening-bus-cue',
       speaker: 'Baal Kuwari Temple',
       lines: [
-        'Srishti has an evening bus to catch — explore the quiet summit shrine or head back down safely when ready.',
+        'Explore the quiet hilltop shrine, ring the temple bell, or head back down the steps together when ready.',
       ],
     });
   }, [showNarration]);
 
   const handleStairHalfwayMilestone = useCallback(() => {
     setStairStepCount(200);
+    const isNew = capturePolaroidAndSave('scene09_stairs_landing');
     useProgressStore.getState().saveCheckpoint();
-    showNarration({
-      id: 'scene09-step-200',
-      speaker: 'Mid-Climb Rest Landing',
-      lines: ['Halfway up (~200 steps) — milestone saved as the group catches their breath together.'],
-    });
-  }, [setStairStepCount, showNarration]);
+    if (isNew) {
+      ambientAudio.playShutterClick();
+      setBaalKuwariToastKind('stairs');
+      if (baalKuwariToastTimerRef.current !== null) {
+        window.clearTimeout(baalKuwariToastTimerRef.current);
+      }
+      baalKuwariToastTimerRef.current = window.setTimeout(() => {
+        baalKuwariToastTimerRef.current = null;
+        setBaalKuwariToastKind(null);
+      }, 3400);
+    }
+  }, [capturePolaroidAndSave, setStairStepCount]);
 
   const handlePullOverAtViewpoint = useCallback(() => {
     setViewpointPullOverNonce((prev) => prev + 1);
@@ -974,9 +994,8 @@ export default function Experience() {
       }
 
       if (chapter.targetSceneId === 9) {
+        setBaalKuwariStairDirection('ascent');
         setStairStepCount(0);
-        setLiveStairSteps(0);
-        setStairAssistCount(0);
       }
 
       if (chapter.targetSceneId === 11) {
@@ -1001,6 +1020,7 @@ export default function Experience() {
       mountainRoadSegment,
       roadSubStage,
       sceneController,
+      setBaalKuwariStairDirection,
       setBaalKuwariSubStage,
       setMountainRoadSegment,
       setRoadResumeDistance,
@@ -1173,17 +1193,12 @@ export default function Experience() {
     setViewpointPhotoLabel(null);
     setTrailheadEatingActive(false);
     setBaalKuwariToastKind(null);
-    setStairAssistActive(false);
     setSummitArrivalCinematicActive(committedSceneId === 10);
     setHotelFarewellDone(false);
     setHotelSummaryOpen(false);
     setHotelToastVisible(false);
     if (committedSceneId === 8 && baalKuwariSubStage === 'maggi_stop') {
       setAteTrailheadMaggi(false);
-    }
-    if (committedSceneId === 9) {
-      setLiveStairSteps(useProgressStore.getState().stairStepCount);
-      setStairAssistCount(0);
     }
   }, [baalKuwariSubStage, committedSceneId, roadSubStage]);
 
@@ -1203,7 +1218,10 @@ export default function Experience() {
 
       if (
         event.code === 'Space' &&
-        (foodCinematicActive || trailheadEatingActive || summitArrivalCinematicActive) &&
+        (foodCinematicActive ||
+          trailheadEatingActive ||
+          summitArrivalCinematicActive ||
+          isBaalKuwariStairsActive) &&
         !userPaused &&
         !anyModalOpen &&
         useProgressStore.getState().transitionPhase === 'idle'
@@ -1211,6 +1229,12 @@ export default function Experience() {
         event.preventDefault();
         if (trailheadEatingActive) {
           handleTrailheadMaggiComplete();
+        } else if (isBaalKuwariStairsActive) {
+          if (baalKuwariStairDirection === 'descent') {
+            handleStairDescentComplete();
+          } else {
+            handleStairAscentComplete();
+          }
         } else if (summitArrivalCinematicActive) {
           handleSummitArrivalCinematicComplete();
         } else {
@@ -1260,14 +1284,18 @@ export default function Experience() {
     };
   }, [
     anyModalOpen,
+    baalKuwariStairDirection,
     chaptersOpen,
     clearAllMovementInputs,
     controlsOpen,
     foodCinematicActive,
     handleDismissControls,
     handleFoodCinematicComplete,
+    handleStairAscentComplete,
+    handleStairDescentComplete,
     handleSummitArrivalCinematicComplete,
     handleTrailheadMaggiComplete,
+    isBaalKuwariStairsActive,
     scooterReturnOpen,
     setTabHiddenPaused,
     setUserPaused,
@@ -1400,11 +1428,11 @@ export default function Experience() {
           ateTrailheadMaggi={ateTrailheadMaggi}
           trailheadEatingActive={trailheadEatingActive}
           onTrailheadMaggiComplete={handleTrailheadMaggiComplete}
-          onStairStepCountChange={setLiveStairSteps}
+          stairTelemetryRefs={stairTelemetryRefs}
+          onEnterStaircaseFromFootpath={handleEnterStaircaseFromFootpath}
           onStairHalfwayMilestone={handleStairHalfwayMilestone}
-          capturedStairLandingPolaroid={capturedStairLandingPolaroid}
-          stairAssistPulseNonce={stairAssistPulseNonce}
-          onStairAssistActiveChange={setStairAssistActive}
+          onStairAscentComplete={handleStairAscentComplete}
+          onStairDescentComplete={handleStairDescentComplete}
           summitArrivalCinematicActive={summitArrivalCinematicActive}
           onSummitArrivalCinematicComplete={handleSummitArrivalCinematicComplete}
           rangBaalKuwariBell={rangBaalKuwariBell}
@@ -1578,7 +1606,9 @@ export default function Experience() {
                 : isBaalKuwariFootpathActive
                   ? 'footpath'
                   : isBaalKuwariStairsActive
-                    ? 'stairs'
+                    ? baalKuwariStairDirection === 'descent'
+                      ? 'descent'
+                      : 'stairs'
                     : 'temple'
             }
             audioMuted={audioMuted}
@@ -1592,10 +1622,13 @@ export default function Experience() {
             ateMaggi={ateTrailheadMaggi}
             eatingActive={trailheadEatingActive}
             onBeginClimbFromMaggi={handleBeginClimbFromMaggi}
-            stepCount={liveStairSteps}
             totalSteps={400}
-            assistCount={stairAssistCount}
-            assistActive={stairAssistActive}
+            stairTelemetryRefs={stairTelemetryRefs}
+            onSkipStairCinematic={
+              baalKuwariStairDirection === 'descent'
+                ? handleStairDescentComplete
+                : handleStairAscentComplete
+            }
             arrivalCinematicActive={summitArrivalCinematicActive}
             onSkipArrivalCinematic={handleSummitArrivalCinematicComplete}
             rangBell={rangBaalKuwariBell}
@@ -1615,11 +1648,11 @@ export default function Experience() {
           <MobileWalkControls
             visible={
               touchControlsVisible &&
+              !isBaalKuwariStairsActive &&
               !contextLost &&
               !userPaused &&
               !anyModalOpen &&
               !trailheadEatingActive &&
-              !stairAssistActive &&
               !summitArrivalCinematicActive &&
               transitionPhase === 'idle'
             }

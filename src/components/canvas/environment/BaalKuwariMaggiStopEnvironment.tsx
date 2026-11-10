@@ -26,8 +26,8 @@ export const BAAL_KUWARI_MAGGI_WALK_BOUNDS: WalkBounds = {
 export const BAAL_KUWARI_MAGGI_TABLE_CENTER = { x: 0.45, z: -1.35 } as const;
 
 export const BAAL_KUWARI_MAGGI_SEAT_SLOTS = {
-  srishti: { x: 0.45, z: -0.48, facingYaw: 0 },
-  ishaan: { x: 0.45, z: -2.22, facingYaw: Math.PI },
+  ishaan: { x: 0.45, z: -0.48, facingYaw: 0 },
+  srishti: { x: 0.45, z: -2.22, facingYaw: Math.PI },
   friend_plaid: { x: -0.92, z: -1.35, facingYaw: -Math.PI / 2 },
   friend_black_tee: { x: 1.82, z: -1.35, facingYaw: Math.PI / 2 },
 } as const;

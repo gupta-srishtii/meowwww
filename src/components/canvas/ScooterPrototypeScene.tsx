@@ -522,7 +522,7 @@ export function ScooterPrototypeScene({
       sim.compDist = THREE.MathUtils.clamp(sim.compDist, minFollowerDist, maxFollowerDist);
 
       const baseTarget =
-        nextRemainingDist <= ARRIVAL_ZONE_DISTANCE ? 1.0 : COMPANION_LANE_LATERAL;
+        nextRemainingDist <= ARRIVAL_ZONE_DISTANCE ? -0.3 : COMPANION_LANE_LATERAL;
       const lateralTarget = THREE.MathUtils.clamp(
         baseTarget + sim.companionAvoidShift,
         -2.55,

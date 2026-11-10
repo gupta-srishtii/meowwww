@@ -6,8 +6,8 @@ import * as THREE from 'three';
 import { PrototypeScooter } from '@/components/canvas/PrototypeScooter';
 import { StylizedPlaceholderCharacter } from '@/components/canvas/characters/StylizedPlaceholderCharacter';
 import {
-  animateSrishtiWalkRig,
-  type SrishtiIdlePose,
+  animateIshaanWalkRig,
+  type CharacterIdlePose,
 } from '@/components/canvas/characters/animateCharacterRig';
 import {
   VIEWPOINT_HOTSPOTS,
@@ -43,16 +43,14 @@ export interface Scene05ViewpointStopProps {
 const CAM_DISTANCE = 5.1;
 const CAM_LOOK_HEIGHT = 1.15;
 
-// Friends standing along the scenic overlook terrace facing out toward the gorge by default
-const ISHAAN_POS: [number, number, number] = [0.65, 0, -4.15];
+// Srishti, Manish, and Yash standing along the scenic overlook rail facing out over the valley
+const SRISHTI_POS: [number, number, number] = [0.65, 0, -4.15];
 const COMP_A_POS: [number, number, number] = [1.45, 0, -4.22];
 const COMP_B_POS: [number, number, number] = [2.25, 0, -4.1];
 
 /**
- * Scene 5 Sub-Stage — Scenic Rishikesh Viewpoint Stop (Phase 2B).
- * Lets the player step off the parked scooters, explore the cliffside mountain overlook,
- * capture both the Srishti Solo Overlook Polaroid and the 4-Friend Group Polaroid,
- * and return to the scooters to ride onward toward the Maggi & Chai stall.
+ * Scene 5 Sub-Stage — Scenic Rishikesh Viewpoint Stop.
+ * Third-person exploration as Ishaan overlooking the gorge with Srishti, Manish & Yash.
  */
 export function Scene05_ViewpointStop({
   walkInputRef,
@@ -72,8 +70,6 @@ export function Scene05_ViewpointStop({
   const playerGroupRef = useRef<THREE.Group>(null);
   const playerTorsoRef = useRef<THREE.Group>(null);
   const playerHeadRef = useRef<THREE.Group>(null);
-  const playerHairRef = useRef<THREE.Group>(null);
-  const playerBagRef = useRef<THREE.Group>(null);
   const leftLegRef = useRef<THREE.Group>(null);
   const leftKneeRef = useRef<THREE.Group>(null);
   const rightLegRef = useRef<THREE.Group>(null);
@@ -81,11 +77,13 @@ export function Scene05_ViewpointStop({
   const leftArmRef = useRef<THREE.Group>(null);
   const rightArmRef = useRef<THREE.Group>(null);
 
-  const ishaanGroupRef = useRef<THREE.Group>(null);
-  const ishaanTorsoRef = useRef<THREE.Group>(null);
-  const ishaanHeadRef = useRef<THREE.Group>(null);
-  const ishaanArmRef = useRef<THREE.Group>(null);
-  const ishaanForearmRef = useRef<THREE.Group>(null);
+  const srishtiGroupRef = useRef<THREE.Group>(null);
+  const srishtiTorsoRef = useRef<THREE.Group>(null);
+  const srishtiHeadRef = useRef<THREE.Group>(null);
+  const srishtiHairRef = useRef<THREE.Group>(null);
+  const srishtiBagRef = useRef<THREE.Group>(null);
+  const srishtiArmRef = useRef<THREE.Group>(null);
+  const srishtiForearmRef = useRef<THREE.Group>(null);
 
   const compAGroupRef = useRef<THREE.Group>(null);
   const compATorsoRef = useRef<THREE.Group>(null);
@@ -158,10 +156,9 @@ export function Scene05_ViewpointStop({
     const sim = simRef.current;
     const t = state.clock.elapsedTime;
     let strideRatio = 0;
-    let idlePose: SrishtiIdlePose = 'default';
+    let idlePose: CharacterIdlePose = 'default';
 
     if (activePhotoMoment === 'solo') {
-      // Stage Srishti calmly at scenic overlook rail looking out toward hazy hills
       sim.posX = THREE.MathUtils.damp(sim.posX, -2.55, 8, delta);
       sim.posZ = THREE.MathUtils.damp(sim.posZ, -4.15, 8, delta);
       sim.velX = 0;
@@ -169,7 +166,6 @@ export function Scene05_ViewpointStop({
       sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, 0.08, 8, delta);
       idlePose = 'hands_behind_back';
     } else if (activePhotoMoment === 'group') {
-      // Stage all four friends shoulder-to-shoulder facing roadside camera (+Z, mountain valley behind)
       sim.posX = THREE.MathUtils.damp(sim.posX, -0.1, 8, delta);
       sim.posZ = THREE.MathUtils.damp(sim.posZ, -4.08, 8, delta);
       sim.velX = 0;
@@ -191,14 +187,12 @@ export function Scene05_ViewpointStop({
       }
     }
 
-    // 1. Srishti walk + pose animation
-    animateSrishtiWalkRig({
+    // 1. Third-person Ishaan walk + pose animation
+    animateIshaanWalkRig({
       refs: {
         group: playerGroupRef.current,
         torso: playerTorsoRef.current,
         head: playerHeadRef.current,
-        hairTail: playerHairRef.current,
-        bag: playerBagRef.current,
         leftLeg: leftLegRef.current,
         leftKnee: leftKneeRef.current,
         rightLeg: rightLegRef.current,
@@ -217,7 +211,7 @@ export function Scene05_ViewpointStop({
       reducedMotion,
     });
 
-    // 2. Companions along the scenic overlook: looking out at mountains, or posing playfully together for group Polaroid
+    // 2. Companions (Srishti, Manish & Yash) at overlook rail
     const isGroupPose = activePhotoMoment === 'group';
     const animateOverlookFriend = (
       group: THREE.Group | null,
@@ -225,6 +219,7 @@ export function Scene05_ViewpointStop({
       head: THREE.Group | null,
       arm: THREE.Group | null,
       forearm: THREE.Group | null,
+      torsoBaseY: number,
       baseYaw: number,
       groupYaw: number,
       phaseOffset: number,
@@ -236,7 +231,9 @@ export function Scene05_ViewpointStop({
         group.rotation.y = THREE.MathUtils.damp(group.rotation.y, targetYaw, 8, delta);
       }
       if (torso) {
-        torso.position.y = reducedMotion ? 0.82 : 0.82 + Math.sin(t * 1.65 + phaseOffset) * 0.007;
+        torso.position.y = reducedMotion
+          ? torsoBaseY
+          : torsoBaseY + Math.sin(t * 1.65 + phaseOffset) * 0.007;
         torso.rotation.z = THREE.MathUtils.damp(
           torso.rotation.z,
           isGroupPose ? groupLeanZ : 0,
@@ -262,23 +259,33 @@ export function Scene05_ViewpointStop({
     };
 
     animateOverlookFriend(
-      ishaanGroupRef.current,
-      ishaanTorsoRef.current,
-      ishaanHeadRef.current,
-      ishaanArmRef.current,
-      ishaanForearmRef.current,
+      srishtiGroupRef.current,
+      srishtiTorsoRef.current,
+      srishtiHeadRef.current,
+      srishtiArmRef.current,
+      srishtiForearmRef.current,
+      0.78,
       -0.18,
       Math.PI - 0.04,
       0.2,
       -0.05,
-      0.16
+      0.32
     );
+    if (srishtiHairRef.current) {
+      srishtiHairRef.current.rotation.x = 0.14;
+      srishtiHairRef.current.rotation.z = reducedMotion ? 0 : Math.sin(t * 1.4) * 0.015;
+    }
+    if (srishtiBagRef.current) {
+      srishtiBagRef.current.rotation.z = 0.08;
+    }
+
     animateOverlookFriend(
       compAGroupRef.current,
       compATorsoRef.current,
       compAHeadRef.current,
       compAArmRef.current,
       compAForearmRef.current,
+      0.82,
       0.06,
       Math.PI + 0.06,
       1.8,
@@ -291,6 +298,7 @@ export function Scene05_ViewpointStop({
       compBHeadRef.current,
       compBArmRef.current,
       compBForearmRef.current,
+      0.82,
       0.25,
       Math.PI + 0.16,
       3.5,
@@ -298,7 +306,6 @@ export function Scene05_ViewpointStop({
       0.42
     );
 
-    // 3. Camera framing (free third-person orbit OR scenic solo/group Polaroid framing)
     if (activePhotoMoment === 'solo') {
       scratch.desiredCamPos.set(-1.15, 1.52, -2.05);
       scratch.desiredLookAt.set(-2.65, 1.18, -5.8);
@@ -347,7 +354,6 @@ export function Scene05_ViewpointStop({
     }
     camera.lookAt(scratch.smoothedLookAt);
 
-    // 4. Hotspot proximity detection
     const nearest =
       activePhotoMoment === 'none'
         ? findNearestWalkHotspot(sim.posX, sim.posZ, VIEWPOINT_HOTSPOTS)
@@ -368,7 +374,6 @@ export function Scene05_ViewpointStop({
         capturedGroup={capturedGroup}
       />
 
-      {/* Parked Scooters along roadside overlook pull-off facing onward (+X) */}
       <group position={[1.3, 0, 3.2]} rotation={[0, -Math.PI / 2, 0]}>
         <PrototypeScooter variant="lead" hideRiders castShadow={shadowsEnabled} />
       </group>
@@ -376,14 +381,12 @@ export function Scene05_ViewpointStop({
         <PrototypeScooter variant="companion" hideRiders castShadow={shadowsEnabled} />
       </group>
 
-      {/* Playable Srishti avatar */}
+      {/* Third-person Playable Protagonist: Ishaan */}
       <StylizedPlaceholderCharacter
-        characterVariant="srishti"
+        characterVariant="ishaan"
         groupRef={playerGroupRef}
         torsoRef={playerTorsoRef}
         headRef={playerHeadRef}
-        hairTailRef={playerHairRef}
-        bagRef={playerBagRef}
         leftLegRef={leftLegRef}
         leftKneeRef={leftKneeRef}
         rightLegRef={rightLegRef}
@@ -391,24 +394,26 @@ export function Scene05_ViewpointStop({
         leftArmRef={leftArmRef}
         rightArmRef={rightArmRef}
         position={[0.25, 0, 1.55]}
+        scale={1.03}
         castShadow={shadowsEnabled}
       />
 
-      {/* Friends gazing across the mountain valley along the scenic railing */}
+      {/* Srishti beside the scenic rail wearing her verified floral outfit & sling bag */}
       <StylizedPlaceholderCharacter
-        characterVariant="ishaan"
-        groupRef={ishaanGroupRef}
-        torsoRef={ishaanTorsoRef}
-        headRef={ishaanHeadRef}
-        rightArmRef={ishaanArmRef}
-        rightForearmRef={ishaanForearmRef}
-        position={ISHAAN_POS}
+        characterVariant="srishti"
+        groupRef={srishtiGroupRef}
+        torsoRef={srishtiTorsoRef}
+        headRef={srishtiHeadRef}
+        hairTailRef={srishtiHairRef}
+        bagRef={srishtiBagRef}
+        rightArmRef={srishtiArmRef}
+        rightForearmRef={srishtiForearmRef}
+        position={SRISHTI_POS}
         rotationY={-0.18}
-        scale={1.05}
+        scale={1.0}
         castShadow={shadowsEnabled}
       />
 
-      {/* Scooter 2 friends (verified group photo outfits; individual name/role unassigned) */}
       <StylizedPlaceholderCharacter
         characterVariant="friend_black_tee"
         groupRef={compAGroupRef}

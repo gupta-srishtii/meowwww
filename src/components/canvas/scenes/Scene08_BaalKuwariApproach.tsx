@@ -14,7 +14,7 @@ import {
 } from '@/components/canvas/characters/CompanionGroup';
 import { StylizedPlaceholderCharacter } from '@/components/canvas/characters/StylizedPlaceholderCharacter';
 import {
-  animateSrishtiWalkRig,
+  animateIshaanWalkRig,
   computeRelativeHeadLookYaw,
   type CharacterIdlePose,
 } from '@/components/canvas/characters/animateCharacterRig';
@@ -71,19 +71,20 @@ export interface Scene08BaalKuwariApproachProps {
   onArrivedChange: (arrived: boolean) => void;
   onAutoDowngradeQuality: () => void;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
+  onEnterStaircase: () => void;
   onSceneReady: (token: number, sceneId: SceneId) => void;
   telemetryRefs: TelemetryRefs;
 }
 
 const MAGGI_COMPANION_INIT: Record<FriendCompanionId, { x: number; z: number; yaw: number }> = {
-  ishaan: { x: -0.65, z: -0.58, yaw: -0.42 },
+  srishti: { x: -0.65, z: -0.58, yaw: -0.42 },
   friend_black_tee: { x: 1.85, z: -0.32, yaw: 0.55 },
   friend_plaid: { x: -1.65, z: 0.55, yaw: -0.82 },
 };
 
 const MAGGI_COMPANION_CONFIGS: readonly CompanionAgentConfig[] = [
   {
-    id: 'ishaan',
+    id: 'srishti',
     followAngleOffset: -0.95,
     followDistance: 1.45,
     idlePose: 'chat_nod',
@@ -106,12 +107,12 @@ const MAGGI_COMPANION_CONFIGS: readonly CompanionAgentConfig[] = [
 ];
 
 const FOOTPATH_ENTRY_TARGETS: Record<FriendCompanionId, CompanionTargetSlot> = {
-  ishaan: { x: -0.78, z: -3.05, facingYaw: 0 },
+  srishti: { x: -0.78, z: -3.05, facingYaw: 0 },
   friend_black_tee: { x: 0.88, z: -2.95, facingYaw: 0.1 },
   friend_plaid: { x: -1.18, z: -2.2, facingYaw: -0.15 },
 };
 
-const SRISHTI_STAND_SAFE_POS = { x: 0.45, z: 0.24, facingYaw: 0 } as const;
+const ISHAAN_STAND_SAFE_POS = { x: 0.45, z: 0.24, facingYaw: 0 } as const;
 const EATING_DURATION_SEC = 8.4;
 const EATING_REDUCED_SEC = 2.0;
 const CAM_DISTANCE = 5.0;
@@ -135,6 +136,7 @@ function MaggiStopWalkView({
   | 'simulateMountFailure'
   | 'onArrivedChange'
   | 'onAutoDowngradeQuality'
+  | 'onEnterStaircase'
   | 'telemetryRefs'
 >) {
   const { camera, size, clock } = useThree();
@@ -144,8 +146,6 @@ function MaggiStopWalkView({
   const playerGroupRef = useRef<THREE.Group>(null);
   const playerTorsoRef = useRef<THREE.Group>(null);
   const playerHeadRef = useRef<THREE.Group>(null);
-  const playerHairRef = useRef<THREE.Group>(null);
-  const playerBagRef = useRef<THREE.Group>(null);
   const leftLegRef = useRef<THREE.Group>(null);
   const leftKneeRef = useRef<THREE.Group>(null);
   const rightLegRef = useRef<THREE.Group>(null);
@@ -210,12 +210,12 @@ function MaggiStopWalkView({
       simRef.current.wasEatingActive = true;
     } else if (simRef.current.wasEatingActive) {
       simRef.current.wasEatingActive = false;
-      // Ensure Srishti stands cleanly off her stool even if eating was skipped
-      simRef.current.posX = SRISHTI_STAND_SAFE_POS.x;
-      simRef.current.posZ = SRISHTI_STAND_SAFE_POS.z;
+      // Ensure Ishaan stands cleanly off his stool even if eating was skipped
+      simRef.current.posX = ISHAAN_STAND_SAFE_POS.x;
+      simRef.current.posZ = ISHAAN_STAND_SAFE_POS.z;
       simRef.current.velX = 0;
       simRef.current.velZ = 0;
-      simRef.current.facingYaw = SRISHTI_STAND_SAFE_POS.facingYaw;
+      simRef.current.facingYaw = ISHAAN_STAND_SAFE_POS.facingYaw;
     }
   }, [eatingActive]);
 
@@ -249,7 +249,7 @@ function MaggiStopWalkView({
       const dur = reducedMotion ? EATING_REDUCED_SEC : EATING_DURATION_SEC;
       sim.eatTimer += delta;
       const mapped = reducedMotion ? (sim.eatTimer / EATING_REDUCED_SEC) * EATING_DURATION_SEC : sim.eatTimer;
-      const slot = BAAL_KUWARI_MAGGI_SEAT_SLOTS.srishti;
+      const slot = BAAL_KUWARI_MAGGI_SEAT_SLOTS.ishaan;
 
       if (mapped < 1.35) {
         const distSeat = Math.hypot(slot.x - sim.posX, slot.z - sim.posZ);
@@ -279,17 +279,17 @@ function MaggiStopWalkView({
                 ? 'sit_sip'
                 : 'sit_laugh';
       } else {
-        // Stand up politely and step off the South stool onto open clearing ground before control resumes
-        sim.posX = THREE.MathUtils.damp(sim.posX, SRISHTI_STAND_SAFE_POS.x, 6.5, delta);
-        sim.posZ = THREE.MathUtils.damp(sim.posZ, SRISHTI_STAND_SAFE_POS.z, 6.5, delta);
-        sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, SRISHTI_STAND_SAFE_POS.facingYaw, 8, delta);
+        // Stand up cleanly and step off the South stool onto open clearing ground before control resumes
+        sim.posX = THREE.MathUtils.damp(sim.posX, ISHAAN_STAND_SAFE_POS.x, 6.5, delta);
+        sim.posZ = THREE.MathUtils.damp(sim.posZ, ISHAAN_STAND_SAFE_POS.z, 6.5, delta);
+        sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, ISHAAN_STAND_SAFE_POS.facingYaw, 8, delta);
         playerIdlePose = 'chat_nod';
       }
 
       if (!sim.eatCompleted && sim.eatTimer >= dur) {
         sim.eatCompleted = true;
-        sim.posX = SRISHTI_STAND_SAFE_POS.x;
-        sim.posZ = SRISHTI_STAND_SAFE_POS.z;
+        sim.posX = ISHAAN_STAND_SAFE_POS.x;
+        sim.posZ = ISHAAN_STAND_SAFE_POS.z;
         onEatMaggiComplete();
       }
     } else {
@@ -320,13 +320,11 @@ function MaggiStopWalkView({
         )
       : 0;
 
-    animateSrishtiWalkRig({
+    animateIshaanWalkRig({
       refs: {
         group: playerGroupRef.current,
         torso: playerTorsoRef.current,
         head: playerHeadRef.current,
-        hairTail: playerHairRef.current,
-        bag: playerBagRef.current,
         leftLeg: leftLegRef.current,
         leftKnee: leftKneeRef.current,
         rightLeg: rightLegRef.current,
@@ -375,7 +373,7 @@ function MaggiStopWalkView({
       explicitTargets:
         compMode === 'gather' || compMode === 'sit_dine'
           ? {
-              ishaan: BAAL_KUWARI_MAGGI_SEAT_SLOTS.ishaan,
+              srishti: BAAL_KUWARI_MAGGI_SEAT_SLOTS.srishti,
               friend_black_tee: BAAL_KUWARI_MAGGI_SEAT_SLOTS.friend_black_tee,
               friend_plaid: BAAL_KUWARI_MAGGI_SEAT_SLOTS.friend_plaid,
             }
@@ -469,12 +467,10 @@ function MaggiStopWalkView({
       />
 
       <StylizedPlaceholderCharacter
-        characterVariant="srishti"
+        characterVariant="ishaan"
         groupRef={playerGroupRef}
         torsoRef={playerTorsoRef}
         headRef={playerHeadRef}
-        hairTailRef={playerHairRef}
-        bagRef={playerBagRef}
         leftLegRef={leftLegRef}
         leftKneeRef={leftKneeRef}
         rightLegRef={rightLegRef}
@@ -498,7 +494,7 @@ function MaggiStopWalkView({
 
 const FOOTPATH_COMPANION_CONFIGS: readonly CompanionAgentConfig[] = [
   {
-    id: 'ishaan',
+    id: 'srishti',
     followAngleOffset: -0.78,
     followDistance: 1.5,
     idlePose: 'chat_nod',
@@ -522,7 +518,7 @@ const FOOTPATH_COMPANION_CONFIGS: readonly CompanionAgentConfig[] = [
 
 const FOOTPATH_ARRIVAL_HOTSPOT: WalkHotspot = {
   id: 'enter_stairs',
-  label: 'Reach Baal Kuwari Staircase · Begin Climb',
+  label: 'Begin Baal Kuwari Climb',
   x: FOOTPATH_END_SPOT.x,
   z: FOOTPATH_END_SPOT.z,
   radius: 3.1,
@@ -535,6 +531,7 @@ function ForestFootpathWalkView({
   paused,
   transitionToken,
   onNearbyHotspotChange,
+  onEnterStaircase,
   onSceneReady,
 }: Pick<
   Scene08BaalKuwariApproachProps,
@@ -543,6 +540,7 @@ function ForestFootpathWalkView({
   | 'paused'
   | 'transitionToken'
   | 'onNearbyHotspotChange'
+  | 'onEnterStaircase'
   | 'onSceneReady'
 >) {
   const { camera, size, clock } = useThree();
@@ -554,7 +552,7 @@ function ForestFootpathWalkView({
     { x: number; y: number; z: number; yaw: number }
   > = useMemo(
     () => ({
-      ishaan: { x: -0.82, y: sampleFootpathY(1.7), z: 1.7, yaw: 0 },
+      srishti: { x: -0.82, y: sampleFootpathY(1.7), z: 1.7, yaw: 0 },
       friend_black_tee: { x: 0.85, y: sampleFootpathY(1.85), z: 1.85, yaw: 0 },
       friend_plaid: { x: -0.1, y: sampleFootpathY(2.2), z: 2.2, yaw: 0 },
     }),
@@ -564,14 +562,13 @@ function ForestFootpathWalkView({
   const playerGroupRef = useRef<THREE.Group>(null);
   const playerTorsoRef = useRef<THREE.Group>(null);
   const playerHeadRef = useRef<THREE.Group>(null);
-  const playerHairRef = useRef<THREE.Group>(null);
-  const playerBagRef = useRef<THREE.Group>(null);
   const leftLegRef = useRef<THREE.Group>(null);
   const leftKneeRef = useRef<THREE.Group>(null);
   const rightLegRef = useRef<THREE.Group>(null);
   const rightKneeRef = useRef<THREE.Group>(null);
   const leftArmRef = useRef<THREE.Group>(null);
   const rightArmRef = useRef<THREE.Group>(null);
+  const autoEnteredStairsRef = useRef(false);
 
   const companionRigsRef = useRef<CompanionRigMap | null>(null);
   const companionStatesRef = useRef(
@@ -662,13 +659,11 @@ function ForestFootpathWalkView({
 
     const groundY = sampleFootpathY(sim.posZ);
 
-    animateSrishtiWalkRig({
+    animateIshaanWalkRig({
       refs: {
         group: playerGroupRef.current,
         torso: playerTorsoRef.current,
         head: playerHeadRef.current,
-        hairTail: playerHairRef.current,
-        bag: playerBagRef.current,
         leftLeg: leftLegRef.current,
         leftKnee: leftKneeRef.current,
         rightLeg: rightLegRef.current,
@@ -752,6 +747,14 @@ function ForestFootpathWalkView({
     }
     camera.lookAt(scratch.smoothLook);
 
+    if (!autoEnteredStairsRef.current && sim.posZ <= -56.6) {
+      autoEnteredStairsRef.current = true;
+      sim.lastHotspotId = null;
+      onNearbyHotspotChange(null);
+      onEnterStaircase();
+      return;
+    }
+
     const hotspot = findNearestWalkHotspot(sim.posX, sim.posZ, [FOOTPATH_ARRIVAL_HOTSPOT]);
     const nextId = hotspot?.id ?? null;
     if (nextId !== sim.lastHotspotId) {
@@ -765,12 +768,10 @@ function ForestFootpathWalkView({
       <BaalKuwariFootpathEnvironment qualityProfile={qualityProfile} paused={paused} />
 
       <StylizedPlaceholderCharacter
-        characterVariant="srishti"
+        characterVariant="ishaan"
         groupRef={playerGroupRef}
         torsoRef={playerTorsoRef}
         headRef={playerHeadRef}
-        hairTailRef={playerHairRef}
-        bagRef={playerBagRef}
         leftLegRef={leftLegRef}
         leftKneeRef={leftKneeRef}
         rightLegRef={rightLegRef}
@@ -822,6 +823,7 @@ export function Scene08_BaalKuwariApproach(props: Scene08BaalKuwariApproachProps
         paused={props.paused}
         transitionToken={props.transitionToken}
         onNearbyHotspotChange={props.onNearbyHotspotChange}
+        onEnterStaircase={props.onEnterStaircase}
         onSceneReady={props.onSceneReady}
       />
     );

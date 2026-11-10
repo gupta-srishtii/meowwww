@@ -9,7 +9,7 @@ import {
   type FriendCompanionId,
 } from '@/components/canvas/characters/CompanionGroup';
 import { StylizedPlaceholderCharacter } from '@/components/canvas/characters/StylizedPlaceholderCharacter';
-import { animateSrishtiWalkRig } from '@/components/canvas/characters/animateCharacterRig';
+import { animateIshaanWalkRig } from '@/components/canvas/characters/animateCharacterRig';
 import {
   HOTEL_HOTSPOTS,
   HOTEL_OBSTACLES,
@@ -47,47 +47,47 @@ export interface Scene12HotelReturnProps {
 }
 
 const HOTEL_COMPANION_INIT: Record<FriendCompanionId, { x: number; z: number; yaw: number }> = {
-  ishaan: { x: -0.95, z: 2.35, yaw: 0.1 },
+  srishti: { x: -0.9, z: 2.25, yaw: 0.1 },
   friend_black_tee: { x: 1.05, z: 2.45, yaw: -0.15 },
   friend_plaid: { x: -0.35, z: 2.85, yaw: 0.05 },
 };
 
 const HOTEL_COMPANION_CONFIGS: readonly CompanionAgentConfig[] = [
   {
-    id: 'ishaan',
-    followAngleOffset: -0.42,
+    id: 'srishti',
+    followAngleOffset: -0.58,
     followDistance: 1.45,
     idlePose: 'chat_nod',
     gesturePhase: 0.3,
   },
   {
     id: 'friend_black_tee',
-    followAngleOffset: 0.42,
+    followAngleOffset: 0.62,
     followDistance: 1.55,
     idlePose: 'look_around',
     gesturePhase: 1.7,
   },
   {
     id: 'friend_plaid',
-    followAngleOffset: 0.06,
+    followAngleOffset: -0.12,
     followDistance: 1.95,
     idlePose: 'chat_nod',
     gesturePhase: 3.1,
   },
 ];
 
-// When Srishti rejoins her original group near the hotel stairs, Ishaan, Manish & Yash wave warmly from courtyard steps
+// Srishti walks over beside her waiting original group at the hotel stairs and turns to wave gently to Ishaan, Manish & Yash
 const FAREWELL_TARGETS: Record<FriendCompanionId, CompanionTargetSlot> = {
-  ishaan: { x: -1.15, z: -0.55, facingYaw: -0.75 },
-  friend_black_tee: { x: -2.0, z: -0.9, facingYaw: -0.8 },
-  friend_plaid: { x: -1.75, z: 0.15, facingYaw: -0.65 },
+  srishti: { x: 2.05, z: -1.15, facingYaw: -0.85 },
+  friend_black_tee: { x: -1.35, z: -0.45, facingYaw: -0.78 },
+  friend_plaid: { x: -1.75, z: 0.25, facingYaw: -0.85 },
 };
 
 const CAM_DISTANCE = 5.1;
 
 /**
  * Scene 12 — Rishikesh Hotel Return, Srishti Rejoining Original Friends & Gentle Farewell.
- * Depicts the shared hotel courtyard (Srishti's 1st floor / Ishaan & friends' ground floor)
+ * Playable in third-person as Ishaan alongside Srishti, Manish & Yash at the hotel courtyard
  * without depicting a bus-stand dropoff.
  */
 export function Scene12_HotelReturn({
@@ -112,8 +112,6 @@ export function Scene12_HotelReturn({
   const playerGroupRef = useRef<THREE.Group>(null);
   const playerTorsoRef = useRef<THREE.Group>(null);
   const playerHeadRef = useRef<THREE.Group>(null);
-  const playerHairRef = useRef<THREE.Group>(null);
-  const playerBagRef = useRef<THREE.Group>(null);
   const leftLegRef = useRef<THREE.Group>(null);
   const leftKneeRef = useRef<THREE.Group>(null);
   const rightLegRef = useRef<THREE.Group>(null);
@@ -200,13 +198,11 @@ export function Scene12_HotelReturn({
     const strideRatio = THREE.MathUtils.clamp(walkSpeed / WALK_SPEED_MPS, 0, 1);
     if (strideRatio > 0.03) sim.stridePhase += moveDist * 3.8;
 
-    animateSrishtiWalkRig({
+    animateIshaanWalkRig({
       refs: {
         group: playerGroupRef.current,
         torso: playerTorsoRef.current,
         head: playerHeadRef.current,
-        hairTail: playerHairRef.current,
-        bag: playerBagRef.current,
         leftLeg: leftLegRef.current,
         leftKnee: leftKneeRef.current,
         rightLeg: rightLegRef.current,
@@ -248,8 +244,8 @@ export function Scene12_HotelReturn({
           agent,
           config: HOTEL_COMPANION_CONFIGS[i],
           refs: rig,
-          lookTargetX: sim.posX,
-          lookTargetZ: sim.posZ,
+          lookTargetX: agent.id === 'srishti' && farewellDone ? sim.posX : 2.1,
+          lookTargetZ: agent.id === 'srishti' && farewellDone ? sim.posZ : -1.2,
           elapsed: t,
           delta,
           idlePoseOverride: farewellDone ? 'group_wave' : undefined,
@@ -300,12 +296,10 @@ export function Scene12_HotelReturn({
       />
 
       <StylizedPlaceholderCharacter
-        characterVariant="srishti"
+        characterVariant="ishaan"
         groupRef={playerGroupRef}
         torsoRef={playerTorsoRef}
         headRef={playerHeadRef}
-        hairTailRef={playerHairRef}
-        bagRef={playerBagRef}
         leftLegRef={leftLegRef}
         leftKneeRef={leftKneeRef}
         rightLegRef={rightLegRef}
@@ -320,4 +314,3 @@ export function Scene12_HotelReturn({
     </>
   );
 }
-

@@ -33,6 +33,17 @@ export interface HumanRigRefs {
 
 export type SrishtiRigRefs = HumanRigRefs;
 
+export interface ConnectedHandTarget {
+  arm: 'left' | 'right';
+  worldPoint: THREE.Vector3;
+  /** `0..1` blend from natural pose toward exact hand contact at `worldPoint`. */
+  weight: number;
+  /** Distance from character spine to shoulder pivot (`0.205` Ishaan, `0.152` Srishti). */
+  shoulderOffsetX?: number;
+  /** Height of shoulder pivot above group feet (`1.26` Ishaan, `1.135` Srishti). */
+  shoulderHeightY?: number;
+}
+
 export interface CharacterRigFrameParams {
   refs: HumanRigRefs;
   posX: number;
@@ -45,9 +56,11 @@ export interface CharacterRigFrameParams {
   idlePose?: CharacterIdlePose;
   groundY?: number;
   climbingStairs?: boolean;
+  downhillJogging?: boolean;
   torsoBaseY?: number;
   headTargetYawOffset?: number;
   armGesturePhase?: number;
+  connectedHandTarget?: ConnectedHandTarget | null;
   reducedMotion?: boolean;
 }
 
@@ -85,6 +98,57 @@ export function computeRelativeHeadLookYaw(
  * - Raising arms/forearms forward/upward toward mouth or chest is positive X rotation (`x > 0`).
  * - Bowing torso/head downward is negative X (`x < 0`); leaning back laughing is positive X (`x > 0`).
  */
+function applyConnectedArmTarget(
+  posX: number,
+  groundY: number,
+  posZ: number,
+  facingYaw: number,
+  leftArm: THREE.Group | null,
+  rightArm: THREE.Group | null,
+  rightForearm: THREE.Group | null | undefined,
+  target: ConnectedHandTarget
+): void {
+  const w = THREE.MathUtils.clamp(target.weight, 0, 1);
+  if (w <= 0.01) return;
+
+  const isLeft = target.arm === 'left';
+  const armGroup = isLeft ? leftArm : rightArm;
+  if (!armGroup) return;
+
+  const shoulderX = (isLeft ? -1 : 1) * (target.shoulderOffsetX ?? 0.18);
+  const shoulderY = groundY + (target.shoulderHeightY ?? 1.2);
+
+  const cosY = Math.cos(facingYaw);
+  const sinY = Math.sin(facingYaw);
+  // Rotate local `(shoulderX, 0)` into world coordinates
+  const swx = posX + shoulderX * cosY;
+  const swz = posZ - shoulderX * sinY;
+
+  const dx = target.worldPoint.x - swx;
+  const dy = target.worldPoint.y - shoulderY;
+  const dz = target.worldPoint.z - swz;
+
+  // Inverse rotate `D` back into character local space (`rotateY(-facingYaw)`)
+  const lx = dx * cosY - dz * sinY;
+  const ly = dy;
+  const lz = dx * sinY + dz * cosY;
+  const len = Math.hypot(lx, ly, lz);
+  if (len < 1e-4) return;
+
+  const ux = lx / len;
+  const uy = ly / len;
+  const uz = lz / len;
+
+  const desiredZ = Math.asin(THREE.MathUtils.clamp(ux, -0.94, 0.94));
+  const desiredX = Math.atan2(-uz, -uy);
+
+  armGroup.rotation.x = THREE.MathUtils.lerp(armGroup.rotation.x, desiredX, w);
+  armGroup.rotation.z = THREE.MathUtils.lerp(armGroup.rotation.z, desiredZ, w);
+  if (!isLeft && rightForearm) {
+    rightForearm.rotation.x = THREE.MathUtils.lerp(rightForearm.rotation.x, 0.14, w);
+  }
+}
+
 export function animateCharacterRig({
   refs,
   posX,
@@ -97,9 +161,11 @@ export function animateCharacterRig({
   idlePose = 'default',
   groundY = 0,
   climbingStairs = false,
+  downhillJogging = false,
   torsoBaseY = 0.78,
   headTargetYawOffset = 0,
   armGesturePhase = 0,
+  connectedHandTarget = null,
   reducedMotion = false,
 }: CharacterRigFrameParams): void {
   const {
@@ -123,20 +189,21 @@ export function animateCharacterRig({
   group.rotation.y = facingYaw;
 
   if (strideRatio > 0.03) {
-    const legGain = climbingStairs ? 1.24 : 1.0;
-    const kneeGain = climbingStairs ? 0.78 : 0.55;
-    const swing = Math.sin(stridePhase) * 0.46 * strideRatio * legGain;
-    const leftKneeBend = -Math.max(0, Math.sin(stridePhase + 0.5)) * kneeGain * strideRatio;
+    const legGain = downhillJogging ? 1.15 : climbingStairs ? 1.24 : 1.0;
+    const kneeGain = downhillJogging ? 0.88 : climbingStairs ? 0.78 : 0.55;
+    const swing = Math.sin(stridePhase) * 0.44 * Math.min(1.18, strideRatio) * legGain;
+    const leftKneeBend =
+      -Math.max(0, Math.sin(stridePhase + 0.5)) * kneeGain * Math.min(1.15, strideRatio);
     const rightKneeBend =
-      -Math.max(0, Math.sin(stridePhase + Math.PI + 0.5)) * kneeGain * strideRatio;
-    const armSwing = swing * 0.68;
+      -Math.max(0, Math.sin(stridePhase + Math.PI + 0.5)) *
+      kneeGain *
+      Math.min(1.15, strideRatio);
+    const armSwing = swing * (downhillJogging ? 0.85 : 0.68);
+    const verticalBounceAmp = downhillJogging ? 0.048 : climbingStairs ? 0.042 : 0.028;
 
     group.position.y = THREE.MathUtils.damp(
       group.position.y,
-      groundY +
-        (reducedMotion
-          ? 0
-          : Math.abs(Math.sin(stridePhase)) * (climbingStairs ? 0.042 : 0.028) * strideRatio),
+      groundY + (reducedMotion ? 0 : Math.abs(Math.sin(stridePhase)) * verticalBounceAmp * Math.min(1, strideRatio)),
       14,
       delta
     );
@@ -153,34 +220,54 @@ export function animateCharacterRig({
       rightArm.rotation.z = THREE.MathUtils.damp(rightArm.rotation.z, 0.08, 12, delta);
     }
     if (rightForearm) {
-      rightForearm.rotation.x = THREE.MathUtils.damp(rightForearm.rotation.x, 0.14, 12, delta);
+      rightForearm.rotation.x = THREE.MathUtils.damp(
+        rightForearm.rotation.x,
+        downhillJogging ? 0.52 : 0.14,
+        12,
+        delta
+      );
     }
     if (torso) {
       torso.position.y = reducedMotion
         ? torsoBaseY
-        : torsoBaseY + Math.abs(Math.cos(stridePhase)) * 0.015;
+        : torsoBaseY + Math.abs(Math.cos(stridePhase)) * (downhillJogging ? 0.022 : 0.015);
+      const torsoPitch = downhillJogging ? 0.05 : climbingStairs ? -0.11 : -0.03;
       torso.rotation.x = THREE.MathUtils.damp(
         torso.rotation.x,
-        (climbingStairs ? -0.11 : -0.03) * strideRatio,
+        torsoPitch * Math.min(1, strideRatio),
         10,
         delta
       );
-      torso.rotation.y = reducedMotion ? 0 : Math.cos(stridePhase) * 0.05 * strideRatio;
+      torso.rotation.y = reducedMotion ? 0 : Math.cos(stridePhase) * 0.05 * Math.min(1, strideRatio);
       torso.rotation.z = THREE.MathUtils.damp(torso.rotation.z, 0, 10, delta);
     }
     if (bag) {
       bag.rotation.z = reducedMotion
         ? 0.08
-        : 0.09 + Math.sin(stridePhase) * 0.05 * strideRatio;
-      bag.rotation.x = reducedMotion ? 0 : Math.cos(stridePhase) * 0.06 * strideRatio;
+        : 0.09 + Math.sin(stridePhase) * 0.05 * Math.min(1, strideRatio);
+      bag.rotation.x = reducedMotion ? 0 : Math.cos(stridePhase) * 0.06 * Math.min(1, strideRatio);
     }
     if (hairTail) {
-      hairTail.rotation.x = 0.14 + strideRatio * 0.09;
-      hairTail.rotation.z = reducedMotion ? 0 : Math.sin(stridePhase) * 0.06 * strideRatio;
+      hairTail.rotation.x = (downhillJogging ? 0.22 : 0.14) + Math.min(1, strideRatio) * 0.09;
+      hairTail.rotation.z = reducedMotion
+        ? 0
+        : Math.sin(stridePhase) * 0.06 * Math.min(1, strideRatio);
     }
     if (head) {
-      head.rotation.y = THREE.MathUtils.damp(head.rotation.y, 0, 10, delta);
+      head.rotation.y = THREE.MathUtils.damp(head.rotation.y, headTargetYawOffset, 10, delta);
       head.rotation.x = THREE.MathUtils.damp(head.rotation.x, 0, 10, delta);
+    }
+    if (connectedHandTarget) {
+      applyConnectedArmTarget(
+        posX,
+        groundY,
+        posZ,
+        facingYaw,
+        leftArm,
+        rightArm,
+        rightForearm,
+        connectedHandTarget
+      );
     }
     return;
   }
@@ -362,10 +449,32 @@ export function animateCharacterRig({
     head.rotation.y = THREE.MathUtils.damp(head.rotation.y, headLookY, 7, delta);
     head.rotation.x = THREE.MathUtils.damp(head.rotation.x, targetHeadX, 6.5, delta);
   }
+  if (connectedHandTarget) {
+    applyConnectedArmTarget(
+      posX,
+      groundY,
+      posZ,
+      facingYaw,
+      leftArm,
+      rightArm,
+      rightForearm,
+      connectedHandTarget
+    );
+  }
 }
 
 /**
- * Srishti walk + idle/seated wrapper preserving existing callers across scenes.
+ * Ishaan third-person playable protagonist rig wrapper (`torsoBaseY = 0.82`).
+ */
+export function animateIshaanWalkRig(params: WalkRigFrameParams): void {
+  animateCharacterRig({
+    ...params,
+    torsoBaseY: 0.82,
+  });
+}
+
+/**
+ * Srishti walk + idle/seated wrapper (`torsoBaseY = 0.78`).
  */
 export function animateSrishtiWalkRig(params: WalkRigFrameParams): void {
   animateCharacterRig({

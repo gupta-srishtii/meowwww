@@ -10,8 +10,8 @@ import {
 } from '@/components/canvas/characters/CompanionGroup';
 import { StylizedPlaceholderCharacter } from '@/components/canvas/characters/StylizedPlaceholderCharacter';
 import {
-  animateSrishtiWalkRig,
-  type SrishtiIdlePose,
+  animateIshaanWalkRig,
+  type CharacterIdlePose,
 } from '@/components/canvas/characters/animateCharacterRig';
 import {
   NEELKANTH_HOTSPOTS,
@@ -60,17 +60,17 @@ function yawTowardTarget(fromX: number, fromZ: number, targetX: number, targetZ:
   return Math.atan2(-(targetX - fromX), -(targetZ - fromZ));
 }
 
-// Start together beside Srishti in the outer bazaar entrance
+// Start together beside Ishaan in the outer bazaar entrance
 const NEELKANTH_COMPANION_INIT: Record<FriendCompanionId, { x: number; z: number; yaw: number }> =
   {
-    ishaan: { x: -0.95, z: 11.45, yaw: 0.12 },
+    srishti: { x: -0.95, z: 11.45, yaw: 0.12 },
     friend_black_tee: { x: 1.35, z: 11.55, yaw: -0.18 },
     friend_plaid: { x: -0.55, z: 12.25, yaw: 0.08 },
   };
 
 const NEELKANTH_COMPANION_CONFIGS: readonly CompanionAgentConfig[] = [
   {
-    id: 'ishaan',
+    id: 'srishti',
     followAngleOffset: -0.42,
     followDistance: 1.45,
     idlePose: 'chat_nod',
@@ -93,7 +93,7 @@ const NEELKANTH_COMPANION_CONFIGS: readonly CompanionAgentConfig[] = [
 ];
 
 const PRAYER_TARGETS: Record<FriendCompanionId, CompanionTargetSlot> = {
-  ishaan: {
+  srishti: {
     x: 1.28,
     z: -2.95,
     facingYaw: yawTowardTarget(1.28, -2.95, 0, -6.2),
@@ -111,7 +111,7 @@ const PRAYER_TARGETS: Record<FriendCompanionId, CompanionTargetSlot> = {
 };
 
 const SCOOTER_RETURN_TARGETS: Record<FriendCompanionId, CompanionTargetSlot> = {
-  ishaan: { x: 1.45, z: 12.85, facingYaw: Math.PI },
+  srishti: { x: 1.45, z: 12.85, facingYaw: Math.PI },
   friend_black_tee: { x: -0.95, z: 12.85, facingYaw: Math.PI },
   friend_plaid: { x: -1.85, z: 12.95, facingYaw: Math.PI },
 };
@@ -147,8 +147,6 @@ export function Scene07_NeelkanthTemple({
   const playerGroupRef = useRef<THREE.Group>(null);
   const playerTorsoRef = useRef<THREE.Group>(null);
   const playerHeadRef = useRef<THREE.Group>(null);
-  const playerHairRef = useRef<THREE.Group>(null);
-  const playerBagRef = useRef<THREE.Group>(null);
   const leftLegRef = useRef<THREE.Group>(null);
   const leftKneeRef = useRef<THREE.Group>(null);
   const rightLegRef = useRef<THREE.Group>(null);
@@ -230,7 +228,7 @@ export function Scene07_NeelkanthTemple({
     const t = state.clock.elapsedTime;
     let strideRatio = 0;
     let walkSpeed = 0;
-    let idlePose: SrishtiIdlePose = 'default';
+    let idlePose: CharacterIdlePose = 'default';
 
     if (activeDarshanPan) {
       // Align Srishti peacefully in front of Nandi facing the sanctum Shivalinga (`-Z`)
@@ -255,14 +253,12 @@ export function Scene07_NeelkanthTemple({
       }
     }
 
-    // 1. Srishti walk + genuine forward bow & folded-hands Namaste
-    animateSrishtiWalkRig({
+    // 1. Ishaan walk + genuine forward bow & folded-hands Namaste
+    animateIshaanWalkRig({
       refs: {
         group: playerGroupRef.current,
         torso: playerTorsoRef.current,
         head: playerHeadRef.current,
-        hairTail: playerHairRef.current,
-        bag: playerBagRef.current,
         leftLeg: leftLegRef.current,
         leftKnee: leftKneeRef.current,
         rightLeg: rightLegRef.current,
@@ -414,14 +410,12 @@ export function Scene07_NeelkanthTemple({
         capturedPolaroid={capturedPolaroid}
       />
 
-      {/* Playable Srishti avatar entering vibrant market passage toward colorful temple gate */}
+      {/* Playable Ishaan avatar entering vibrant market passage toward colorful temple gate */}
       <StylizedPlaceholderCharacter
-        characterVariant="srishti"
+        characterVariant="ishaan"
         groupRef={playerGroupRef}
         torsoRef={playerTorsoRef}
         headRef={playerHeadRef}
-        hairTailRef={playerHairRef}
-        bagRef={playerBagRef}
         leftLegRef={leftLegRef}
         leftKneeRef={leftKneeRef}
         rightLegRef={rightLegRef}

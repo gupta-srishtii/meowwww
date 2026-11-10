@@ -65,6 +65,7 @@ export interface ProgressStoreState {
   mountainRoadSegment: MountainRoadSegmentId;
   roadSubStage: MountainRoadSubStage;
   baalKuwariSubStage: BaalKuwariSubStage;
+  baalKuwariStairDirection: 'ascent' | 'descent';
   roadResumeDistance: number;
   activeNarration: ActiveNarrationState | null;
 
@@ -106,6 +107,7 @@ export interface ProgressStoreState {
   setMountainRoadSegment: (segment: MountainRoadSegmentId) => void;
   setRoadSubStage: (subStage: MountainRoadSubStage) => void;
   setBaalKuwariSubStage: (subStage: BaalKuwariSubStage) => void;
+  setBaalKuwariStairDirection: (direction: 'ascent' | 'descent') => void;
   setRoadResumeDistance: (distance: number) => void;
   setUserPaused: (paused: boolean) => void;
   setTabHiddenPaused: (paused: boolean) => void;
@@ -149,6 +151,7 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
   mountainRoadSegment: 'to_dhaba',
   roadSubStage: 'driving',
   baalKuwariSubStage: 'driving',
+  baalKuwariStairDirection: 'ascent',
   roadResumeDistance: LEAD_START_DISTANCE,
   activeNarration: null,
 
@@ -383,6 +386,7 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
         )
       ),
     })),
+  setBaalKuwariStairDirection: (direction) => set({ baalKuwariStairDirection: direction }),
   setRoadResumeDistance: (distance) =>
     set({ roadResumeDistance: Math.max(LEAD_START_DISTANCE, distance) }),
 
