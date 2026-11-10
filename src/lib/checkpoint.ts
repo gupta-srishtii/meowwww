@@ -69,7 +69,8 @@ export function validateCheckpointData(raw: unknown): CheckpointData | null {
     candidate.mountainRoadSegment !== undefined &&
     candidate.mountainRoadSegment !== 'to_dhaba' &&
     candidate.mountainRoadSegment !== 'to_neelkanth' &&
-    candidate.mountainRoadSegment !== 'to_baalkuwari'
+    candidate.mountainRoadSegment !== 'to_baalkuwari' &&
+    candidate.mountainRoadSegment !== 'to_hotel_return'
   ) {
     return null;
   }

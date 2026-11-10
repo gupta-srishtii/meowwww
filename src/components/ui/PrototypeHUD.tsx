@@ -23,6 +23,7 @@ export interface PrototypeHUDProps {
   onContinueToDhaba?: () => void;
   onEnterNeelkanthTemple?: () => void;
   onEnterBaalKuwariMaggi?: () => void;
+  onEnterHotelCourtyard?: () => void;
   onReplayPreDhabaSegment?: () => void;
   telemetryRefs: TelemetryRefs;
 }
@@ -45,6 +46,7 @@ export function PrototypeHUD({
   onContinueToDhaba,
   onEnterNeelkanthTemple,
   onEnterBaalKuwariMaggi,
+  onEnterHotelCourtyard,
   onReplayPreDhabaSegment,
   telemetryRefs,
 }: PrototypeHUDProps) {
@@ -57,13 +59,16 @@ export function PrototypeHUD({
       arrived && roadSegment === 'to_neelkanth' && Boolean(onEnterNeelkanthTemple);
     const canEnterBaalKuwariMaggi =
       arrived && roadSegment === 'to_baalkuwari' && Boolean(onEnterBaalKuwariMaggi);
+    const canEnterHotel =
+      arrived && roadSegment === 'to_hotel_return' && Boolean(onEnterHotelCourtyard);
 
     if (
       !canEnterViewpoint &&
       !canPullOverViewpoint &&
       !canEnterDhaba &&
       !canEnterNeelkanth &&
-      !canEnterBaalKuwariMaggi
+      !canEnterBaalKuwariMaggi &&
+      !canEnterHotel
     ) {
       return;
     }
@@ -77,7 +82,11 @@ export function PrototypeHUD({
       if (
         event.code === 'KeyE' ||
         (event.code === 'Enter' &&
-          (canEnterViewpoint || canEnterDhaba || canEnterNeelkanth || canEnterBaalKuwariMaggi))
+          (canEnterViewpoint ||
+            canEnterDhaba ||
+            canEnterNeelkanth ||
+            canEnterBaalKuwariMaggi ||
+            canEnterHotel))
       ) {
         event.preventDefault();
         if (canEnterViewpoint) {
@@ -88,6 +97,8 @@ export function PrototypeHUD({
           onEnterNeelkanthTemple?.();
         } else if (canEnterBaalKuwariMaggi) {
           onEnterBaalKuwariMaggi?.();
+        } else if (canEnterHotel) {
+          onEnterHotelCourtyard?.();
         } else if (canPullOverViewpoint) {
           onPullOverAtViewpoint?.();
         }
@@ -106,6 +117,7 @@ export function PrototypeHUD({
     onContinueToDhaba,
     onEnterNeelkanthTemple,
     onEnterBaalKuwariMaggi,
+    onEnterHotelCourtyard,
     onPullOverAtViewpoint,
     onEnterViewpoint,
   ]);
@@ -118,7 +130,14 @@ export function PrototypeHUD({
             ? 'Rishikesh Mountain Highway'
             : roadSegment === 'to_baalkuwari'
               ? 'Mountain Route to Baal Kuwari'
-              : 'Forest Road to Neelkanth'
+              : roadSegment === 'to_hotel_return'
+                ? 'Evening Safe Return to Rishikesh'
+                : 'Forest Road to Neelkanth'
+        }
+        subtitle={
+          roadSegment === 'to_hotel_return'
+            ? 'Evening bus schedule · Steady & safe return with Scooter 2'
+            : undefined
         }
         polaroidCount={polaroidCount}
         audioMuted={audioMuted}
@@ -263,6 +282,33 @@ export function PrototypeHUD({
                       className="rounded-xl bg-amber-400 px-4 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-amber-300"
                     >
                       Stop for Pre-Climb Maggi (E) →
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={onResetRide}
+                    className="rounded-xl border border-slate-600 bg-slate-800 px-3.5 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-slate-700"
+                  >
+                    Ride Again
+                  </button>
+                </div>
+              </>
+            ) : roadSegment === 'to_hotel_return' ? (
+              <>
+                <p className="text-xs font-semibold tracking-[0.16em] text-amber-300 uppercase">
+                  Rishikesh Hotel Forecourt
+                </p>
+                <p className="text-xs text-slate-300">
+                  Made it back smoothly before dusk. Park beside the entrance to rejoin your group.
+                </p>
+                <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
+                  {onEnterHotelCourtyard && (
+                    <button
+                      type="button"
+                      onClick={onEnterHotelCourtyard}
+                      className="rounded-xl bg-amber-400 px-4 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-amber-300"
+                    >
+                      Enter Hotel Courtyard (E) →
                     </button>
                   )}
                   <button

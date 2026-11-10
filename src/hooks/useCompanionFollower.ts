@@ -257,6 +257,7 @@ export function applyCompanionRigFrame({
   elapsed,
   delta,
   groundY = 0,
+  climbingStairs = false,
   idlePoseOverride,
   forcePrayBow = false,
   reducedMotion = false,
@@ -269,6 +270,7 @@ export function applyCompanionRigFrame({
   elapsed: number;
   delta: number;
   groundY?: number;
+  climbingStairs?: boolean;
   idlePoseOverride?: CharacterIdlePose;
   forcePrayBow?: boolean;
   reducedMotion?: boolean;
@@ -300,6 +302,7 @@ export function applyCompanionRigFrame({
     elapsed,
     delta,
     groundY,
+    climbingStairs,
     idlePose: resolvedIdle,
     torsoBaseY: 0.82,
     headTargetYawOffset,

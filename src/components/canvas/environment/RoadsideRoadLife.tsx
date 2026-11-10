@@ -120,6 +120,28 @@ const SHACKS_BY_SEGMENT: Record<MountainRoadSegmentId, readonly ShackSpec[]> = {
       showParkedScooter: true,
     },
   ],
+  to_hotel_return: [
+    {
+      id: 'road-chai-ret-1',
+      dist: 88,
+      variant: 'refreshments_kiosk',
+      keeperShirt: '#e2e8f0',
+      guestAColor: '#475569',
+      guestBColor: '#334155',
+      showSecondCustomer: true,
+      showParkedScooter: true,
+    },
+    {
+      id: 'road-chai-ret-2',
+      dist: 196,
+      variant: 'chai_tapri',
+      keeperShirt: '#f59e0b',
+      guestAColor: '#0f766e',
+      guestBColor: '#64748b',
+      showSecondCustomer: false,
+      showParkedScooter: false,
+    },
+  ],
 };
 
 // Strictly positioned on outer hillside berm (`lateral <= -4.18m`), clear of all traffic lanes and stalls
@@ -208,6 +230,18 @@ const WALKERS_BY_SEGMENT: Record<MountainRoadSegmentId, readonly WalkerSpec[]> =
       phaseOffset: 2.4,
       shirtColor: '#c2410c',
       pantsColor: '#334155',
+    },
+  ],
+  to_hotel_return: [
+    {
+      id: 'walker-ret-1',
+      centerDist: 136,
+      lateral: -4.18,
+      spanMeters: 7.0,
+      speedMps: 1.0,
+      phaseOffset: 1.3,
+      shirtColor: '#475569',
+      pantsColor: '#1e293b',
     },
   ],
 };

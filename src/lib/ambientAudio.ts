@@ -11,6 +11,7 @@ export type AmbientAudioMode =
   | 'neelkanth'
   | 'baalkuwari_stairs'
   | 'baalkuwari_temple'
+  | 'hotel_evening'
   | 'off';
 
 interface AmbientState {
@@ -168,6 +169,10 @@ class AmbientAudioController {
       this.windFilter.frequency.setTargetAtTime(300, now, 0.2);
       this.windGain.gain.setTargetAtTime(0.048, now, 0.2);
       this.simmerGain.gain.setTargetAtTime(0.012, now, 0.2);
+    } else if (this.state.mode === 'hotel_evening') {
+      this.windFilter.frequency.setTargetAtTime(220, now, 0.2);
+      this.windGain.gain.setTargetAtTime(0.028, now, 0.2);
+      this.simmerGain.gain.setTargetAtTime(0.014, now, 0.2);
     }
   }
 

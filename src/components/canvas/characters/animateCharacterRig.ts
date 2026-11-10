@@ -10,7 +10,9 @@ export type CharacterIdlePose =
   | 'sit_ready'
   | 'sit_eat'
   | 'sit_sip'
-  | 'sit_laugh';
+  | 'sit_laugh'
+  | 'hand_assist_reach'
+  | 'cheer_wave';
 
 export type SrishtiIdlePose = CharacterIdlePose;
 
@@ -42,6 +44,7 @@ export interface CharacterRigFrameParams {
   delta: number;
   idlePose?: CharacterIdlePose;
   groundY?: number;
+  climbingStairs?: boolean;
   torsoBaseY?: number;
   headTargetYawOffset?: number;
   armGesturePhase?: number;
@@ -93,6 +96,7 @@ export function animateCharacterRig({
   delta,
   idlePose = 'default',
   groundY = 0,
+  climbingStairs = false,
   torsoBaseY = 0.78,
   headTargetYawOffset = 0,
   armGesturePhase = 0,
@@ -119,15 +123,20 @@ export function animateCharacterRig({
   group.rotation.y = facingYaw;
 
   if (strideRatio > 0.03) {
-    const swing = Math.sin(stridePhase) * 0.46 * strideRatio;
-    const leftKneeBend = -Math.max(0, Math.sin(stridePhase + 0.5)) * 0.55 * strideRatio;
+    const legGain = climbingStairs ? 1.24 : 1.0;
+    const kneeGain = climbingStairs ? 0.78 : 0.55;
+    const swing = Math.sin(stridePhase) * 0.46 * strideRatio * legGain;
+    const leftKneeBend = -Math.max(0, Math.sin(stridePhase + 0.5)) * kneeGain * strideRatio;
     const rightKneeBend =
-      -Math.max(0, Math.sin(stridePhase + Math.PI + 0.5)) * 0.55 * strideRatio;
+      -Math.max(0, Math.sin(stridePhase + Math.PI + 0.5)) * kneeGain * strideRatio;
     const armSwing = swing * 0.68;
 
     group.position.y = THREE.MathUtils.damp(
       group.position.y,
-      groundY + (reducedMotion ? 0 : Math.abs(Math.sin(stridePhase)) * 0.028 * strideRatio),
+      groundY +
+        (reducedMotion
+          ? 0
+          : Math.abs(Math.sin(stridePhase)) * (climbingStairs ? 0.042 : 0.028) * strideRatio),
       14,
       delta
     );
@@ -150,7 +159,12 @@ export function animateCharacterRig({
       torso.position.y = reducedMotion
         ? torsoBaseY
         : torsoBaseY + Math.abs(Math.cos(stridePhase)) * 0.015;
-      torso.rotation.x = THREE.MathUtils.damp(torso.rotation.x, -0.03 * strideRatio, 10, delta);
+      torso.rotation.x = THREE.MathUtils.damp(
+        torso.rotation.x,
+        (climbingStairs ? -0.11 : -0.03) * strideRatio,
+        10,
+        delta
+      );
       torso.rotation.y = reducedMotion ? 0 : Math.cos(stridePhase) * 0.05 * strideRatio;
       torso.rotation.z = THREE.MathUtils.damp(torso.rotation.z, 0, 10, delta);
     }
@@ -229,6 +243,22 @@ export function animateCharacterRig({
     targetRightArmX = 0.55;
     targetRightArmZ = 0.42;
     targetTorsoZ = 0.06;
+  } else if (idlePose === 'hand_assist_reach') {
+    const reachPulse = reducedMotion ? 0 : Math.sin(elapsed * 2.6 + armGesturePhase) * 0.06;
+    targetLeftArmX = -0.12;
+    targetRightArmX = 0.88 + reachPulse;
+    targetRightArmZ = 0.24;
+    targetForearmX = 0.42;
+    targetTorsoX = -0.14;
+    targetTorsoY = -0.12;
+    targetHeadX = -0.08;
+  } else if (idlePose === 'cheer_wave') {
+    const waveAngle = reducedMotion ? 0 : Math.sin(elapsed * 5.2 + armGesturePhase) * 0.18;
+    targetLeftArmX = 0.15;
+    targetRightArmX = 0.72;
+    targetRightArmZ = 0.52 + waveAngle;
+    targetForearmX = 0.58;
+    targetTorsoZ = 0.05;
   } else if (idlePose === 'sit_ready') {
     targetLeftArmX = 0.45;
     targetLeftArmZ = -0.06;

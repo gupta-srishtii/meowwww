@@ -14,7 +14,9 @@ export type ChapterKey =
   | 'baal_kuwari_road'
   | 'baal_kuwari_maggi'
   | 'baal_kuwari_stairs'
-  | 'baal_kuwari_temple';
+  | 'baal_kuwari_temple'
+  | 'evening_return'
+  | 'hotel_farewell';
 
 export interface StoryChapterItem {
   key: ChapterKey;
@@ -98,9 +100,9 @@ export const PHASE2_STORY_CHAPTERS: readonly StoryChapterItem[] = [
     key: 'baal_kuwari_stairs',
     rank: 7,
     title: 'Baal Kuwari: The ~400 Stairs',
-    subtitle: 'Climbing forested mountain steps together through four scenic flights',
+    subtitle: 'Climbing forested steps together as Ishaan helps along the steep flights',
     targetSceneId: 9,
-    polaroidIds: [],
+    polaroidIds: ['scene09_stairs_landing'],
   },
   {
     key: 'baal_kuwari_temple',
@@ -110,11 +112,28 @@ export const PHASE2_STORY_CHAPTERS: readonly StoryChapterItem[] = [
     targetSceneId: 10,
     polaroidIds: ['scene10_baalkuwari'],
   },
+  {
+    key: 'evening_return',
+    rank: 9,
+    title: 'Evening Safe Return to Rishikesh',
+    subtitle: 'Cruising down cleanly & safely in golden-hour light before the evening bus',
+    targetSceneId: 11,
+    targetSegment: 'to_hotel_return',
+    polaroidIds: [],
+  },
+  {
+    key: 'hotel_farewell',
+    rank: 10,
+    title: 'Hotel Return & Gentle Farewell',
+    subtitle: 'Returning to the shared Rishikesh hotel courtyard as Srishti rejoins her group',
+    targetSceneId: 12,
+    polaroidIds: ['scene12_hotel_farewell'],
+  },
 ];
 
 export const UPCOMING_CHAPTER_PREVIEW = {
-  title: 'Safe Evening Return & Hotel Farewell',
-  subtitle: 'Return ride & reunion arriving in next checkpoint',
+  title: 'Bhai Dooj Tilak · Separate Later Epilogue',
+  subtitle: 'Awaits next phase (separate post-trip occasion)',
 } as const;
 
 export function inferChapterRank(
@@ -125,9 +144,13 @@ export function inferChapterRank(
   baalKuwariSubStage: BaalKuwariSubStage = 'driving'
 ): number {
   let rank = 0;
-  if (sceneId === 10 || polaroids.includes('scene10_baalkuwari')) {
+  if (sceneId === 12 || polaroids.includes('scene12_hotel_farewell')) {
+    rank = 10;
+  } else if (sceneId === 11 || (sceneId === 5 && segment === 'to_hotel_return')) {
+    rank = 9;
+  } else if (sceneId === 10 || polaroids.includes('scene10_baalkuwari')) {
     rank = 8;
-  } else if (sceneId === 9) {
+  } else if (sceneId === 9 || polaroids.includes('scene09_stairs_landing')) {
     rank = 7;
   } else if (sceneId === 8 && baalKuwariSubStage === 'maggi_stop') {
     rank = 6;
@@ -155,6 +178,8 @@ export function getActiveChapterKey(
   subStage: MountainRoadSubStage,
   baalKuwariSubStage: BaalKuwariSubStage = 'driving'
 ): ChapterKey {
+  if (sceneId === 12) return 'hotel_farewell';
+  if (sceneId === 11) return 'evening_return';
   if (sceneId === 10) return 'baal_kuwari_temple';
   if (sceneId === 9) return 'baal_kuwari_stairs';
   if (sceneId === 8) {
@@ -164,6 +189,7 @@ export function getActiveChapterKey(
   if (sceneId === 6) return 'maggi_chai_stop';
   if (segment === 'to_neelkanth') return 'neelkanth_road';
   if (segment === 'to_baalkuwari') return 'baal_kuwari_road';
+  if (segment === 'to_hotel_return') return 'evening_return';
   if (subStage === 'viewpoint_walk') return 'scenic_viewpoint';
   return 'mountain_road';
 }

@@ -9,7 +9,10 @@ import {
   type FriendCompanionId,
 } from '@/components/canvas/characters/CompanionGroup';
 import { StylizedPlaceholderCharacter } from '@/components/canvas/characters/StylizedPlaceholderCharacter';
-import { animateSrishtiWalkRig } from '@/components/canvas/characters/animateCharacterRig';
+import {
+  animateSrishtiWalkRig,
+  type CharacterIdlePose,
+} from '@/components/canvas/characters/animateCharacterRig';
 import {
   BAAL_KUWARI_TOTAL_STEPS,
   BaalKuwariStairsEnvironment,
@@ -26,6 +29,7 @@ import {
   createCompanionStates,
   stepGroupCompanions,
   type CompanionAgentConfig,
+  type CompanionTargetSlot,
 } from '@/hooks/useCompanionFollower';
 import {
   WALK_SPEED_MPS,
@@ -45,8 +49,11 @@ export interface Scene09BaalKuwariStairsProps {
   transitionToken: number;
   simulateMountFailure?: boolean;
   initialStepCount: number;
+  capturedLandingPolaroid: boolean;
+  assistPulseNonce: number;
   onStepCountChange: (steps: number) => void;
   onReachHalfwayMilestone: () => void;
+  onAssistActiveChange: (active: boolean) => void;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onSceneReady: (token: number, sceneId: SceneId) => void;
 }
@@ -59,6 +66,21 @@ const SUMMIT_HOTSPOT: WalkHotspot = {
   radius: 3.4,
   actionType: 'interact',
 };
+
+const LANDING_PHOTO_HOTSPOT: WalkHotspot = {
+  id: 'stairs_polaroid',
+  label: 'Capture Mid-Climb Forest Polaroid',
+  x: -1.6,
+  z: -49.5,
+  radius: 2.1,
+  actionType: 'photo',
+};
+
+const ASSIST_ZONES = [
+  { id: 'assist_1', triggerZ: -17.5, endZ: -23.0, zMin: -21.5, zMax: -15.0 },
+  { id: 'assist_2', triggerZ: -43.5, endZ: -49.2, zMin: -47.5, zMax: -41.0 },
+  { id: 'assist_3', triggerZ: -69.5, endZ: -75.2, zMin: -73.5, zMax: -67.0 },
+] as const;
 
 const STAIR_COMPANION_CONFIGS: readonly CompanionAgentConfig[] = [
   {
@@ -85,9 +107,7 @@ const STAIR_COMPANION_CONFIGS: readonly CompanionAgentConfig[] = [
 ];
 
 /**
- * Scene 9 — Baal Kuwari: ~400-Step Segmented Forest Climb.
- * Player climbs naturally across 4 flights (~100 steps each) separated by flat scenic landings,
- * saving a milestone checkpoint at step 200 and ascending continuously into Scene 10.
+ * Scene 9 — Baal Kuwari: ~400-Step Segmented Forest Climb with Interactive Ishaan Hand-Assist.
  */
 export function Scene09_BaalKuwariStairs({
   walkInputRef,
@@ -96,8 +116,11 @@ export function Scene09_BaalKuwariStairs({
   transitionToken,
   simulateMountFailure = false,
   initialStepCount,
+  capturedLandingPolaroid,
+  assistPulseNonce,
   onStepCountChange,
   onReachHalfwayMilestone,
+  onAssistActiveChange,
   onNearbyHotspotChange,
   onSceneReady,
 }: Scene09BaalKuwariStairsProps) {
@@ -109,10 +132,15 @@ export function Scene09_BaalKuwariStairs({
   const shadowsEnabled = QUALITY_PRESETS[qualityProfile].shadows;
   const reducedMotion = useReducedMotion();
 
-  const startZ = getZForMilestoneStep(initialStepCount >= 200 && initialStepCount < 390 ? initialStepCount : 0);
+  const startZ = getZForMilestoneStep(
+    initialStepCount >= 200 && initialStepCount < 390 ? initialStepCount : 0
+  );
   const startY = sampleStaircaseHeight(startZ);
   const [canEnterSummit, setCanEnterSummit] = useState(
     computeStepCountFromZ(startZ) >= 390
+  );
+  const [assistBeaconPos, setAssistBeaconPos] = useState<readonly [number, number, number] | null>(
+    null
   );
 
   const initialCompanionPositions: Record<
@@ -173,6 +201,13 @@ export function Scene09_BaalKuwariStairs({
     halfwayCommitted: initialStepCount >= 200,
     summitNear: computeStepCountFromZ(startZ) >= 390,
     lastHotspotId: null as string | null,
+    usedAssists: new Set<string>(),
+    assistActive: false,
+    assistTimer: 0,
+    assistTargetZ: startZ,
+    assistZoneId: null as string | null,
+    lastHandledPulse: 0,
+    hadBeaconZoneId: null as string | null,
   });
 
   const scratch = useMemo(
@@ -199,6 +234,25 @@ export function Scene09_BaalKuwariStairs({
   }, [paused, clock]);
 
   useEffect(() => {
+    if (assistPulseNonce > 0 && assistPulseNonce !== simRef.current.lastHandledPulse) {
+      simRef.current.lastHandledPulse = assistPulseNonce;
+      const sim = simRef.current;
+      const zone = ASSIST_ZONES.find(
+        (z) => !sim.usedAssists.has(z.id) && sim.posZ <= z.zMax && sim.posZ >= z.zMin
+      );
+      if (zone) {
+        sim.usedAssists.add(zone.id);
+        sim.assistActive = true;
+        sim.assistTimer = 0;
+        sim.assistZoneId = zone.id;
+        sim.assistTargetZ = zone.endZ;
+        setAssistBeaconPos(null);
+        onAssistActiveChange(true);
+      }
+    }
+  }, [assistPulseNonce, onAssistActiveChange]);
+
+  useEffect(() => {
     if (camera instanceof THREE.PerspectiveCamera) {
       const aspect = size.width / Math.max(1, size.height);
       const nextFov = aspect < 0.8 ? 58 : 52;
@@ -210,8 +264,11 @@ export function Scene09_BaalKuwariStairs({
   }, [camera, size.width, size.height]);
 
   useEffect(() => {
-    return () => onNearbyHotspotChange(null);
-  }, [onNearbyHotspotChange]);
+    return () => {
+      onNearbyHotspotChange(null);
+      onAssistActiveChange(false);
+    };
+  }, [onAssistActiveChange, onNearbyHotspotChange]);
 
   useFrame((state, rawDelta) => {
     if (paused || (typeof document !== 'undefined' && document.hidden)) return;
@@ -220,7 +277,6 @@ export function Scene09_BaalKuwariStairs({
 
     const sim = simRef.current;
     const t = state.clock.elapsedTime;
-
     const dynamicHalfW = getStairWalkHalfWidth(sim.posZ);
     const stairBounds = {
       minX: -dynamicHalfW,
@@ -229,15 +285,45 @@ export function Scene09_BaalKuwariStairs({
       maxZ: STAIR_MAX_Z,
     };
 
-    const moveDist = stepWalkSimulation(sim, walkInputRef.current, delta, stairBounds, []);
-    const walkSpeed = Math.hypot(sim.velX, sim.velZ);
-    const strideRatio = THREE.MathUtils.clamp(walkSpeed / WALK_SPEED_MPS, 0, 1);
-    if (strideRatio > 0.03) {
-      const climbingBoost = isOnStairFlight(sim.posZ) ? 1.2 : 1.0;
-      sim.stridePhase += moveDist * 3.8 * climbingBoost;
+    let strideRatio = 0;
+    let walkSpeed = 0;
+    let playerIdlePose: CharacterIdlePose = 'default';
+
+    const assistZone = ASSIST_ZONES.find(
+      (z) => !sim.usedAssists.has(z.id) && sim.posZ <= z.zMax && sim.posZ >= z.zMin
+    );
+
+    if (sim.assistActive) {
+      const dur = reducedMotion ? 0.55 : 2.25;
+      sim.assistTimer += delta;
+      sim.posX = THREE.MathUtils.damp(sim.posX, -0.15, 6, delta);
+      sim.posZ = THREE.MathUtils.damp(sim.posZ, sim.assistTargetZ, 3.2, delta);
+      sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, 0, 8, delta);
+      const stepDelta = Math.abs(sim.assistTargetZ - sim.posZ);
+      if (stepDelta > 0.12) {
+        strideRatio = 0.78;
+        sim.stridePhase += delta * 9.5;
+        walkSpeed = 2.6;
+      } else {
+        playerIdlePose = 'chat_nod';
+      }
+      if (sim.assistTimer >= dur) {
+        sim.assistActive = false;
+        sim.assistZoneId = null;
+        onAssistActiveChange(false);
+      }
+    } else {
+      const moveDist = stepWalkSimulation(sim, walkInputRef.current, delta, stairBounds, []);
+      walkSpeed = Math.hypot(sim.velX, sim.velZ);
+      strideRatio = THREE.MathUtils.clamp(walkSpeed / WALK_SPEED_MPS, 0, 1);
+      if (strideRatio > 0.03) {
+        const climbingBoost = isOnStairFlight(sim.posZ) ? 1.2 : 1.0;
+        sim.stridePhase += moveDist * 3.8 * climbingBoost;
+      }
     }
 
     const groundY = sampleStaircaseHeight(sim.posZ);
+    const srishtiClimbing = strideRatio > 0.08 && isOnStairFlight(sim.posZ);
     animateSrishtiWalkRig({
       refs: {
         group: playerGroupRef.current,
@@ -260,6 +346,8 @@ export function Scene09_BaalKuwariStairs({
       elapsed: t,
       delta,
       groundY,
+      climbingStairs: srishtiClimbing,
+      idlePose: playerIdlePose,
       reducedMotion,
     });
 
@@ -278,6 +366,23 @@ export function Scene09_BaalKuwariStairs({
       onReachHalfwayMilestone();
     }
 
+    // Companion behavior: during assist window Ishaan leads 0.85m ahead offering hand, while Manish/Yash cheer from landing
+    let explicitTargets: Record<string, CompanionTargetSlot> | undefined;
+    if (sim.assistActive) {
+      explicitTargets = {
+        ishaan: { x: -0.62, z: sim.posZ - 0.12, facingYaw: -0.1 },
+        friend_black_tee: { x: 1.05, z: sim.assistTargetZ - 1.2, facingYaw: Math.PI },
+        friend_plaid: { x: -1.15, z: sim.assistTargetZ - 1.5, facingYaw: Math.PI },
+      };
+    } else if (assistZone) {
+      const waitZ = Math.max(STAIR_MIN_Z, Math.min(assistZone.triggerZ, sim.posZ - 1.05));
+      explicitTargets = {
+        ishaan: { x: -0.58, z: waitZ, facingYaw: Math.PI - 0.15 },
+        friend_black_tee: { x: 1.05, z: assistZone.endZ - 0.9, facingYaw: Math.PI },
+        friend_plaid: { x: -1.1, z: assistZone.endZ - 1.2, facingYaw: Math.PI },
+      };
+    }
+
     stepGroupCompanions({
       agents: companionStatesRef.current,
       configs: STAIR_COMPANION_CONFIGS,
@@ -293,7 +398,8 @@ export function Scene09_BaalKuwariStairs({
       },
       obstacles: [],
       delta,
-      mode: 'follow',
+      mode: explicitTargets ? 'gather' : 'follow',
+      explicitTargets,
     });
 
     const rigs = companionRigsRef.current;
@@ -303,6 +409,14 @@ export function Scene09_BaalKuwariStairs({
         agent.posX = THREE.MathUtils.clamp(agent.posX, -w, w);
         const rig = rigs[agent.id as FriendCompanionId];
         if (!rig) return;
+
+        let poseOverride: CharacterIdlePose | undefined;
+        if ((assistZone || sim.assistActive) && agent.id === 'ishaan') {
+          poseOverride = 'hand_assist_reach';
+        } else if (assistZone && agent.id !== 'ishaan') {
+          poseOverride = 'cheer_wave';
+        }
+
         applyCompanionRigFrame({
           agent,
           config: STAIR_COMPANION_CONFIGS[i],
@@ -312,9 +426,21 @@ export function Scene09_BaalKuwariStairs({
           elapsed: t,
           delta,
           groundY: sampleStaircaseHeight(agent.posZ),
+          climbingStairs: isOnStairFlight(agent.posZ),
+          idlePoseOverride: poseOverride,
           reducedMotion,
         });
       });
+    }
+
+    if (assistZone && !sim.assistActive) {
+      if (sim.hadBeaconZoneId !== assistZone.id) {
+        sim.hadBeaconZoneId = assistZone.id;
+        setAssistBeaconPos([-0.55, sampleStaircaseHeight(assistZone.triggerZ), assistZone.triggerZ]);
+      }
+    } else if (sim.hadBeaconZoneId !== null) {
+      sim.hadBeaconZoneId = null;
+      setAssistBeaconPos(null);
     }
 
     const camDist = 5.4;
@@ -341,7 +467,25 @@ export function Scene09_BaalKuwariStairs({
     }
     camera.lookAt(scratch.smoothLook);
 
-    const hotspot = findNearestWalkHotspot(sim.posX, sim.posZ, [SUMMIT_HOTSPOT]);
+    const activeHotspots: WalkHotspot[] = [SUMMIT_HOTSPOT];
+    if (!capturedLandingPolaroid) {
+      activeHotspots.push(LANDING_PHOTO_HOTSPOT);
+    }
+    if (assistZone && !sim.assistActive) {
+      const ishaanState = companionStatesRef.current[0];
+      activeHotspots.push({
+        id: 'ishaan_assist',
+        label: "Take Ishaan's Hand · Climb Together",
+        x: ishaanState.posX,
+        z: ishaanState.posZ,
+        radius: 2.6,
+        actionType: 'interact',
+      });
+    }
+
+    const hotspot = sim.assistActive
+      ? null
+      : findNearestWalkHotspot(sim.posX, sim.posZ, activeHotspots);
     const nextId = hotspot?.id ?? null;
     if (nextId !== sim.lastHotspotId) {
       sim.lastHotspotId = nextId;
@@ -355,6 +499,8 @@ export function Scene09_BaalKuwariStairs({
         qualityProfile={qualityProfile}
         paused={paused}
         canEnterSummit={canEnterSummit}
+        canCaptureLandingPhoto={!capturedLandingPolaroid}
+        assistBeaconPos={assistBeaconPos}
       />
 
       <StylizedPlaceholderCharacter

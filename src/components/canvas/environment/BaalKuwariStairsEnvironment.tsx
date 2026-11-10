@@ -140,6 +140,8 @@ export interface BaalKuwariStairsEnvironmentProps {
   qualityProfile: QualityProfile;
   paused: boolean;
   canEnterSummit: boolean;
+  canCaptureLandingPhoto?: boolean;
+  assistBeaconPos?: readonly [number, number, number] | null;
 }
 
 /**
@@ -150,6 +152,8 @@ export function BaalKuwariStairsEnvironment({
   qualityProfile,
   paused,
   canEnterSummit,
+  canCaptureLandingPhoto = false,
+  assistBeaconPos = null,
 }: BaalKuwariStairsEnvironmentProps) {
   const shadowsEnabled = QUALITY_PRESETS[qualityProfile].shadows;
   const reducedMotion = useReducedMotion();
@@ -411,6 +415,24 @@ export function BaalKuwariStairsEnvironment({
         paused={paused}
         reducedMotion={reducedMotion}
       />
+      <HotspotBeaconSparkle
+        position={[-1.6, 12.6, -49.5]}
+        visible={canCaptureLandingPhoto}
+        color="#38bdf8"
+        height={0.95}
+        paused={paused}
+        reducedMotion={reducedMotion}
+      />
+      {assistBeaconPos && (
+        <HotspotBeaconSparkle
+          position={assistBeaconPos}
+          visible
+          color="#34d399"
+          height={1.05}
+          paused={paused}
+          reducedMotion={reducedMotion}
+        />
+      )}
     </group>
   );
 }

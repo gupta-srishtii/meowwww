@@ -22,6 +22,8 @@ import { Scene07_NeelkanthTemple } from '@/components/canvas/scenes/Scene07_Neel
 import { Scene08_BaalKuwariApproach } from '@/components/canvas/scenes/Scene08_BaalKuwariApproach';
 import { Scene09_BaalKuwariStairs } from '@/components/canvas/scenes/Scene09_BaalKuwariStairs';
 import { Scene10_BaalKuwariTemple } from '@/components/canvas/scenes/Scene10_BaalKuwariTemple';
+import { Scene11_SafeReturnRide } from '@/components/canvas/scenes/Scene11_SafeReturnRide';
+import { Scene12_HotelReturn } from '@/components/canvas/scenes/Scene12_HotelReturn';
 import { TempPhase1BTestScene } from '@/components/canvas/scenes/TempPhase1BTestScene';
 import type { DrivingInputState } from '@/hooks/useDrivingInput';
 import type { WalkHotspot, WalkInputState } from '@/hooks/useWalkController';
@@ -314,9 +316,16 @@ export interface SceneStageProps {
   onTrailheadMaggiComplete: () => void;
   onStairStepCountChange: (steps: number) => void;
   onStairHalfwayMilestone: () => void;
+  capturedStairLandingPolaroid: boolean;
+  stairAssistPulseNonce: number;
+  onStairAssistActiveChange: (active: boolean) => void;
+  summitArrivalCinematicActive: boolean;
+  onSummitArrivalCinematicComplete: () => void;
   rangBaalKuwariBell: boolean;
   baalKuwariBellNonce: number;
   capturedBaalKuwariPolaroid: boolean;
+  hotelFarewellDone: boolean;
+  capturedHotelPolaroid: boolean;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onArrivedChange: (arrived: boolean) => void;
   onInViewpointZoneChange: (inZone: boolean) => void;
@@ -354,9 +363,16 @@ export function SceneStage({
   onTrailheadMaggiComplete,
   onStairStepCountChange,
   onStairHalfwayMilestone,
+  capturedStairLandingPolaroid,
+  stairAssistPulseNonce,
+  onStairAssistActiveChange,
+  summitArrivalCinematicActive,
+  onSummitArrivalCinematicComplete,
   rangBaalKuwariBell,
   baalKuwariBellNonce,
   capturedBaalKuwariPolaroid,
+  hotelFarewellDone,
+  capturedHotelPolaroid,
   onNearbyHotspotChange,
   onArrivedChange,
   onInViewpointZoneChange,
@@ -504,8 +520,11 @@ export function SceneStage({
               transitionToken={transitionToken}
               simulateMountFailure={simulateMountFailure}
               initialStepCount={stairStepCount}
+              capturedLandingPolaroid={capturedStairLandingPolaroid}
+              assistPulseNonce={stairAssistPulseNonce}
               onStepCountChange={onStairStepCountChange}
               onReachHalfwayMilestone={onStairHalfwayMilestone}
+              onAssistActiveChange={onStairAssistActiveChange}
               onNearbyHotspotChange={onNearbyHotspotChange}
               onSceneReady={controller.onMountedSceneReady}
             />
@@ -516,9 +535,38 @@ export function SceneStage({
               paused={scenePaused}
               transitionToken={transitionToken}
               simulateMountFailure={simulateMountFailure}
+              arrivalCinematicActive={summitArrivalCinematicActive}
+              onArrivalCinematicComplete={onSummitArrivalCinematicComplete}
               rangBell={rangBaalKuwariBell}
               bellImpulseNonce={baalKuwariBellNonce}
               capturedPolaroid={capturedBaalKuwariPolaroid}
+              onNearbyHotspotChange={onNearbyHotspotChange}
+              onSceneReady={controller.onMountedSceneReady}
+            />
+          ) : mountedSceneId === 11 ? (
+            <Scene11_SafeReturnRide
+              inputRef={inputRef}
+              qualityProfile={qualityProfile}
+              paused={scenePaused}
+              resetNonce={resetNonce}
+              startDistance={roadResumeDistance}
+              transitionToken={transitionToken}
+              simulateMountFailure={simulateMountFailure}
+              onSceneReady={controller.onMountedSceneReady}
+              onArrivedChange={onArrivedChange}
+              onTrafficBrush={onTrafficBrush}
+              onAutoDowngradeQuality={downgradeQualityProfile}
+              telemetryRefs={telemetryRefs}
+            />
+          ) : mountedSceneId === 12 ? (
+            <Scene12_HotelReturn
+              walkInputRef={walkInputRef}
+              qualityProfile={qualityProfile}
+              paused={scenePaused}
+              transitionToken={transitionToken}
+              simulateMountFailure={simulateMountFailure}
+              farewellDone={hotelFarewellDone}
+              capturedPolaroid={capturedHotelPolaroid}
               onNearbyHotspotChange={onNearbyHotspotChange}
               onSceneReady={controller.onMountedSceneReady}
             />

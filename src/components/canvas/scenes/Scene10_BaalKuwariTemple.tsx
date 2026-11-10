@@ -39,6 +39,8 @@ export interface Scene10BaalKuwariTempleProps {
   paused: boolean;
   transitionToken: number;
   simulateMountFailure?: boolean;
+  arrivalCinematicActive: boolean;
+  onArrivalCinematicComplete: () => void;
   rangBell: boolean;
   bellImpulseNonce: number;
   capturedPolaroid: boolean;
@@ -87,6 +89,8 @@ export function Scene10_BaalKuwariTemple({
   paused,
   transitionToken,
   simulateMountFailure = false,
+  arrivalCinematicActive,
+  onArrivalCinematicComplete,
   rangBell,
   bellImpulseNonce,
   capturedPolaroid,
@@ -134,6 +138,8 @@ export function Scene10_BaalKuwariTemple({
     stridePhase: 0,
     cameraInitialized: false,
     lastHotspotId: null as string | null,
+    arrivalTimer: 0,
+    arrivalDone: false,
   });
 
   const scratch = useMemo(
@@ -171,6 +177,13 @@ export function Scene10_BaalKuwariTemple({
   }, [camera, size.width, size.height]);
 
   useEffect(() => {
+    if (arrivalCinematicActive) {
+      simRef.current.arrivalTimer = 0;
+      simRef.current.arrivalDone = false;
+    }
+  }, [arrivalCinematicActive]);
+
+  useEffect(() => {
     return () => onNearbyHotspotChange(null);
   }, [onNearbyHotspotChange]);
 
@@ -181,16 +194,35 @@ export function Scene10_BaalKuwariTemple({
 
     const sim = simRef.current;
     const t = state.clock.elapsedTime;
-    const moveDist = stepWalkSimulation(
-      sim,
-      walkInputRef.current,
-      delta,
-      BAAL_KUWARI_TEMPLE_WALK_BOUNDS,
-      BAAL_KUWARI_TEMPLE_OBSTACLES
-    );
-    const walkSpeed = Math.hypot(sim.velX, sim.velZ);
-    const strideRatio = THREE.MathUtils.clamp(walkSpeed / WALK_SPEED_MPS, 0, 1);
-    if (strideRatio > 0.03) sim.stridePhase += moveDist * 3.8;
+    let strideRatio = 0;
+    let walkSpeed = 0;
+
+    if (arrivalCinematicActive) {
+      const dur = reducedMotion ? 0.65 : 4.6;
+      sim.arrivalTimer += delta;
+      sim.velX = 0;
+      sim.velZ = 0;
+      sim.posZ = THREE.MathUtils.damp(sim.posZ, 1.4, 1.8, delta);
+      if (Math.abs(sim.posZ - 1.4) > 0.1) {
+        strideRatio = 0.55;
+        sim.stridePhase += delta * 5.2;
+      }
+      if (!sim.arrivalDone && sim.arrivalTimer >= dur) {
+        sim.arrivalDone = true;
+        onArrivalCinematicComplete();
+      }
+    } else {
+      const moveDist = stepWalkSimulation(
+        sim,
+        walkInputRef.current,
+        delta,
+        BAAL_KUWARI_TEMPLE_WALK_BOUNDS,
+        BAAL_KUWARI_TEMPLE_OBSTACLES
+      );
+      walkSpeed = Math.hypot(sim.velX, sim.velZ);
+      strideRatio = THREE.MathUtils.clamp(walkSpeed / WALK_SPEED_MPS, 0, 1);
+      if (strideRatio > 0.03) sim.stridePhase += moveDist * 3.8;
+    }
 
     animateSrishtiWalkRig({
       refs: {
@@ -247,14 +279,24 @@ export function Scene10_BaalKuwariTemple({
       });
     }
 
-    const hDist = Math.cos(sim.orbitPitch) * CAM_DISTANCE;
-    const vOff = 1.2 + Math.sin(sim.orbitPitch) * CAM_DISTANCE;
-    scratch.camPos.set(
-      sim.posX + Math.sin(sim.orbitYaw) * hDist,
-      vOff,
-      sim.posZ + Math.cos(sim.orbitYaw) * hDist
-    );
-    scratch.lookAt.set(sim.posX, 1.18, sim.posZ);
+    if (arrivalCinematicActive) {
+      const sweepU = Math.min(1, sim.arrivalTimer / 4.6);
+      scratch.camPos.set(
+        THREE.MathUtils.lerp(-4.2, 3.8, sweepU),
+        THREE.MathUtils.lerp(4.6, 2.35, sweepU),
+        THREE.MathUtils.lerp(5.8, 3.6, sweepU)
+      );
+      scratch.lookAt.set(0, THREE.MathUtils.lerp(2.2, 1.35, sweepU), -2.4);
+    } else {
+      const hDist = Math.cos(sim.orbitPitch) * CAM_DISTANCE;
+      const vOff = 1.2 + Math.sin(sim.orbitPitch) * CAM_DISTANCE;
+      scratch.camPos.set(
+        sim.posX + Math.sin(sim.orbitYaw) * hDist,
+        vOff,
+        sim.posZ + Math.cos(sim.orbitYaw) * hDist
+      );
+      scratch.lookAt.set(sim.posX, 1.18, sim.posZ);
+    }
 
     if (!sim.cameraInitialized || reducedMotion) {
       camera.position.copy(scratch.camPos);
@@ -270,7 +312,9 @@ export function Scene10_BaalKuwariTemple({
     }
     camera.lookAt(scratch.smoothLook);
 
-    const nearest = findNearestWalkHotspot(sim.posX, sim.posZ, BAAL_KUWARI_TEMPLE_HOTSPOTS);
+    const nearest = arrivalCinematicActive
+      ? null
+      : findNearestWalkHotspot(sim.posX, sim.posZ, BAAL_KUWARI_TEMPLE_HOTSPOTS);
     const nextId = nearest?.id ?? null;
     if (nextId !== sim.lastHotspotId) {
       sim.lastHotspotId = nextId;

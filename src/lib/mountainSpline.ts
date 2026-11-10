@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 
-export type MountainRoadSegmentId = 'to_dhaba' | 'to_neelkanth' | 'to_baalkuwari';
+export type MountainRoadSegmentId =
+  | 'to_dhaba'
+  | 'to_neelkanth'
+  | 'to_baalkuwari'
+  | 'to_hotel_return';
 export type MountainRoadSubStage = 'driving' | 'viewpoint_walk';
 export type BaalKuwariSubStage = 'driving' | 'maggi_stop';
 
@@ -45,6 +49,7 @@ export const VIEWPOINT_PARK_COMP_LATERAL = 2.9;
 
 export const NEELKANTH_APPROACH_STOP_DISTANCE = 324.0;
 export const BAAL_KUWARI_STOP_DISTANCE = 278.0;
+export const HOTEL_RETURN_STOP_DISTANCE = 266.0;
 
 export interface RoadFrame {
   point: THREE.Vector3;
@@ -91,18 +96,31 @@ export function createMountainRoadCurve(
             new THREE.Vector3(-72, 16.4, -416),
             new THREE.Vector3(-112, 17.6, -448),
           ]
-        : [
-            new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(12, 1.8, -40),
-            new THREE.Vector3(32, 4.2, -84),
-            new THREE.Vector3(18, 6.8, -132),
-            new THREE.Vector3(-16, 9.4, -178),
-            new THREE.Vector3(-28, 12.0, -226),
-            new THREE.Vector3(-12, 14.5, -274), // Baal Kuwari base trailhead & Maggi stop ~278m
-            new THREE.Vector3(16, 16.2, -322), // mountain ridge road bends past the stairhead
-            new THREE.Vector3(52, 17.8, -368),
-            new THREE.Vector3(92, 19.2, -406),
-          ];
+        : segment === 'to_baalkuwari'
+          ? [
+              new THREE.Vector3(0, 0, 0),
+              new THREE.Vector3(12, 1.8, -40),
+              new THREE.Vector3(32, 4.2, -84),
+              new THREE.Vector3(18, 6.8, -132),
+              new THREE.Vector3(-16, 9.4, -178),
+              new THREE.Vector3(-28, 12.0, -226),
+              new THREE.Vector3(-12, 14.5, -274), // Baal Kuwari base trailhead & Maggi stop ~278m
+              new THREE.Vector3(16, 16.2, -322), // mountain ridge road bends past the stairhead
+              new THREE.Vector3(52, 17.8, -368),
+              new THREE.Vector3(92, 19.2, -406),
+            ]
+          : [
+              // Evening Safe Return Descent toward Rishikesh Hotel Courtyard (~266m stop bay)
+              new THREE.Vector3(0, 15.6, 0),
+              new THREE.Vector3(-10, 13.8, -42),
+              new THREE.Vector3(-26, 11.4, -86),
+              new THREE.Vector3(-14, 9.0, -132),
+              new THREE.Vector3(14, 6.4, -178),
+              new THREE.Vector3(24, 3.8, -224),
+              new THREE.Vector3(8, 1.4, -268), // Rishikesh hotel arrival pull-off ~266m
+              new THREE.Vector3(-16, 0.4, -314),
+              new THREE.Vector3(-48, 0.0, -356),
+            ];
 
   const curve = new THREE.CatmullRomCurve3(controlPoints, false, 'catmullrom', 0.5);
   // Fine arc-length lookup eliminates piecewise tangent micro-jitter along S-curves.
@@ -117,6 +135,9 @@ export function getSegmentStopDistance(segment: MountainRoadSegmentId, totalLeng
   }
   if (segment === 'to_baalkuwari') {
     return Math.min(BAAL_KUWARI_STOP_DISTANCE, totalLength - 60);
+  }
+  if (segment === 'to_hotel_return') {
+    return Math.min(HOTEL_RETURN_STOP_DISTANCE, totalLength - 60);
   }
   return Math.min(NEELKANTH_APPROACH_STOP_DISTANCE, totalLength - 60);
 }

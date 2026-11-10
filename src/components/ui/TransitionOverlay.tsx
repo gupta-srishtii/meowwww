@@ -34,9 +34,12 @@ function getFriendlyStopTitle(
   }
   if (sceneId === 9) return 'Baal Kuwari: The ~400 Stairs';
   if (sceneId === 10) return 'Baal Kuwari Summit Temple';
+  if (sceneId === 11) return 'Evening Safe Return to Rishikesh';
+  if (sceneId === 12) return 'Rishikesh Hotel Return & Farewell';
   if (sceneId === 5) {
     if (subStage === 'viewpoint_walk') return 'Scenic Mountain Viewpoint';
     if (segment === 'to_baalkuwari') return 'Mountain Route to Baal Kuwari';
+    if (segment === 'to_hotel_return') return 'Evening Safe Return to Rishikesh';
     return segment === 'to_neelkanth' ? 'Forest Road to Neelkanth' : 'Rishikesh Mountain Road';
   }
   return getSceneDefinition(sceneId).title;

@@ -38,6 +38,7 @@ const STALL_DISTS_BY_SEGMENT: Record<MountainRoadSegmentId, readonly number[]> =
   to_dhaba: [48, 96, 214],
   to_neelkanth: [96, 242],
   to_baalkuwari: [76, 178],
+  to_hotel_return: [88, 196],
 };
 
 function smoothStep01(t: number): number {
@@ -938,9 +939,11 @@ export function MountainRoadEnvironment({
         args={[
           roadSegment === 'to_dhaba'
             ? '#b8d8f0'
-            : roadSegment === 'to_baalkuwari'
-              ? '#c9dfef'
-              : '#c6def0',
+            : roadSegment === 'to_hotel_return'
+              ? '#dca67a'
+              : roadSegment === 'to_baalkuwari'
+                ? '#c9dfef'
+                : '#c6def0',
         ]}
       />
       <fog
@@ -948,9 +951,11 @@ export function MountainRoadEnvironment({
         args={[
           roadSegment === 'to_dhaba'
             ? '#b8d8f0'
-            : roadSegment === 'to_baalkuwari'
-              ? '#d4e5f2'
-              : '#cddff0',
+            : roadSegment === 'to_hotel_return'
+              ? '#cf9b7d'
+              : roadSegment === 'to_baalkuwari'
+                ? '#d4e5f2'
+                : '#cddff0',
           95,
           290,
         ]}
@@ -958,17 +963,29 @@ export function MountainRoadEnvironment({
 
       <hemisphereLight
         args={[
-          roadSegment === 'to_dhaba' ? '#e0f2fe' : '#fff3e0',
+          roadSegment === 'to_dhaba'
+            ? '#e0f2fe'
+            : roadSegment === 'to_hotel_return'
+              ? '#ffd6aa'
+              : '#fff3e0',
           roadSegment === 'to_baalkuwari' ? '#4d6048' : '#686b57',
-          0.98,
+          roadSegment === 'to_hotel_return' ? 0.85 : 0.98,
         ]}
       />
       <primitive object={lightTarget} />
       <directionalLight
         ref={dirLightRef}
-        position={[60, 96, -120]}
-        intensity={1.7}
-        color={roadSegment === 'to_dhaba' ? '#fff4db' : roadSegment === 'to_baalkuwari' ? '#ffe6bf' : '#ffeacc'}
+        position={[60, roadSegment === 'to_hotel_return' ? 42 : 96, -120]}
+        intensity={roadSegment === 'to_hotel_return' ? 1.5 : 1.7}
+        color={
+          roadSegment === 'to_dhaba'
+            ? '#fff4db'
+            : roadSegment === 'to_hotel_return'
+              ? '#ffb878'
+              : roadSegment === 'to_baalkuwari'
+                ? '#ffe6bf'
+                : '#ffeacc'
+        }
         castShadow={shadowsEnabled}
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -1170,6 +1187,33 @@ export function MountainRoadEnvironment({
                 <meshStandardMaterial color="#948977" roughness={0.92} />
               </mesh>
             ))}
+          </group>
+        </group>
+      ) : roadSegment === 'to_hotel_return' ? (
+        <group position={landmarks.stallCenter} quaternion={landmarks.stopQuat}>
+          {/* Rishikesh Hotel Forecourt Gate & Lantern Veranda at Road Arrival Bay */}
+          <mesh position={[2.8, -4.5, 0]} receiveShadow={shadowsEnabled}>
+            <boxGeometry args={[9.6, 9.0, 13.0]} />
+            <meshStandardMaterial color="#736655" roughness={0.95} />
+          </mesh>
+          <mesh position={[1.4, -0.04, 0]} receiveShadow={shadowsEnabled}>
+            <boxGeometry args={[6.8, 0.16, 12.6]} />
+            <meshStandardMaterial color="#a69a86" roughness={0.92} />
+          </mesh>
+          <group position={[3.8, 0, 0]}>
+            <mesh position={[0, 2.5, 0]} castShadow={shadowsEnabled}>
+              <boxGeometry args={[4.4, 5.0, 9.2]} />
+              <meshStandardMaterial color="#efe3cf" roughness={0.86} />
+            </mesh>
+            <mesh position={[0, 5.2, 0]} castShadow={shadowsEnabled}>
+              <boxGeometry args={[4.8, 0.36, 9.6]} />
+              <meshStandardMaterial color="#b45309" roughness={0.8} />
+            </mesh>
+            <mesh position={[-2.25, 2.4, 0]}>
+              <boxGeometry args={[0.3, 0.18, 9.2]} />
+              <meshStandardMaterial color="#8c5e42" roughness={0.85} />
+            </mesh>
+            <pointLight position={[-2.6, 2.1, 0]} intensity={1.8} color="#fbbf24" distance={10} />
           </group>
         </group>
       ) : (

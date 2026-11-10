@@ -51,7 +51,14 @@ export interface ParkedShoulderVehicleSpec {
 }
 
 export function buildRoadTrafficFleet(segment: MountainRoadSegmentId): TrafficVehicleSpec[] {
-  const seedShift = segment === 'to_dhaba' ? 0 : segment === 'to_neelkanth' ? 12 : 20;
+  const seedShift =
+    segment === 'to_dhaba'
+      ? 0
+      : segment === 'to_neelkanth'
+        ? 12
+        : segment === 'to_baalkuwari'
+          ? 20
+          : 28;
   return [
     // Oncoming outer-left mountain traffic (`-Z` direction -> coming toward scooters)
     {
@@ -158,7 +165,14 @@ export function buildParkedShoulderVehicles(
       id: 'parked-1',
       kind: 'moto',
       vehicleStyle: 'commuter_bike',
-      dist: segment === 'to_dhaba' ? 62 : segment === 'to_neelkanth' ? 76 : 94,
+      dist:
+        segment === 'to_dhaba'
+          ? 62
+          : segment === 'to_neelkanth'
+            ? 76
+            : segment === 'to_baalkuwari'
+              ? 94
+              : 108,
       lateral: -4.15,
       facingSign: 1,
       color: '#475569',
@@ -167,7 +181,14 @@ export function buildParkedShoulderVehicles(
       id: 'parked-2',
       kind: 'car',
       vehicleStyle: 'hatchback',
-      dist: segment === 'to_dhaba' ? 196 : segment === 'to_neelkanth' ? 212 : 208,
+      dist:
+        segment === 'to_dhaba'
+          ? 196
+          : segment === 'to_neelkanth'
+            ? 212
+            : segment === 'to_baalkuwari'
+              ? 208
+              : 184,
       lateral: -4.25,
       facingSign: -1,
       color: '#e5e7eb',

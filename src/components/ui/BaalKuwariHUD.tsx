@@ -25,10 +25,15 @@ export interface BaalKuwariHUDProps {
   stepCount?: number;
   totalSteps?: number;
   assistCount?: number;
+  assistActive?: boolean;
   // Temple fields
+  arrivalCinematicActive?: boolean;
+  onSkipArrivalCinematic?: () => void;
   rangBell?: boolean;
   capturedPolaroid?: boolean;
   polaroidToastVisible?: boolean;
+  toastTitle?: string;
+  toastCaption?: string;
   onDismissPolaroidToast?: () => void;
   onTriggerHotspot: () => void;
 }
@@ -52,9 +57,14 @@ export function BaalKuwariHUD({
   stepCount = 0,
   totalSteps = 400,
   assistCount = 0,
+  assistActive = false,
+  arrivalCinematicActive = false,
+  onSkipArrivalCinematic,
   rangBell = false,
   capturedPolaroid = false,
   polaroidToastVisible = false,
+  toastTitle = 'Baal Kuwari Temple',
+  toastCaption = 'Baal Kuwari Summit · After ~400 Steps',
   onDismissPolaroidToast,
   onTriggerHotspot,
 }: BaalKuwariHUDProps) {
@@ -77,6 +87,27 @@ export function BaalKuwariHUD({
       : mode === 'stairs'
         ? `Flight ${flightNumber} of 4 · Climb together step by step`
         : 'Serene summit sanctuary above the pines';
+
+  if (mode === 'temple' && arrivalCinematicActive) {
+    return (
+      <div className="pointer-events-none fixed inset-x-0 bottom-6 z-20 flex justify-center px-4">
+        <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-amber-300/45 bg-slate-950/85 px-5 py-2.5 text-center shadow-2xl backdrop-blur-md">
+          <p className="text-xs font-medium text-amber-100">
+            Reaching Baal Kuwari Temple after ~400 stairs together...
+          </p>
+          {onSkipArrivalCinematic && (
+            <button
+              type="button"
+              onClick={onSkipArrivalCinematic}
+              className="rounded-lg border border-slate-600 bg-slate-800/90 px-2.5 py-1 text-[11px] font-semibold text-slate-200 transition hover:bg-slate-700 hover:text-white"
+            >
+              Skip (Space)
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -153,8 +184,8 @@ export function BaalKuwariHUD({
 
       {polaroidToastVisible && onDismissPolaroidToast && (
         <PolaroidToastCard
-          caption="Baal Kuwari Summit · After ~400 Steps"
-          title="Baal Kuwari Temple"
+          caption={toastCaption}
+          title={toastTitle}
           gradientClass="from-sky-100 via-amber-100 to-emerald-100"
           onDismiss={onDismissPolaroidToast}
         />
@@ -162,7 +193,7 @@ export function BaalKuwariHUD({
 
       <ContextualActionPill
         nearbyHotspot={nearbyHotspot}
-        visible={!hasActiveNarration && !eatingActive}
+        visible={!hasActiveNarration && !eatingActive && !assistActive && !arrivalCinematicActive}
         touchControlsVisible={touchControlsVisible}
         onTrigger={onTriggerHotspot}
       />
