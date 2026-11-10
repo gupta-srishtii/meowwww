@@ -3,7 +3,11 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { ConnectedHillTerrain } from '@/components/canvas/environment/ConnectedHillTerrain';
+import {
+  buildConnectedHillGeometry,
+  ConnectedHillTerrain,
+} from '@/components/canvas/environment/ConnectedHillTerrain';
+import { createTerrainMeshSampler } from '@/lib/terrainMeshSampler';
 import {
   DistantHimalayanRidges,
   type HimalayanRidgeSpec,
@@ -128,6 +132,32 @@ export function BaalKuwariTempleEnvironment({
     }
   }, [bellImpulseNonce]);
 
+  const terrainGeometry = useMemo(
+    () =>
+      buildConnectedHillGeometry({
+        width: 150,
+        depth: 140,
+        centerX: 0,
+        centerZ: -8,
+        segX: 72,
+        segZ: 72,
+        heightFn: sampleSummitTerrainY,
+        colorFn: sampleSummitTerrainColor,
+      }),
+    []
+  );
+
+  useEffect(() => {
+    return () => {
+      terrainGeometry.dispose();
+    };
+  }, [terrainGeometry]);
+
+  const terrainSampler = useMemo(
+    () => createTerrainMeshSampler([terrainGeometry], 3.5),
+    [terrainGeometry]
+  );
+
   const MAX_PINES = 46;
   const pinePositions = useMemo(() => {
     const items: Array<[number, number, number, number]> = [];
@@ -136,10 +166,11 @@ export function BaalKuwariTempleEnvironment({
       const x = side * (9.2 + (i % 6) * 4.5);
       const z = -18 + ((i * 5.2) % 36);
       const scale = 0.82 + ((i * 7) % 6) * 0.08;
-      items.push([x, sampleSummitTerrainY(x, z) - 0.56 * scale, z, scale]);
+      const surfaceY = terrainSampler.trySampleY(x, z) ?? sampleSummitTerrainY(x, z);
+      items.push([x, surfaceY - 0.12 * scale, z, scale]);
     }
     return items;
-  }, []);
+  }, [terrainSampler]);
 
   useEffect(() => {
     if (!trunkInstRef.current || !crownInstRef.current) return;
@@ -235,6 +266,7 @@ export function BaalKuwariTempleEnvironment({
         segZ={72}
         heightFn={sampleSummitTerrainY}
         colorFn={sampleSummitTerrainColor}
+        geometry={terrainGeometry}
         receiveShadow={shadowsEnabled}
       />
       <DistantHimalayanRidges ridges={SUMMIT_RIDGES} />
@@ -245,19 +277,25 @@ export function BaalKuwariTempleEnvironment({
         { pos: [7.4, -0.35, -5.2] as const, s: [1.6, 1.1, 1.4] as const, rot: -0.5 },
         { pos: [-7.9, -0.45, 2.2] as const, s: [1.3, 0.9, 1.2] as const, rot: 0.9 },
         { pos: [7.8, -0.45, 2.8] as const, s: [1.4, 0.95, 1.3] as const, rot: -0.8 },
-      ].map((rock, idx) => (
-        <mesh
-          key={`summit-rock-${idx}`}
-          position={rock.pos}
-          scale={rock.s}
-          rotation={[0.12, rock.rot, 0.08]}
-          castShadow={shadowsEnabled}
-          receiveShadow={shadowsEnabled}
-        >
-          <dodecahedronGeometry args={[0.85, 0]} />
-          <meshStandardMaterial color="#676f78" roughness={0.95} flatShading />
-        </mesh>
-      ))}
+      ].map((rock, idx) => {
+        const groundY =
+          terrainSampler.trySampleY(rock.pos[0], rock.pos[2]) ??
+          sampleSummitTerrainY(rock.pos[0], rock.pos[2]);
+        const rockY = Math.min(rock.pos[1], groundY - 0.12);
+        return (
+          <mesh
+            key={`summit-rock-${idx}`}
+            position={[rock.pos[0], rockY, rock.pos[2]]}
+            scale={rock.s}
+            rotation={[0.12, rock.rot, 0.08]}
+            castShadow={shadowsEnabled}
+            receiveShadow={shadowsEnabled}
+          >
+            <dodecahedronGeometry args={[0.85, 0]} />
+            <meshStandardMaterial color="#676f78" roughness={0.95} flatShading />
+          </mesh>
+        );
+      })}
 
       {/* Peaceful Pahadi / Katyuri Hilltop Sanctuary Pavilion (`z = -4.0`) */}
       <group position={[0, 0, -4.0]}>

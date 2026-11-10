@@ -38,6 +38,7 @@ export interface StairTelemetryRefs {
 
 export interface Scene09BaalKuwariStairsProps {
   direction: 'ascent' | 'descent';
+  initialStepCount?: number;
   qualityProfile: QualityProfile;
   paused: boolean;
   transitionToken: number;
@@ -181,6 +182,34 @@ function computeExactHandClaspPoint(
   outClasp.set(cx + px * drop, cy + py * drop, cz + pz * drop);
 }
 
+function computeInitialStairElapsedSec(
+  direction: 'ascent' | 'descent',
+  initialStepCount: number,
+  reducedMotion: boolean
+): number {
+  const step = Math.max(0, Math.min(BAAL_KUWARI_TOTAL_STEPS, initialStepCount));
+  if (direction === 'ascent') {
+    if (step <= 0) return 0;
+    const totalDur = reducedMotion ? ASCENT_REDUCED_SEC : ASCENT_DURATION_SEC;
+    if (step >= BAAL_KUWARI_TOTAL_STEPS) {
+      return Math.max(0, totalDur - 0.15);
+    }
+    const halfwayFrame = ASCENT_SRISHTI_KEYFRAMES.find((f) => Math.abs(f.s - HALFWAY_S) < 0.05);
+    const halfwayFrac = halfwayFrame ? halfwayFrame.t / ASCENT_DURATION_SEC : 0.45;
+    const frac =
+      step <= 200
+        ? (step / 200) * halfwayFrac
+        : halfwayFrac + ((step - 200) / 200) * (1 - halfwayFrac);
+    return THREE.MathUtils.clamp(frac * totalDur, 0, Math.max(0, totalDur - 0.15));
+  }
+
+  // Descent runs from step 400 -> 0
+  if (step >= BAAL_KUWARI_TOTAL_STEPS || step <= 0) return 0;
+  const totalDur = reducedMotion ? DESCENT_REDUCED_SEC : DESCENT_DURATION_SEC;
+  const progress = (BAAL_KUWARI_TOTAL_STEPS - step) / BAAL_KUWARI_TOTAL_STEPS;
+  return THREE.MathUtils.clamp(progress * totalDur, 0, Math.max(0, totalDur - 0.15));
+}
+
 /**
  * Scene 9 — Automatic Baal Kuwari Staircase Climb & Descent Cinematics.
  * Replaces manual controls with deterministic third-person choreography around Ishaan,
@@ -189,6 +218,7 @@ function computeExactHandClaspPoint(
  */
 export function Scene09_BaalKuwariStairs({
   direction,
+  initialStepCount = 0,
   qualityProfile,
   paused,
   transitionToken,
@@ -282,14 +312,23 @@ export function Scene09_BaalKuwariStairs({
     companionRigsRef.current = rigs;
   }, []);
 
+  const initialStepCountRef = useRef(initialStepCount);
+  initialStepCountRef.current = initialStepCount;
+
   useEffect(() => {
-    simRef.current.elapsedSec = 0;
-    simRef.current.halfwayNotified = direction === 'descent';
+    const startSec = computeInitialStairElapsedSec(
+      direction,
+      initialStepCountRef.current,
+      reducedMotion
+    );
+    simRef.current.elapsedSec = startSec;
+    simRef.current.halfwayNotified =
+      direction === 'descent' || initialStepCountRef.current >= 200;
     simRef.current.completedNotified = false;
     simRef.current.lastDomStep = -999;
     simRef.current.lastDomPhase = '';
     simRef.current.cameraInitialized = false;
-  }, [direction, transitionToken]);
+  }, [direction, transitionToken, reducedMotion]);
 
   useEffect(() => {
     onSceneReady(transitionToken, 9);

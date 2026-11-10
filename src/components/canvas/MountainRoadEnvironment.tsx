@@ -27,6 +27,7 @@ import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
 import { DistantHimalayanRidges } from '@/components/canvas/environment/DistantHimalayanRidges';
 import { RoadsideRoadLife } from '@/components/canvas/environment/RoadsideRoadLife';
 import { RoadsideTapriAssembly } from '@/components/canvas/environment/RoadsideTapriAssembly';
+import { createTerrainMeshSampler } from '@/lib/terrainMeshSampler';
 
 export interface MountainRoadEnvironmentProps {
   curve: THREE.CatmullRomCurve3;
@@ -104,28 +105,26 @@ function getApronOuterOffset(
 function sampleHillsideY(distance: number, lateral: number, segment: MountainRoadSegmentId): number {
   const distOut = Math.max(0, -lateral - (ROAD_HALF_WIDTH + 1.3));
   const alcove = getStallAlcoveBlend(distance, segment);
-  // Leave a subtle level berm pocket (`~0.18m`) around roadside stalls before climbing up slope
   const stallShelfWidth = alcove * 2.2;
-  const climb = Math.max(0, distOut - stallShelfWidth);
+  const climbRaw = Math.max(0, distOut - stallShelfWidth);
+  const climbRamp = smoothStep01(climbRaw / 1.8) * climbRaw;
 
   const wave =
     Math.sin(distance * 0.085) * 0.68 +
     Math.cos(distance * 0.041 + 0.8) * 0.88 +
     Math.sin(distance * 0.19) * 0.18;
-  const stallBermsBase = THREE.MathUtils.lerp(
-    -0.04,
-    0.34,
-    Math.min(1, distOut / Math.max(0.5, stallShelfWidth))
-  );
-  const toeY = alcove * smoothStep01(distOut / 1.5) * 0.26 + (alcove > 0 ? stallBermsBase - (-0.04) : 0);
+  const toeY = alcove * smoothStep01(distOut / 1.8) * 0.24;
 
-  const hillSlopeGain = segment === 'to_baalkuwari' ? 0.72 : 0.6;
+  const hillSlopeGain = segment === 'to_baalkuwari' ? 0.68 : 0.56;
+  // Blend steep ascent into broader ridge undulations near outer edge (`> 26m`) so slopes connect naturally to distant massifs
+  const ridgeCap = climbRaw > 28 ? (climbRaw - 28) * 0.12 : 0;
   return (
     -0.04 +
-    toeY * 0.45 +
-    Math.pow(climb, 0.92) * hillSlopeGain +
-    Math.sin(climb * 0.24) * 0.28 +
-    wave * smoothStep01(climb / 4.2)
+    toeY +
+    Math.pow(climbRamp + 0.001, 0.88) * hillSlopeGain -
+    ridgeCap +
+    Math.sin(climbRaw * 0.22 + distance * 0.03) * 0.34 * smoothStep01(climbRaw / 3.0) +
+    wave * smoothStep01(climbRaw / 4.2)
   );
 }
 
@@ -138,27 +137,31 @@ function sampleValleyY(
   stopDist: number
 ): number {
   const apronEdge = getApronOuterOffset(distance, segment, turnoutA, turnoutB, stopDist);
-  if (lateral <= apronEdge) {
-    const tApron = Math.max(0, lateral - (ROAD_HALF_WIDTH + 1.3)) / Math.max(0.2, apronEdge - (ROAD_HALF_WIDTH + 1.3));
-    return THREE.MathUtils.lerp(-0.04, -0.09, tApron);
+  const dropDist = Math.max(0, lateral - apronEdge);
+  if (dropDist <= 0.001) {
+    const tApron =
+      Math.max(0, lateral - (ROAD_HALF_WIDTH + 1.3)) /
+      Math.max(0.2, apronEdge - (ROAD_HALF_WIDTH + 1.3));
+    return THREE.MathUtils.lerp(-0.04, -0.09, smoothStep01(tApron));
   }
-  const dropDist = lateral - apronEdge;
-  const maxSpan = Math.max(8, 34.0 - apronEdge);
+  const maxSpan = Math.max(12, 66.0 - apronEdge);
   const u = Math.min(1, dropDist / maxSpan);
-  const bankBatter = smoothStep01(dropDist / 2.2) * 1.4;
+  const bankBatter = smoothStep01(dropDist / 2.6) * 1.45;
   const gorgeUndulation =
     (Math.sin(distance * 0.068 + lateral * 0.12) * 0.72 +
       Math.cos(distance * 0.037 - 0.5) * 0.58) *
-    smoothStep01(dropDist / 4.5);
-  return -0.07 - bankBatter - Math.pow(u, 0.85) * 16.4 + gorgeUndulation;
+    smoothStep01(dropDist / 5.0) *
+    (1 - smoothStep01((u - 0.65) / 0.35));
+  // Taper cleanly down to y = -20.5 (continuous with DistantHimalayanRidges basin floor)
+  return -0.09 - bankBatter - Math.pow(u, 0.76) * 18.96 + gorgeUndulation;
 }
 
 const ROAD_SEGMENTS = 320;
-const HILLSIDE_LATERAL_SAMPLES = 9;
-const VALLEY_LATERAL_SAMPLES = 10;
-const MAX_PINE_TREES = 180;
-const MAX_ROADSIDE_SHRUBS = 90;
-const MAX_CLIFF_ROCKS = 72;
+const HILLSIDE_LATERAL_SAMPLES = 13;
+const VALLEY_LATERAL_SAMPLES = 13;
+const MAX_PINE_TREES = 240;
+const MAX_ROADSIDE_SHRUBS = 140;
+const MAX_CLIFF_ROCKS = 96;
 
 function createSeededRandom(seed: number): () => number {
   let state = seed >>> 0;
@@ -225,14 +228,14 @@ function buildContouredRoadSideGeometry(
       let yOff: number;
 
       if (side === 'hill') {
-        lateral = THREE.MathUtils.lerp(-(ROAD_HALF_WIDTH + 1.3), -29.0, Math.pow(s, 1.12));
+        lateral = THREE.MathUtils.lerp(-(ROAD_HALF_WIDTH + 1.3), -62.0, Math.pow(s, 1.24));
         yOff = sampleHillsideY(distance, lateral, segment);
-        if (s < 0.14) {
-          tmpColor.copy(shoulderDirt).lerp(rockScree, s / 0.14);
-        } else if (s < 0.36) {
-          tmpColor.copy(rockScree).lerp(midTurf, (s - 0.14) / 0.22);
+        if (s < 0.12) {
+          tmpColor.copy(shoulderDirt).lerp(rockScree, s / 0.12);
+        } else if (s < 0.32) {
+          tmpColor.copy(rockScree).lerp(midTurf, (s - 0.12) / 0.2);
         } else {
-          tmpColor.copy(midTurf).lerp(pineForest, (s - 0.36) / 0.64);
+          tmpColor.copy(midTurf).lerp(pineForest, (s - 0.32) / 0.68);
         }
       } else {
         const bankSamples = 3;
@@ -243,17 +246,17 @@ function buildContouredRoadSideGeometry(
           lateral = THREE.MathUtils.lerp(ROAD_HALF_WIDTH + 1.3, apronEdge, frac);
         } else {
           const vFrac = (j - bankSamples) / (cols - 1 - bankSamples);
-          lateral = THREE.MathUtils.lerp(apronEdge, 34.0, Math.pow(vFrac, 1.1));
+          lateral = THREE.MathUtils.lerp(apronEdge, 66.0, Math.pow(vFrac, 1.25));
         }
         yOff = sampleValleyY(distance, lateral, segment, turnoutA, turnoutB, stopDist);
         if (lateral <= apronEdge + 0.4) {
           tmpColor.copy(shoulderDirt).lerp(rockScree, 0.45);
         } else {
-          const vT = Math.min(1, (lateral - apronEdge) / Math.max(1, 34.0 - apronEdge));
-          if (vT < 0.28) {
-            tmpColor.copy(rockScree).lerp(midTurf, vT / 0.28);
+          const vT = Math.min(1, (lateral - apronEdge) / Math.max(1, 66.0 - apronEdge));
+          if (vT < 0.22) {
+            tmpColor.copy(rockScree).lerp(midTurf, vT / 0.22);
           } else {
-            tmpColor.copy(midTurf).lerp(gorgeDeep, (vT - 0.28) / 0.72);
+            tmpColor.copy(midTurf).lerp(gorgeDeep, (vT - 0.22) / 0.78);
           }
         }
       }
@@ -705,7 +708,12 @@ export function MountainRoadEnvironment({
     }
   }, [curve, totalLength, dashCount, postPositions, milestoneDistances]);
 
-  // Populate hillside & gorge pine trees + shrubs cleanly outside paved aprons
+  const terrainMeshSampler = useMemo(
+    () => createTerrainMeshSampler([geometries.hillsideSlope, geometries.valleySlope], 3.5),
+    [geometries]
+  );
+
+  // Populate hillside & gorge pine trees, bushes, and rocks anchored cleanly onto actual rendered mesh triangles
   useEffect(() => {
     if (
       !trunkMeshRef.current ||
@@ -728,138 +736,140 @@ export function MountainRoadEnvironment({
     const foliageUpperColor = new THREE.Color();
     const shrubColor = new THREE.Color();
 
-    trunkMeshRef.current.count = treeCount;
-    foliageLowerMeshRef.current.count = treeCount;
-    foliageUpperMeshRef.current.count = treeCount;
-
-    for (let i = 0; i < treeCount; i += 1) {
+    let placedTrees = 0;
+    for (let attempt = 0; attempt < treeCount * 2 && placedTrees < treeCount; attempt += 1) {
       const d = 4 + rand() * (totalLength - 8);
       sampleRoadFrame(curve, d, totalLength, point, tangent, right, up);
 
       const inTurnoutB = d >= turnoutB.start - 4 && d <= turnoutB.end + 4;
       const inTurnoutA = d >= turnoutA.start - 3 && d <= turnoutA.end + 3;
-      const isHillside = inTurnoutA || inTurnoutB ? rand() < 0.72 : rand() < 0.58;
+      const isHillside = inTurnoutA || inTurnoutB ? rand() < 0.72 : rand() < 0.56;
       const alcove = getStallAlcoveBlend(d, roadSegment);
 
       let lateral: number;
-      let yOffset: number;
-      const scale = 0.8 + rand() * 0.75;
+      const scale = 0.8 + rand() * 0.78;
       if (isHillside) {
         const u = rand();
         const stallShelfClear = alcove * 2.8;
-        lateral = -(ROAD_HALF_WIDTH + 2.3 + stallShelfClear + u * 16.5);
-        lateral = Math.max(-28.0, lateral);
-        yOffset = sampleHillsideY(d, lateral, roadSegment) - 0.46 * scale;
+        lateral = -(ROAD_HALF_WIDTH + 2.4 + stallShelfClear + Math.pow(u, 0.82) * 34.0);
+        lateral = Math.max(-56.0, lateral);
       } else {
         const u = rand();
         const apronEdge = getApronOuterOffset(d, roadSegment, turnoutA, turnoutB, stopDist);
         const nearArrivalTemple =
           roadSegment === 'to_neelkanth' && Math.abs(d - stopDist) < 11.0;
-        const valleyClear = nearArrivalTemple ? Math.max(apronEdge + 2.5, ROAD_HALF_WIDTH + 16.0) : apronEdge + 1.8;
-        lateral = Math.min(31.5, valleyClear + u * 14.0);
-        yOffset =
-          sampleValleyY(d, lateral, roadSegment, turnoutA, turnoutB, stopDist) - 0.46 * scale;
+        const valleyClear = nearArrivalTemple
+          ? Math.max(apronEdge + 2.6, ROAD_HALF_WIDTH + 16.0)
+          : apronEdge + 1.9;
+        lateral = Math.min(54.0, valleyClear + Math.pow(u, 0.85) * 32.0);
       }
 
-      const yaw = rand() * Math.PI * 2;
-      basePos.copy(point).addScaledVector(right, lateral).addScaledVector(up, yOffset);
+      const wx = point.x + right.x * lateral;
+      const wz = point.z + right.z * lateral;
+      const exactGroundY = terrainMeshSampler.trySampleY(wx, wz);
+      if (exactGroundY === null) continue;
 
-      dummy.position.set(basePos.x, basePos.y + 0.85 * scale, basePos.z);
+      const yaw = rand() * Math.PI * 2;
+      // Subtle 14cm root seat beneath sampled triangle height so sloped bases meet terrain seamlessly
+      const rootY = exactGroundY - 0.14 * scale;
+
+      dummy.position.set(wx, rootY + 0.85 * scale, wz);
       dummy.rotation.set(0, yaw, 0);
       dummy.scale.set(scale, scale, scale);
       dummy.updateMatrix();
-      trunkMeshRef.current.setMatrixAt(i, dummy.matrix);
+      trunkMeshRef.current.setMatrixAt(placedTrees, dummy.matrix);
 
-      dummy.position.set(basePos.x, basePos.y + 2.15 * scale, basePos.z);
+      dummy.position.set(wx, rootY + 2.15 * scale, wz);
       dummy.updateMatrix();
-      foliageLowerMeshRef.current.setMatrixAt(i, dummy.matrix);
+      foliageLowerMeshRef.current.setMatrixAt(placedTrees, dummy.matrix);
 
-      dummy.position.set(basePos.x, basePos.y + 3.25 * scale, basePos.z);
+      dummy.position.set(wx, rootY + 3.25 * scale, wz);
       dummy.updateMatrix();
-      foliageUpperMeshRef.current.setMatrixAt(i, dummy.matrix);
+      foliageUpperMeshRef.current.setMatrixAt(placedTrees, dummy.matrix);
 
-      foliageColor.setHSL(0.32 + (rand() - 0.5) * 0.04, 0.38, 0.24 + rand() * 0.08);
-      foliageUpperColor.copy(foliageColor).offsetHSL(0, 0, 0.04);
-      foliageLowerMeshRef.current.setColorAt(i, foliageColor);
-      foliageUpperMeshRef.current.setColorAt(i, foliageUpperColor);
+      foliageColor.setHSL(0.32 + (rand() - 0.5) * 0.05, 0.4, 0.23 + rand() * 0.09);
+      foliageUpperColor.copy(foliageColor).offsetHSL(0, 0, 0.05);
+      foliageLowerMeshRef.current.setColorAt(placedTrees, foliageColor);
+      foliageUpperMeshRef.current.setColorAt(placedTrees, foliageUpperColor);
+      placedTrees += 1;
     }
+    trunkMeshRef.current.count = placedTrees;
+    foliageLowerMeshRef.current.count = placedTrees;
+    foliageUpperMeshRef.current.count = placedTrees;
 
-    shrubMeshRef.current.count = shrubCount;
-    for (let i = 0; i < shrubCount; i += 1) {
+    let placedShrubs = 0;
+    for (let attempt = 0; attempt < shrubCount * 2 && placedShrubs < shrubCount; attempt += 1) {
       const d = 6 + rand() * (totalLength - 12);
       sampleRoadFrame(curve, d, totalLength, point, tangent, right, up);
       const alcove = getStallAlcoveBlend(d, roadSegment);
-      const placeOnHillside = rand() < 0.72;
-      const scale = 0.55 + rand() * 0.6;
+      const placeOnHillside = rand() < 0.7;
+      const scale = 0.55 + rand() * 0.65;
       let lateral: number;
-      let slopeY: number;
 
       if (placeOnHillside) {
-        lateral = -(ROAD_HALF_WIDTH + 1.8 + alcove * 2.5 + rand() * 5.2);
-        slopeY = sampleHillsideY(d, lateral, roadSegment);
+        lateral = -(ROAD_HALF_WIDTH + 1.85 + alcove * 2.4 + rand() * 9.5);
       } else {
         const apronEdge = getApronOuterOffset(d, roadSegment, turnoutA, turnoutB, stopDist);
-        lateral = Math.min(30.5, apronEdge + 1.1 + rand() * 5.2);
-        slopeY = sampleValleyY(d, lateral, roadSegment, turnoutA, turnoutB, stopDist);
+        lateral = Math.min(48.0, apronEdge + 1.15 + rand() * 9.0);
       }
 
-      basePos
-        .copy(point)
-        .addScaledVector(right, lateral)
-        .addScaledVector(up, slopeY + 0.18 * scale);
+      const wx = point.x + right.x * lateral;
+      const wz = point.z + right.z * lateral;
+      const exactGroundY = terrainMeshSampler.trySampleY(wx, wz);
+      if (exactGroundY === null) continue;
 
-      dummy.position.copy(basePos);
+      dummy.position.set(wx, exactGroundY + 0.16 * scale, wz);
       dummy.rotation.set(0, rand() * Math.PI, 0);
-      dummy.scale.set(scale * 1.2, scale * 0.85, scale * 1.2);
+      dummy.scale.set(scale * 1.25, scale * 0.85, scale * 1.15);
       dummy.updateMatrix();
-      shrubMeshRef.current.setMatrixAt(i, dummy.matrix);
+      shrubMeshRef.current.setMatrixAt(placedShrubs, dummy.matrix);
 
-      shrubColor.setHSL(0.28 + (rand() - 0.5) * 0.05, 0.42, 0.28 + rand() * 0.09);
-      shrubMeshRef.current.setColorAt(i, shrubColor);
+      shrubColor.setHSL(0.28 + (rand() - 0.5) * 0.06, 0.44, 0.26 + rand() * 0.1);
+      shrubMeshRef.current.setColorAt(placedShrubs, shrubColor);
+      placedShrubs += 1;
     }
+    shrubMeshRef.current.count = placedShrubs;
 
-    rockMeshRef.current.count = rockCount;
-    for (let i = 0; i < rockCount; i += 1) {
+    let placedRocks = 0;
+    for (let attempt = 0; attempt < rockCount * 2 && placedRocks < rockCount; attempt += 1) {
       const d = 10 + rand() * (totalLength - 22);
       sampleRoadFrame(curve, d, totalLength, point, tangent, right, up);
       const alcove = getStallAlcoveBlend(d, roadSegment);
       const inTurnoutB = d >= turnoutB.start - 4 && d <= turnoutB.end + 4;
-      const onOffroadEdge = isOffroad && !inTurnoutB && i % 2 === 0;
+      const onOffroadEdge = isOffroad && !inTurnoutB && attempt % 2 === 0;
       const placeOnHillside = rand() < 0.72;
-      const scaleX = onOffroadEdge ? 0.45 + rand() * 0.55 : 0.75 + rand() * 1.15;
-      const scaleY = onOffroadEdge ? 0.3 + rand() * 0.35 : 0.55 + rand() * 0.9;
+      const scaleX = onOffroadEdge ? 0.45 + rand() * 0.55 : 0.78 + rand() * 1.18;
+      const scaleY = onOffroadEdge ? 0.3 + rand() * 0.35 : 0.56 + rand() * 0.92;
       let lateral: number;
-      let slopeY: number;
 
       if (onOffroadEdge) {
         if (placeOnHillside) {
-          lateral = -(ROAD_HALF_WIDTH + 0.35 + alcove * 2.1 + rand() * 1.45);
-          slopeY = sampleHillsideY(d, lateral, roadSegment) - 0.08;
+          lateral = -(ROAD_HALF_WIDTH + 0.4 + alcove * 2.1 + rand() * 1.6);
         } else {
           const apronEdge = getApronOuterOffset(d, roadSegment, turnoutA, turnoutB, stopDist);
-          lateral = Math.min(apronEdge + 1.2, ROAD_HALF_WIDTH + 0.3 + rand() * 1.15);
-          slopeY = sampleValleyY(d, lateral, roadSegment, turnoutA, turnoutB, stopDist) - 0.08;
+          lateral = Math.min(apronEdge + 1.4, ROAD_HALF_WIDTH + 0.45 + rand() * 1.3);
         }
       } else if (placeOnHillside) {
-        lateral = -(ROAD_HALF_WIDTH + 1.7 + alcove * 2.6 + rand() * 3.8);
-        slopeY = sampleHillsideY(d, lateral, roadSegment) - 0.12;
+        lateral = -(ROAD_HALF_WIDTH + 1.7 + alcove * 2.6 + rand() * 6.5);
       } else {
         const apronEdge = getApronOuterOffset(d, roadSegment, turnoutA, turnoutB, stopDist);
-        lateral = Math.min(30.0, apronEdge + 1.0 + rand() * 4.5);
-        slopeY = sampleValleyY(d, lateral, roadSegment, turnoutA, turnoutB, stopDist) - 0.12;
+        lateral = Math.min(46.0, apronEdge + 1.0 + rand() * 6.5);
       }
 
-      basePos
-        .copy(point)
-        .addScaledVector(right, lateral)
-        .addScaledVector(up, slopeY + scaleY * 0.1);
+      const wx = point.x + right.x * lateral;
+      const wz = point.z + right.z * lateral;
+      const exactGroundY = terrainMeshSampler.trySampleY(wx, wz);
+      if (exactGroundY === null) continue;
 
-      dummy.position.copy(basePos);
-      dummy.rotation.set(rand() * 0.6, rand() * Math.PI * 2, rand() * 0.6);
+      dummy.position.set(wx, exactGroundY + scaleY * 0.08, wz);
+      dummy.rotation.set(rand() * 0.5, rand() * Math.PI * 2, rand() * 0.5);
       dummy.scale.set(scaleX, scaleY, scaleX * 0.9);
       dummy.updateMatrix();
-      rockMeshRef.current.setMatrixAt(i, dummy.matrix);
+      rockMeshRef.current.setMatrixAt(placedRocks, dummy.matrix);
+      placedRocks += 1;
     }
+    rockMeshRef.current.count = placedRocks;
+    void basePos;
 
     trunkMeshRef.current.instanceMatrix.needsUpdate = true;
     foliageLowerMeshRef.current.instanceMatrix.needsUpdate = true;
@@ -875,7 +885,19 @@ export function MountainRoadEnvironment({
     if (shrubMeshRef.current.instanceColor) {
       shrubMeshRef.current.instanceColor.needsUpdate = true;
     }
-  }, [curve, totalLength, treeCount, shrubCount, rockCount, roadSegment, isOffroad, stopDist, turnoutA, turnoutB]);
+  }, [
+    curve,
+    totalLength,
+    terrainMeshSampler,
+    treeCount,
+    shrubCount,
+    rockCount,
+    roadSegment,
+    isOffroad,
+    stopDist,
+    turnoutA,
+    turnoutB,
+  ]);
 
   // Turnout structures: viewpoint rail + roadside dhaba placeholder / Neelkanth turnout post
   const landmarks = useMemo(() => {
@@ -1016,13 +1038,13 @@ export function MountainRoadEnvironment({
         shadow-bias={-0.0005}
       />
 
-      {/* Main continuous track: rocky mountain dirt track on `to_baalkuwari`, asphalt highway elsewhere */}
+      {/* Main continuous track: rocky mountain dirt track on `to_baalkuwari`, weathered mountain asphalt elsewhere */}
       <mesh geometry={geometries.asphalt} receiveShadow={shadowsEnabled}>
         <meshStandardMaterial
-          color={isOffroad ? '#9f8365' : '#3b4454'}
+          color={isOffroad ? '#9f8365' : '#6c7785'}
           map={(isOffroad ? offroadDirtTex : asphaltTex) ?? undefined}
-          roughness={isOffroad ? 0.98 : 0.9}
-          metalness={isOffroad ? 0.01 : 0.05}
+          roughness={isOffroad ? 0.98 : 0.88}
+          metalness={isOffroad ? 0.01 : 0.04}
         />
       </mesh>
       {!isOffroad && (
@@ -1319,13 +1341,9 @@ export function MountainRoadEnvironment({
         <meshStandardMaterial vertexColors roughness={0.95} />
       </mesh>
 
-      {/* Distant lower valley ground plane & faint river gorge shimmer */}
-      <mesh position={[-20, -17.5, -220]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[720, 760]} />
-        <meshStandardMaterial color="#3c5a45" roughness={1} />
-      </mesh>
-      <mesh position={[85, -17.2, -210]} rotation={[-Math.PI / 2, 0, -0.22]}>
-        <planeGeometry args={[12, 460]} />
+      {/* Deep gorge river channel shimmer flush inside continuous valley basin (`DistantHimalayanRidges` base -20.5) */}
+      <mesh position={[92, -20.15, -210]} rotation={[-Math.PI / 2, 0, -0.22]}>
+        <planeGeometry args={[18, 480]} />
         <meshStandardMaterial color="#6793b0" roughness={0.4} metalness={0.12} />
       </mesh>
 

@@ -73,6 +73,7 @@ export interface ProgressStoreState {
   userPaused: boolean;
   tabHiddenPaused: boolean;
   contextLostPaused: boolean;
+  modalPaused: boolean;
 
   // Settings & Quality
   audioMuted: boolean;
@@ -112,6 +113,7 @@ export interface ProgressStoreState {
   setUserPaused: (paused: boolean) => void;
   setTabHiddenPaused: (paused: boolean) => void;
   setContextLostPaused: (lost: boolean) => void;
+  setModalPaused: (paused: boolean) => void;
   toggleAudio: () => void;
   toggleGuidedMode: () => void;
   setQualityProfile: (profile: QualityProfile) => void;
@@ -126,7 +128,9 @@ export interface ProgressStoreState {
 }
 
 export function selectIsSimulationPaused(state: ProgressStoreState): boolean {
-  return state.userPaused || state.tabHiddenPaused || state.contextLostPaused;
+  return (
+    state.userPaused || state.tabHiddenPaused || state.contextLostPaused || state.modalPaused
+  );
 }
 
 const DEFAULT_INITIAL_SCENE_ID: SceneId = 5;
@@ -158,6 +162,7 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
   userPaused: false,
   tabHiddenPaused: false,
   contextLostPaused: false,
+  modalPaused: false,
 
   audioMuted: false,
   guidedMode: false,
@@ -234,6 +239,7 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
       transitionPhase: 'fading_in',
       transitionError: null,
       saveOnNextCommit: false,
+      ...(sceneId !== 9 ? { baalKuwariStairDirection: 'ascent' as const } : {}),
     });
 
     if (shouldSave) {
@@ -393,6 +399,7 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
   setUserPaused: (paused) => set({ userPaused: paused }),
   setTabHiddenPaused: (paused) => set({ tabHiddenPaused: paused }),
   setContextLostPaused: (lost) => set({ contextLostPaused: lost }),
+  setModalPaused: (paused) => set({ modalPaused: paused }),
 
   toggleAudio: () => set((state) => ({ audioMuted: !state.audioMuted })),
   toggleGuidedMode: () => set((state) => ({ guidedMode: !state.guidedMode })),
@@ -413,6 +420,7 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
       committedSceneId: state.committedSceneId,
       collectedPolaroids: [...state.collectedPolaroids],
       stairStepCount: state.stairStepCount > 0 ? state.stairStepCount : undefined,
+      baalKuwariStairDirection: state.baalKuwariStairDirection,
       mountainRoadSegment: state.mountainRoadSegment,
       roadSubStage: state.roadSubStage,
       baalKuwariSubStage: state.baalKuwariSubStage,
@@ -445,6 +453,7 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
         inferChapterRank(data.committedSceneId, seg, sub, data.collectedPolaroids, baalSub)
       ),
       stairStepCount: data.stairStepCount ?? 0,
+      baalKuwariStairDirection: data.baalKuwariStairDirection ?? 'ascent',
       mountainRoadSegment: seg,
       roadSubStage: sub,
       baalKuwariSubStage: baalSub,
@@ -476,6 +485,7 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
           )
         ),
         stairStepCount: result.data!.stairStepCount ?? 0,
+        baalKuwariStairDirection: result.data!.baalKuwariStairDirection ?? 'ascent',
         baalKuwariSubStage: baalSub,
         audioMuted: result.data!.audioMuted,
         guidedMode: result.data!.guidedMode,
@@ -520,6 +530,7 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
       mountainRoadSegment: 'to_dhaba',
       roadSubStage: 'driving',
       baalKuwariSubStage: 'driving',
+      baalKuwariStairDirection: 'ascent',
       roadResumeDistance: LEAD_START_DISTANCE,
       stairStepCount: 0,
       checkpointStatusNote: removed

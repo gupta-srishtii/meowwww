@@ -13,6 +13,7 @@ export interface CheckpointData {
   committedSceneId: SceneId;
   collectedPolaroids: string[];
   stairStepCount?: number;
+  baalKuwariStairDirection?: 'ascent' | 'descent';
   mountainRoadSegment?: MountainRoadSegmentId;
   roadSubStage?: MountainRoadSubStage;
   baalKuwariSubStage?: BaalKuwariSubStage;
@@ -66,6 +67,13 @@ export function validateCheckpointData(raw: unknown): CheckpointData | null {
     return null;
   }
   if (
+    candidate.baalKuwariStairDirection !== undefined &&
+    candidate.baalKuwariStairDirection !== 'ascent' &&
+    candidate.baalKuwariStairDirection !== 'descent'
+  ) {
+    return null;
+  }
+  if (
     candidate.mountainRoadSegment !== undefined &&
     candidate.mountainRoadSegment !== 'to_dhaba' &&
     candidate.mountainRoadSegment !== 'to_neelkanth' &&
@@ -113,6 +121,7 @@ export function validateCheckpointData(raw: unknown): CheckpointData | null {
     committedSceneId: candidate.committedSceneId,
     collectedPolaroids: [...candidate.collectedPolaroids],
     stairStepCount: candidate.stairStepCount,
+    baalKuwariStairDirection: candidate.baalKuwariStairDirection,
     mountainRoadSegment: candidate.mountainRoadSegment,
     roadSubStage: candidate.roadSubStage,
     baalKuwariSubStage: candidate.baalKuwariSubStage,

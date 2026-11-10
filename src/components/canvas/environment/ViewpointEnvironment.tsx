@@ -3,7 +3,11 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { ConnectedHillTerrain } from '@/components/canvas/environment/ConnectedHillTerrain';
+import {
+  buildConnectedHillGeometry,
+  ConnectedHillTerrain,
+} from '@/components/canvas/environment/ConnectedHillTerrain';
+import { createTerrainMeshSampler } from '@/lib/terrainMeshSampler';
 import type { WalkBounds, WalkHotspot, WalkObstacle } from '@/hooks/useWalkController';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
@@ -144,6 +148,31 @@ export function ViewpointEnvironment({
   const trunkRef = useRef<THREE.InstancedMesh>(null);
   const crownRef = useRef<THREE.InstancedMesh>(null);
 
+  const terrainGeometry = useMemo(
+    () =>
+      buildConnectedHillGeometry({
+        width: 165,
+        depth: 120,
+        centerX: 0,
+        centerZ: -14,
+        segX: 72,
+        segZ: 56,
+        heightFn: sampleViewpointTerrainY,
+      }),
+    []
+  );
+
+  useEffect(() => {
+    return () => {
+      terrainGeometry.dispose();
+    };
+  }, [terrainGeometry]);
+
+  const terrainSampler = useMemo(
+    () => createTerrainMeshSampler([terrainGeometry], 3.5),
+    [terrainGeometry]
+  );
+
   const pineTransforms = useMemo(() => {
     const list: Array<{ x: number; y: number; z: number; scale: number; rotY: number }> = [];
     for (let i = 0; i < MAX_PINE_COUNT; i++) {
@@ -165,8 +194,9 @@ export function ViewpointEnvironment({
         z = i % 4 === 0 ? -36 - (i % 8) * 1.4 : -10.4 - (i % 5) * 1.3;
       }
       const scale = 0.78 + ((i * 19) % 10) * 0.055;
-      // Deep-ground trunk base directly into sloped mountain gorge terrain so zero roots float
-      const y = sampleViewpointTerrainY(x, z) - 0.56 * scale;
+      // Ground directly against actual rendered terrain mesh triangles with slight natural root seat
+      const surfaceY = terrainSampler.trySampleY(x, z) ?? sampleViewpointTerrainY(x, z);
+      const y = surfaceY - 0.12 * scale;
       list.push({
         x,
         y,
@@ -176,7 +206,7 @@ export function ViewpointEnvironment({
       });
     }
     return list;
-  }, []);
+  }, [terrainSampler]);
 
   useEffect(() => {
     const trunks = trunkRef.current;
@@ -300,10 +330,11 @@ export function ViewpointEnvironment({
         segX={72}
         segZ={56}
         heightFn={sampleViewpointTerrainY}
+        geometry={terrainGeometry}
         receiveShadow={shadowsEnabled}
       />
       {VIEWPOINT_SLOPE_BOULDERS.map(([bx, bz, bs], idx) => {
-        const by = sampleViewpointTerrainY(bx, bz) - bs * 0.2;
+        const by = (terrainSampler.trySampleY(bx, bz) ?? sampleViewpointTerrainY(bx, bz)) - bs * 0.16;
         return (
           <mesh
             key={`vp-rock-${idx}`}

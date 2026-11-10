@@ -95,15 +95,29 @@ interface SimulationState {
   pullingToViewpoint: boolean;
   viewpointArrived: boolean;
   viewStopTargetDist: number;
+  pullOffWaitSec: number;
   collisionCooldown: number;
   companionAvoidShift: number;
   cameraInitialized: boolean;
   telemetryTimer: number;
   boundaryWarnActive: boolean;
-  fpsFrames: number;
-  fpsElapsed: number;
-  lowFpsDuration: number;
-  autoDowngraded: boolean;
+}
+
+function hasCrossTrafficConflict(
+  vehicles: readonly TrafficVehicleRuntime[],
+  leadDist: number
+): boolean {
+  for (let i = 0; i < vehicles.length; i += 1) {
+    const v = vehicles[i];
+    const inWindow =
+      v.spec.direction === -1
+        ? v.dist >= leadDist - 6 && v.dist <= leadDist + 26
+        : v.dist >= leadDist - 6 && v.dist <= leadDist + 20 && v.lateral > -0.25;
+    if (inWindow && v.lateral > -0.4) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function createInitialSimState(initialLeadDist = LEAD_START_DISTANCE): SimulationState {
@@ -122,15 +136,12 @@ function createInitialSimState(initialLeadDist = LEAD_START_DISTANCE): Simulatio
     pullingToViewpoint: false,
     viewpointArrived: false,
     viewStopTargetDist: VIEWPOINT_STOP_DISTANCE,
+    pullOffWaitSec: 0,
     collisionCooldown: 0,
     companionAvoidShift: 0,
     cameraInitialized: false,
     telemetryTimer: 0.08,
     boundaryWarnActive: false,
-    fpsFrames: 0,
-    fpsElapsed: 0,
-    lowFpsDuration: 0,
-    autoDowngraded: false,
   };
 }
 
@@ -149,7 +160,6 @@ export function ScooterPrototypeScene({
   onInViewpointZoneChange,
   onViewpointArrivedChange,
   onTrafficBrush,
-  onAutoDowngradeQuality,
   telemetryRefs,
 }: ScooterPrototypeSceneProps) {
   if (simulateMountFailure) {
@@ -236,13 +246,11 @@ export function ScooterPrototypeScene({
   const lastViewpointPullNonceRef = useRef(viewpointPullOverNonce);
 
   useEffect(() => {
-    const prevDowngraded = simRef.current.autoDowngraded;
     const resolvedStart =
       roadSegment === 'to_dhaba'
         ? Math.min(Math.max(LEAD_START_DISTANCE, startDistance), stopDist - 4)
         : LEAD_START_DISTANCE;
     simRef.current = createInitialSimState(resolvedStart);
-    simRef.current.autoDowngraded = prevDowngraded;
     trafficRuntimeRef.current = createTrafficRuntime(trafficFleet, resolvedStart);
     if (leadFrontWheelRef.current) leadFrontWheelRef.current.rotation.x = 0;
     if (leadRearWheelRef.current) leadRearWheelRef.current.rotation.x = 0;
@@ -308,26 +316,6 @@ export function ScooterPrototypeScene({
 
     const sim = simRef.current;
 
-    // Sustained low-FPS runtime auto-scaling check (§9 protocol)
-    if (rawDelta < 0.25 && qualityProfile !== 'low' && !sim.autoDowngraded) {
-      sim.fpsFrames += 1;
-      sim.fpsElapsed += rawDelta;
-      if (sim.fpsElapsed >= 0.5) {
-        const currentFps = sim.fpsFrames / sim.fpsElapsed;
-        if (currentFps < 28) {
-          sim.lowFpsDuration += sim.fpsElapsed;
-          if (sim.lowFpsDuration >= 3.0) {
-            sim.autoDowngraded = true;
-            onAutoDowngradeQuality?.();
-          }
-        } else {
-          sim.lowFpsDuration = 0;
-        }
-        sim.fpsFrames = 0;
-        sim.fpsElapsed = 0;
-      }
-    }
-
     const input = inputRef.current;
     const prevLeadDist = sim.leadDist;
     const prevLeadLateral = sim.leadLateral;
@@ -380,26 +368,43 @@ export function ScooterPrototypeScene({
     } else if (sim.pullingToViewpoint) {
       const remViewDist = Math.max(0, sim.viewStopTargetDist - sim.leadDist);
       const viewProgress = THREE.MathUtils.clamp(remViewDist / 18.0, 0, 1);
-      const targetSpeed =
+      const needsCross = sim.leadLateral < -0.35;
+      const waitingTraffic =
+        needsCross &&
+        hasCrossTrafficConflict(trafficRuntimeRef.current, sim.leadDist) &&
+        sim.pullOffWaitSec < 2.6;
+
+      if (waitingTraffic) {
+        sim.pullOffWaitSec += delta;
+      } else if (!needsCross || sim.pullOffWaitSec >= 2.6) {
+        sim.pullOffWaitSec = 0;
+      }
+
+      const baseTargetSpeed =
         remViewDist <= 0.25 ? 0 : Math.max(0.9, SCOOTER_MAX_SPEED * 0.65 * Math.pow(viewProgress, 0.72));
+      const targetSpeed = waitingTraffic
+        ? Math.min(baseTargetSpeed, remViewDist <= 3.5 ? 0.25 : 2.1)
+        : baseTargetSpeed;
+      const targetLat = waitingTraffic ? Math.min(-0.45, sim.leadLateral) : VIEWPOINT_PARK_LEAD_LATERAL;
+      const latLambda = waitingTraffic ? 5.0 : 3.0 + (1 - viewProgress) * 4.5;
+
       sim.leadSpeed = THREE.MathUtils.damp(sim.leadSpeed, targetSpeed, 4.6, delta);
-      sim.leadLateral = THREE.MathUtils.damp(
-        sim.leadLateral,
-        VIEWPOINT_PARK_LEAD_LATERAL,
-        3.0 + (1 - viewProgress) * 4.5,
-        delta
-      );
+      sim.leadLateral = THREE.MathUtils.damp(sim.leadLateral, targetLat, latLambda, delta);
       const latSlopeRatio = THREE.MathUtils.clamp(
         (sim.leadLateral - prevLeadLateral) / delta / SCOOTER_STEER_SPEED,
         -0.6,
         0.6
       );
       sim.leadSteerSmoothed = THREE.MathUtils.damp(sim.leadSteerSmoothed, latSlopeRatio, 8.0, delta);
-      sim.leadDist = Math.min(sim.viewStopTargetDist, sim.leadDist + sim.leadSpeed * delta);
-      if (sim.viewStopTargetDist - sim.leadDist <= 0.18) {
+      const maxStopCap = waitingTraffic
+        ? Math.max(sim.leadDist, sim.viewStopTargetDist - 3.0)
+        : sim.viewStopTargetDist;
+      sim.leadDist = Math.min(maxStopCap, sim.leadDist + sim.leadSpeed * delta);
+      if (!waitingTraffic && sim.viewStopTargetDist - sim.leadDist <= 0.18) {
         sim.leadDist = sim.viewStopTargetDist;
         sim.leadSpeed = 0;
         sim.pullingToViewpoint = false;
+        sim.pullOffWaitSec = 0;
         sim.viewpointArrived = true;
         onViewpointArrivedChange?.(true);
       }
@@ -411,17 +416,33 @@ export function ScooterPrototypeScene({
             ? 0
             : Math.max(0.65, SCOOTER_MAX_SPEED * Math.pow(progressRatio, 0.72));
 
+        const needsCross = sim.leadLateral < -0.35;
+        const waitingTraffic =
+          needsCross &&
+          hasCrossTrafficConflict(trafficRuntimeRef.current, sim.leadDist) &&
+          sim.pullOffWaitSec < 2.6;
+
+        if (waitingTraffic) {
+          sim.pullOffWaitSec += delta;
+        } else if (!needsCross) {
+          sim.pullOffWaitSec = 0;
+        }
+
         if (input.brake > 0) {
           sim.leadSpeed = Math.max(0, sim.leadSpeed - SCOOTER_BRAKE_DECEL * input.brake * delta);
         } else {
-          const targetSpeed =
+          let targetSpeed =
             input.throttle > 0 ? speedEnvelope : Math.min(speedEnvelope, Math.max(sim.leadSpeed, 1.8));
+          if (waitingTraffic) {
+            targetSpeed = Math.min(targetSpeed, remainingDist <= 3.6 ? 0.25 : 2.2);
+          }
           sim.leadSpeed = THREE.MathUtils.damp(sim.leadSpeed, targetSpeed, 4.4, delta);
         }
 
-        // Pull cleanly off main road onto the right-side dhaba / turnout apron (+5.4m)
-        const parkLambda = 2.4 + (1 - progressRatio) * 5.2;
-        sim.leadLateral = THREE.MathUtils.damp(sim.leadLateral, LEAD_PARK_LATERAL, parkLambda, delta);
+        // Pull cleanly across to right-side turnout apron (+5.4m) once lane crossing is clear (or timeout)
+        const targetLat = waitingTraffic ? Math.min(-0.45, sim.leadLateral) : LEAD_PARK_LATERAL;
+        const parkLambda = waitingTraffic ? 5.0 : 2.4 + (1 - progressRatio) * 5.2;
+        sim.leadLateral = THREE.MathUtils.damp(sim.leadLateral, targetLat, parkLambda, delta);
 
         const lateralSlopeRatio = THREE.MathUtils.clamp(
           (sim.leadLateral - prevLeadLateral) / delta / SCOOTER_STEER_SPEED,
@@ -430,10 +451,12 @@ export function ScooterPrototypeScene({
         );
         sim.leadSteerSmoothed = THREE.MathUtils.damp(sim.leadSteerSmoothed, lateralSlopeRatio, 8.0, delta);
 
-        sim.leadDist = Math.min(stopDist, sim.leadDist + sim.leadSpeed * delta);
-        if (stopDist - sim.leadDist <= 0.18) {
+        const maxStopCap = waitingTraffic ? Math.max(sim.leadDist, stopDist - 3.2) : stopDist;
+        sim.leadDist = Math.min(maxStopCap, sim.leadDist + sim.leadSpeed * delta);
+        if (!waitingTraffic && stopDist - sim.leadDist <= 0.18) {
           sim.leadDist = stopDist;
           sim.leadSpeed = 0;
+          sim.pullOffWaitSec = 0;
           sim.arrived = true;
           onArrivedChange(true);
         }

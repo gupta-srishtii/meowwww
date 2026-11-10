@@ -4,7 +4,11 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { StallCookCharacter } from '@/components/canvas/characters/StallCookCharacter';
-import { ConnectedHillTerrain } from '@/components/canvas/environment/ConnectedHillTerrain';
+import {
+  buildConnectedHillGeometry,
+  ConnectedHillTerrain,
+} from '@/components/canvas/environment/ConnectedHillTerrain';
+import { createTerrainMeshSampler } from '@/lib/terrainMeshSampler';
 import {
   DistantHimalayanRidges,
   type HimalayanRidgeSpec,
@@ -205,6 +209,32 @@ export function BaalKuwariMaggiStopEnvironment({
   const trunkInstRef = useRef<THREE.InstancedMesh>(null);
   const crownInstRef = useRef<THREE.InstancedMesh>(null);
 
+  const terrainGeometry = useMemo(
+    () =>
+      buildConnectedHillGeometry({
+        width: 140,
+        depth: 120,
+        centerX: 0,
+        centerZ: -18,
+        segX: 76,
+        segZ: 68,
+        heightFn: sampleClearingTerrainY,
+        colorFn: sampleClearingColor,
+      }),
+    []
+  );
+
+  useEffect(() => {
+    return () => {
+      terrainGeometry.dispose();
+    };
+  }, [terrainGeometry]);
+
+  const terrainSampler = useMemo(
+    () => createTerrainMeshSampler([terrainGeometry], 3.5),
+    [terrainGeometry]
+  );
+
   const pineTransforms = useMemo(() => {
     const items: Array<[number, number, number, number]> = [];
     for (let i = 0; i < MAX_PINE_COUNT; i += 1) {
@@ -222,11 +252,11 @@ export function BaalKuwariMaggiStopEnvironment({
         z = -16 + ((i * 4.5) % 24);
       }
       const scale = 0.85 + ((i * 11) % 7) * 0.08;
-      // Deeper trunk embed keeps trunks solidly rooted on sloped hill triangles
-      items.push([x, sampleClearingTerrainY(x, z) - 0.55 * scale, z, scale]);
+      const surfaceY = terrainSampler.trySampleY(x, z) ?? sampleClearingTerrainY(x, z);
+      items.push([x, surfaceY - 0.12 * scale, z, scale]);
     }
     return items;
-  }, []);
+  }, [terrainSampler]);
 
   useEffect(() => {
     if (!trunkInstRef.current || !crownInstRef.current) return;
@@ -307,6 +337,7 @@ export function BaalKuwariMaggiStopEnvironment({
         segZ={68}
         heightFn={sampleClearingTerrainY}
         colorFn={sampleClearingColor}
+        geometry={terrainGeometry}
         receiveShadow={shadowsEnabled}
       />
       <DistantHimalayanRidges ridges={TRAILHEAD_RIDGES} />
@@ -322,19 +353,23 @@ export function BaalKuwariMaggiStopEnvironment({
       </mesh>
 
       {/* Natural trail boulders & rustic timber log seating */}
-      {CLEARING_BOULDERS.map((b, idx) => (
-        <mesh
-          key={`boulder-${idx}`}
-          position={[b.pos[0], sampleClearingTerrainY(b.pos[0], b.pos[1]) + b.scale[1] * 0.28, b.pos[1]]}
-          rotation={b.rot}
-          scale={b.scale}
-          castShadow={shadowsEnabled}
-          receiveShadow={shadowsEnabled}
-        >
-          <dodecahedronGeometry args={[0.72, 0]} />
-          <meshStandardMaterial color={b.color} roughness={0.95} flatShading />
-        </mesh>
-      ))}
+      {CLEARING_BOULDERS.map((b, idx) => {
+        const groundY =
+          terrainSampler.trySampleY(b.pos[0], b.pos[1]) ?? sampleClearingTerrainY(b.pos[0], b.pos[1]);
+        return (
+          <mesh
+            key={`boulder-${idx}`}
+            position={[b.pos[0], groundY + b.scale[1] * 0.22, b.pos[1]]}
+            rotation={b.rot}
+            scale={b.scale}
+            castShadow={shadowsEnabled}
+            receiveShadow={shadowsEnabled}
+          >
+            <dodecahedronGeometry args={[0.72, 0]} />
+            <meshStandardMaterial color={b.color} roughness={0.95} flatShading />
+          </mesh>
+        );
+      })}
 
       {/* Rustic mountain fern & grass bushes tucked around edge boulders */}
       {[
@@ -344,16 +379,19 @@ export function BaalKuwariMaggiStopEnvironment({
         [5.1, -0.8],
         [-3.9, 2.2],
         [4.2, 2.3],
-      ].map(([fx, fz], idx) => (
-        <mesh
-          key={`fern-${idx}`}
-          position={[fx, sampleClearingTerrainY(fx, fz) + 0.16, fz]}
-          scale={[0.8, 0.52, 0.8]}
-        >
-          <dodecahedronGeometry args={[0.55, 0]} />
-          <meshStandardMaterial color={idx % 2 === 0 ? '#365e32' : '#4a7038'} roughness={0.93} flatShading />
-        </mesh>
-      ))}
+      ].map(([fx, fz], idx) => {
+        const groundY = terrainSampler.trySampleY(fx, fz) ?? sampleClearingTerrainY(fx, fz);
+        return (
+          <mesh
+            key={`fern-${idx}`}
+            position={[fx, groundY + 0.14, fz]}
+            scale={[0.8, 0.52, 0.8]}
+          >
+            <dodecahedronGeometry args={[0.55, 0]} />
+            <meshStandardMaterial color={idx % 2 === 0 ? '#365e32' : '#4a7038'} roughness={0.93} flatShading />
+          </mesh>
+        );
+      })}
 
       {/* Weathered trail log bench on east side */}
       <group position={[3.85, 0, -1.35]} rotation={[0, 0.2, 0]}>

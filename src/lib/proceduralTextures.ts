@@ -151,33 +151,48 @@ export function getDenimTexture(): THREE.CanvasTexture | null {
 }
 
 /**
- * Weathered mountain road asphalt texture with fine stone aggregate speckle.
+ * Weathered Himalayan hill road asphalt texture with warm stone aggregate & worn tire tracks
+ * (replaces harsh solid black appearance with sunlit weathered tarmac + gravel shoulder bleed).
  */
 export function getAsphaltRoadTexture(): THREE.CanvasTexture | null {
   return createCachedCanvasTexture(
-    'mountain_asphalt',
+    'mountain_asphalt_v2',
     256,
     (ctx, s) => {
-      ctx.fillStyle = '#333b48';
+      // Sun-faded slate-grey hill tarmac rather than flat pure black
+      ctx.fillStyle = '#535d6b';
       ctx.fillRect(0, 0, s, s);
 
-      for (let i = 0; i < 1400; i++) {
-        const x = (i * 73) % s;
-        const y = (i * 139) % s;
-        const light = i % 3 === 0;
-        ctx.fillStyle = light ? 'rgba(148, 163, 184, 0.16)' : 'rgba(15, 23, 42, 0.22)';
-        ctx.fillRect(x, y, 2, 2);
-      }
-
-      // Soft tire-track wear along dual lane paths
+      // Soft dusty berm gradient along outer edges + slight wear track shading
       const grad = ctx.createLinearGradient(0, 0, s, 0);
-      grad.addColorStop(0, 'rgba(22, 27, 36, 0.28)');
-      grad.addColorStop(0.25, 'rgba(71, 85, 105, 0.05)');
-      grad.addColorStop(0.5, 'rgba(30, 41, 59, 0.16)');
-      grad.addColorStop(0.75, 'rgba(71, 85, 105, 0.05)');
-      grad.addColorStop(1, 'rgba(22, 27, 36, 0.28)');
+      grad.addColorStop(0.0, 'rgba(130, 118, 100, 0.55)');
+      grad.addColorStop(0.11, 'rgba(84, 92, 104, 0.22)');
+      grad.addColorStop(0.24, 'rgba(54, 62, 74, 0.25)');
+      grad.addColorStop(0.5, 'rgba(88, 97, 110, 0.14)');
+      grad.addColorStop(0.76, 'rgba(54, 62, 74, 0.25)');
+      grad.addColorStop(0.89, 'rgba(84, 92, 104, 0.22)');
+      grad.addColorStop(1.0, 'rgba(130, 118, 100, 0.55)');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, s, s);
+
+      // Fine mineral aggregate chips and worn patch variation
+      for (let i = 0; i < 2000; i++) {
+        const x = (i * 73) % s;
+        const y = (i * 139) % s;
+        const mod = i % 5;
+        ctx.fillStyle =
+          mod === 0
+            ? 'rgba(203, 213, 225, 0.22)'
+            : mod === 1
+              ? 'rgba(168, 156, 138, 0.18)'
+              : 'rgba(30, 41, 59, 0.18)';
+        ctx.fillRect(x, y, i % 7 === 0 ? 3 : 2, 2);
+      }
+
+      // Subtle weathered tar seam streaks
+      ctx.fillStyle = 'rgba(30, 38, 48, 0.16)';
+      ctx.fillRect(0, 88, s, 2);
+      ctx.fillRect(0, 196, s, 1.5);
     },
     { repeatX: 1, repeatY: 42 }
   );

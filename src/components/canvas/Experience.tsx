@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import {
   SceneStage,
@@ -41,12 +41,94 @@ import {
 } from '@/lib/mountainSpline';
 import {
   QUALITY_PRESETS,
+  detectInitialQualityProfile,
   detectIsTouchDevice,
 } from '@/lib/qualityProfile';
 import { selectIsSimulationPaused, useProgressStore } from '@/store/progressStore';
 
 // Configure local self-hosted Draco decoder path once at client entry.
 useGLTF.setDecoderPath('/draco/');
+
+const QUALITY_RANK: Record<'low' | 'balanced' | 'high', number> = {
+  low: 0,
+  balanced: 1,
+  high: 2,
+};
+
+function AdaptiveQualityMonitor() {
+  const hardwareCeiling = useMemo(() => detectInitialQualityProfile(), []);
+  const metricsRef = useRef({
+    frames: 0,
+    elapsed: 0,
+    lowDuration: 0,
+    highDuration: 0,
+    cooldownSec: 0,
+  });
+
+  useFrame((_, rawDelta) => {
+    const state = useProgressStore.getState();
+    const m = metricsRef.current;
+
+    if (
+      selectIsSimulationPaused(state) ||
+      state.transitionPhase !== 'idle' ||
+      (typeof document !== 'undefined' && document.hidden)
+    ) {
+      m.frames = 0;
+      m.elapsed = 0;
+      return;
+    }
+
+    if (rawDelta <= 0 || rawDelta >= 0.25) {
+      return;
+    }
+
+    m.cooldownSec = Math.max(0, m.cooldownSec - rawDelta);
+    m.frames += 1;
+    m.elapsed += rawDelta;
+
+    if (m.elapsed < 0.5) {
+      return;
+    }
+
+    const fps = m.frames / m.elapsed;
+    m.frames = 0;
+    m.elapsed = 0;
+
+    const current = state.qualityProfile;
+
+    if (fps < 28) {
+      m.lowDuration += 0.5;
+      m.highDuration = 0;
+      if (m.cooldownSec <= 0 && m.lowDuration >= 2.5 && current !== 'low') {
+        const nextProfile = current === 'high' ? 'balanced' : 'low';
+        state.setQualityProfile(nextProfile);
+        m.cooldownSec = 8.0;
+        m.lowDuration = 0;
+      }
+    } else if (fps >= 54) {
+      m.lowDuration = 0;
+      if (QUALITY_RANK[current] < QUALITY_RANK[hardwareCeiling]) {
+        m.highDuration += 0.5;
+        if (m.cooldownSec <= 0 && m.highDuration >= 10.0) {
+          const nextProfile = current === 'low' ? 'balanced' : 'high';
+          if (QUALITY_RANK[nextProfile] <= QUALITY_RANK[hardwareCeiling]) {
+            state.setQualityProfile(nextProfile);
+            m.cooldownSec = 12.0;
+            m.highDuration = 0;
+          }
+        }
+      } else {
+        m.highDuration = 0;
+      }
+    } else {
+      m.lowDuration = Math.max(0, m.lowDuration - 0.25);
+      m.highDuration = 0;
+    }
+  });
+
+  return null;
+}
 
 export default function Experience() {
   const [canvasElement, setCanvasElement] = useState<HTMLCanvasElement | null>(null);
@@ -142,6 +224,7 @@ export default function Experience() {
   const setUserPaused = useProgressStore((s) => s.setUserPaused);
   const setTabHiddenPaused = useProgressStore((s) => s.setTabHiddenPaused);
   const setContextLostPaused = useProgressStore((s) => s.setContextLostPaused);
+  const setModalPaused = useProgressStore((s) => s.setModalPaused);
   const collectedPolaroids = useProgressStore((s) => s.collectedPolaroids);
   const capturePolaroidAndSave = useProgressStore((s) => s.capturePolaroidAndSave);
   const activeNarration = useProgressStore((s) => s.activeNarration);
@@ -822,13 +905,11 @@ export default function Experience() {
   const handleStairDescentComplete = useCallback(() => {
     if (useProgressStore.getState().committedSceneId !== 9) return;
     clearInputsRef.current();
-    setBaalKuwariStairDirection('ascent');
     setMountainRoadSegment('to_hotel_return');
     setRoadResumeDistance(LEAD_START_DISTANCE);
     sceneController.requestSceneTransition(11, { clearInputs: clearInputsRef.current });
   }, [
     sceneController,
-    setBaalKuwariStairDirection,
     setMountainRoadSegment,
     setRoadResumeDistance,
   ]);
@@ -1312,6 +1393,23 @@ export default function Experience() {
     }
   }, [anyModalOpen, clearAllMovementInputs, transitionPhase, userPaused]);
 
+  // Pause automatic cinematics, traffic, and simulation clocks while UI modals/overlays are open.
+  useEffect(() => {
+    setModalPaused(
+      anyModalOpen ||
+        hotelSummaryOpen ||
+        pendingResumeCheckpoint !== null ||
+        activeNarration !== null
+    );
+    return () => setModalPaused(false);
+  }, [
+    activeNarration,
+    anyModalOpen,
+    hotelSummaryOpen,
+    pendingResumeCheckpoint,
+    setModalPaused,
+  ]);
+
   // WebGL2 context loss, timeout escalation, and restoration without overriding other pause flags.
   useEffect(() => {
     if (!canvasElement) return;
@@ -1404,6 +1502,7 @@ export default function Experience() {
         style={{ touchAction: 'none' }}
         onCreated={({ gl }) => setCanvasElement(gl.domElement)}
       >
+        <AdaptiveQualityMonitor />
         <SceneStage
           controller={sceneController}
           inputRef={inputRef}

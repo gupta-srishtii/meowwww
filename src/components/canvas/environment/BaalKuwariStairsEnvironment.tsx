@@ -3,7 +3,10 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { ConnectedHillTerrain } from '@/components/canvas/environment/ConnectedHillTerrain';
+import {
+  ConnectedHillTerrain,
+  buildConnectedHillGeometry,
+} from '@/components/canvas/environment/ConnectedHillTerrain';
 import {
   DistantHimalayanRidges,
   type HimalayanRidgeSpec,
@@ -11,6 +14,7 @@ import {
 import { HotspotBeaconSparkle } from '@/components/canvas/environment/HotspotBeaconSparkle';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
+import { createTerrainMeshSampler } from '@/lib/terrainMeshSampler';
 
 /**
  * Total logical step count displayed cleanly across 4 winding mountain hillside flights.
@@ -179,7 +183,8 @@ export function projectPointOntoStairPath(wx: number, wz: number): StairProjecti
 }
 
 /**
- * Evaluates exact world transform along the winding staircase path distance `s`.
+ * Evaluates smooth blended world transform along the winding staircase path distance `s`.
+ * Interpolates yaw gently across ±1.6m around landing bends (`0.00m` lateral jump on corners).
  */
 export function sampleStairTransformAtS(s: number): {
   x: number;
@@ -206,19 +211,46 @@ export function sampleStairTransformAtS(s: number): {
       kind: seg.kind,
     };
   }
+  const blendHalfSpan = 1.6;
   for (let i = 0; i < STAIR_SEGMENTS.length; i += 1) {
     const seg = STAIR_SEGMENTS[i];
     if (s <= seg.sEnd || i === STAIR_SEGMENTS.length - 1) {
       const t = THREE.MathUtils.clamp((s - seg.sStart) / seg.len2D, 0, 1);
+      const x = THREE.MathUtils.lerp(seg.xStart, seg.xEnd, t);
+      const y = THREE.MathUtils.lerp(seg.yStart, seg.yEnd, t);
+      const z = THREE.MathUtils.lerp(seg.zStart, seg.zEnd, t);
+      let yaw = seg.yaw;
+
+      // Smoothly blend yaw across transition boundaries into adjacent segment
+      if (i > 0 && s - seg.sStart < blendHalfSpan) {
+        const prev = STAIR_SEGMENTS[i - 1];
+        const blend = smoothStep01((s - seg.sStart + blendHalfSpan) / (blendHalfSpan * 2));
+        let diff = seg.yaw - prev.yaw;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        yaw = prev.yaw + diff * blend;
+      } else if (i < STAIR_SEGMENTS.length - 1 && seg.sEnd - s < blendHalfSpan) {
+        const next = STAIR_SEGMENTS[i + 1];
+        const blend = smoothStep01((s - (seg.sEnd - blendHalfSpan)) / (blendHalfSpan * 2));
+        let diff = next.yaw - seg.yaw;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        yaw = seg.yaw + diff * blend;
+      }
+
+      const ux = -Math.sin(yaw);
+      const uz = -Math.cos(yaw);
+      const rx = -uz;
+      const rz = ux;
       return {
-        x: THREE.MathUtils.lerp(seg.xStart, seg.xEnd, t),
-        y: THREE.MathUtils.lerp(seg.yStart, seg.yEnd, t),
-        z: THREE.MathUtils.lerp(seg.zStart, seg.zEnd, t),
-        yaw: seg.yaw,
-        ux: seg.ux,
-        uz: seg.uz,
-        rx: seg.rx,
-        rz: seg.rz,
+        x,
+        y,
+        z,
+        yaw,
+        ux,
+        uz,
+        rx,
+        rz,
         kind: seg.kind,
       };
     }
@@ -283,23 +315,24 @@ function smoothStep01(t: number): number {
 }
 
 /**
- * Hillside terrain height tightly sculpted beneath and flanking every turn of the staircase.
+ * Smooth hillside terrain height sculpted beneath and flanking every turn of the staircase
+ * without piecewise edge cliffs so vertex triangles and foliage placement stay continuous.
  */
 function sampleStairTerrainY(wx: number, wz: number): number {
   const proj = projectPointOntoStairPath(wx, wz);
-  const clearHalf = proj.halfWidth + 0.85;
-  if (proj.perpDist <= clearHalf) {
-    return proj.heightY - 0.36;
-  }
-  const sideDist = proj.perpDist - clearHalf;
+  const clearInner = proj.halfWidth + 0.55;
+  const sideDist = Math.max(0, proj.perpDist - clearInner);
+  const slopeBlend = smoothStep01(sideDist / 2.2);
+  const smoothSide = Math.max(0, sideDist - 0.4) * slopeBlend;
   const ridgeWave =
-    Math.sin(wz * 0.12 + wx * 0.11) * 0.68 + Math.cos(wz * 0.08 - wx * 0.09) * 0.45;
-  const edgeFade = smoothStep01(sideDist / 2.8);
+    Math.sin(wz * 0.12 + wx * 0.11) * 0.62 + Math.cos(wz * 0.08 - wx * 0.09) * 0.42;
 
-  if (proj.lateralSigned < 0) {
-    return proj.heightY - 0.22 + Math.pow(sideDist, 0.88) * 0.46 + ridgeWave * 0.42 * edgeFade;
-  }
-  return proj.heightY - 0.25 - Math.pow(sideDist, 0.88) * 0.44 + ridgeWave * 0.42 * edgeFade;
+  // Smooth lateral slope blending without discrete +/- cliff jumps near path axis
+  const lateralSlopeWeight = THREE.MathUtils.clamp(-proj.lateralSigned / 2.8, -1, 1);
+  const offsetDelta = lateralSlopeWeight * 0.46 * smoothSide;
+  const baseDrop = -0.34 - (1 - Math.abs(lateralSlopeWeight)) * 0.12 * slopeBlend;
+
+  return proj.heightY + baseDrop + offsetDelta + ridgeWave * 0.4 * slopeBlend;
 }
 
 const _rockSkirt = new THREE.Color('#6a645a');
@@ -381,10 +414,36 @@ export function BaalKuwariStairsEnvironment({
     });
   }, []);
 
+  const terrainGeometry = useMemo(
+    () =>
+      buildConnectedHillGeometry({
+        width: 98,
+        depth: 136,
+        centerX: 0,
+        centerZ: -50,
+        segX: 76,
+        segZ: 96,
+        heightFn: sampleStairTerrainY,
+        colorFn: sampleStairTerrainColor,
+      }),
+    []
+  );
+
+  useEffect(() => {
+    return () => {
+      terrainGeometry.dispose();
+    };
+  }, [terrainGeometry]);
+
+  const terrainSampler = useMemo(
+    () => createTerrainMeshSampler([terrainGeometry], 3.0),
+    [terrainGeometry]
+  );
+
   const pinePlacements = useMemo(() => {
     const list: Array<[number, number, number, number]> = [];
-    for (let i = 0; i < MAX_PINE_TREES * 2 && list.length < MAX_PINE_TREES; i += 1) {
-      const z = 4 - ((i * 0.92) % 112);
+    for (let i = 0; i < MAX_PINE_TREES * 3 && list.length < MAX_PINE_TREES; i += 1) {
+      const z = 4 - ((i * 0.78) % 112);
       const side = i % 2 === 0 ? -1 : 1;
       const baseProj = sampleStairTransformAtS(Math.max(0, Math.min(STAIR_TOTAL_S, -z)));
       const offset = 3.9 + (i % 7) * 3.1 + ((i * 5) % 4) * 0.5;
@@ -392,14 +451,17 @@ export function BaalKuwariStairsEnvironment({
 
       // Guarantee zero overlap against turned flight segments or landings
       const actualProj = projectPointOntoStairPath(x, z);
-      if (actualProj.perpDist < actualProj.halfWidth + 2.4) continue;
+      if (actualProj.perpDist < actualProj.halfWidth + 2.5) continue;
+
+      const meshY = terrainSampler.trySampleY(x, z);
+      if (meshY === null) continue;
 
       const scale = 0.85 + ((i * 13) % 8) * 0.075;
-      const y = sampleStairTerrainY(x, z) - 0.56 * scale;
-      list.push([x, y, z, scale]);
+      // Anchor squarely on the rendered mesh triangle height (0.00m analytic divergence)
+      list.push([x, meshY - 0.12 * scale, z, scale]);
     }
     return list;
-  }, []);
+  }, [terrainSampler]);
 
   const landingBoulders = useMemo(() => {
     const rocks: Array<{ pos: [number, number, number]; scale: [number, number, number]; yaw: number }> = [];
@@ -407,7 +469,7 @@ export function BaalKuwariStairsEnvironment({
       [-1, 1].forEach((side) => {
         const x = seg.xEnd + seg.rx * side * (seg.halfWidth + 1.35);
         const z = seg.zEnd + seg.rz * side * (seg.halfWidth + 1.35);
-        const y = sampleStairTerrainY(x, z) + 0.2;
+        const y = terrainSampler.sampleY(x, z, sampleStairTerrainY(x, z)) + 0.14;
         rocks.push({
           pos: [x, y, z],
           scale: [0.95 + (sIdx % 3) * 0.2, 0.72, 0.88],
@@ -416,7 +478,7 @@ export function BaalKuwariStairsEnvironment({
       });
     });
     return rocks;
-  }, []);
+  }, [terrainSampler]);
 
   useEffect(() => {
     if (!trunkInstRef.current || !crownInstRef.current) return;
@@ -543,12 +605,13 @@ export function BaalKuwariStairsEnvironment({
 
       {/* Contoured Mountain Hillside Terrain tightly sculpted around winding stair turns */}
       <ConnectedHillTerrain
+        geometry={terrainGeometry}
         width={98}
         depth={136}
         centerX={0}
         centerZ={-50}
-        segX={72}
-        segZ={92}
+        segX={76}
+        segZ={96}
         heightFn={sampleStairTerrainY}
         colorFn={sampleStairTerrainColor}
         receiveShadow={shadowsEnabled}

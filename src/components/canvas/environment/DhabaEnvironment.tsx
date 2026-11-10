@@ -9,7 +9,11 @@ import { PrototypeScooter } from '@/components/canvas/PrototypeScooter';
 import type { WalkBounds, WalkHotspot, WalkObstacle } from '@/hooks/useWalkController';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
-import { ConnectedHillTerrain } from '@/components/canvas/environment/ConnectedHillTerrain';
+import {
+  buildConnectedHillGeometry,
+  ConnectedHillTerrain,
+} from '@/components/canvas/environment/ConnectedHillTerrain';
+import { createTerrainMeshSampler } from '@/lib/terrainMeshSampler';
 import {
   DistantHimalayanRidges,
   type HimalayanRidgeSpec,
@@ -296,6 +300,31 @@ export function DhabaEnvironment({
     dashInstRef.current.instanceMatrix.needsUpdate = true;
   }, [onwardRoadCurve]);
 
+  const terrainGeometry = useMemo(
+    () =>
+      buildConnectedHillGeometry({
+        width: 178,
+        depth: 130,
+        centerX: 10,
+        centerZ: -8,
+        segX: 82,
+        segZ: 62,
+        heightFn: sampleDhabaTerrainY,
+      }),
+    [sampleDhabaTerrainY]
+  );
+
+  useEffect(() => {
+    return () => {
+      terrainGeometry.dispose();
+    };
+  }, [terrainGeometry]);
+
+  const terrainSampler = useMemo(
+    () => createTerrainMeshSampler([terrainGeometry], 3.5),
+    [terrainGeometry]
+  );
+
   const pinePlacements = useMemo(() => {
     const coords: Array<[number, number, number]> = [
       // Gorge hillside & rocky spur pines flanking terrace
@@ -339,14 +368,11 @@ export function DhabaEnvironment({
       [52.0, 5.0, 1.34],
       [64.0, -4.5, 1.32],
     ];
-    return coords.map(([x, z, s]): [number, number, number, number] => [
-      x,
-      // Deep-ground trunk base directly into sloped mountain ridge terrain
-      sampleDhabaTerrainY(x, z) - 0.56 * s,
-      z,
-      s,
-    ]);
-  }, [sampleDhabaTerrainY]);
+    return coords.map(([x, z, s]): [number, number, number, number] => {
+      const surfaceY = terrainSampler.trySampleY(x, z) ?? sampleDhabaTerrainY(x, z);
+      return [x, surfaceY - 0.12 * s, z, s];
+    });
+  }, [terrainSampler, sampleDhabaTerrainY]);
 
   useEffect(() => {
     if (!trunkInstRef.current || !crownInstRef.current) return;
@@ -540,6 +566,7 @@ export function DhabaEnvironment({
         segX={82}
         segZ={62}
         heightFn={sampleDhabaTerrainY}
+        geometry={terrainGeometry}
         receiveShadow={shadowsEnabled}
       />
       {(
@@ -551,19 +578,22 @@ export function DhabaEnvironment({
           [-14.5, 10.2, 0.96],
           [12.5, 10.6, 0.88],
         ] as const
-      ).map(([bx, bz, bs], idx) => (
-        <mesh
-          key={`dhaba-rock-${idx}`}
-          position={[bx, sampleDhabaTerrainY(bx, bz) - bs * 0.2, bz]}
-          rotation={[idx * 0.5, idx * 1.1, idx * 0.3]}
-          scale={[bs * 1.25, bs * 0.72, bs]}
-          castShadow={shadowsEnabled}
-          receiveShadow={shadowsEnabled}
-        >
-          <dodecahedronGeometry args={[0.82, 0]} />
-          <meshStandardMaterial color={idx % 2 === 0 ? '#656e67' : '#57605a'} roughness={0.95} />
-        </mesh>
-      ))}
+      ).map(([bx, bz, bs], idx) => {
+        const by = (terrainSampler.trySampleY(bx, bz) ?? sampleDhabaTerrainY(bx, bz)) - bs * 0.16;
+        return (
+          <mesh
+            key={`dhaba-rock-${idx}`}
+            position={[bx, by, bz]}
+            rotation={[idx * 0.5, idx * 1.1, idx * 0.3]}
+            scale={[bs * 1.25, bs * 0.72, bs]}
+            castShadow={shadowsEnabled}
+            receiveShadow={shadowsEnabled}
+          >
+            <dodecahedronGeometry args={[0.82, 0]} />
+            <meshStandardMaterial color={idx % 2 === 0 ? '#656e67' : '#57605a'} roughness={0.95} />
+          </mesh>
+        );
+      })}
       <DistantHimalayanRidges ridges={DHABA_RIDGES} />
 
       {/* Valley wooden lookout rail along northern terrace edge */}

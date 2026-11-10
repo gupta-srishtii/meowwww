@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 
 export interface HimalayanRidgeSpec {
@@ -9,47 +10,115 @@ export interface HimalayanRidgeSpec {
   color: string;
 }
 
-const SHARED_RIDGE_SPHERE_GEOMETRY = new THREE.SphereGeometry(1, 18, 10);
-
-const DEFAULT_HIGHWAY_RIDGES: readonly HimalayanRidgeSpec[] = [
-  { position: [-165, -8, -110], scale: [120, 62, 95], rotationY: 0.35, color: '#6b8ba4' },
-  { position: [158, -10, -145], scale: [132, 58, 108], rotationY: -0.4, color: '#64839c' },
-  { position: [-176, -6, -265], scale: [148, 76, 120], rotationY: 0.22, color: '#58768f' },
-  { position: [164, -8, -295], scale: [142, 70, 118], rotationY: -0.25, color: '#5e7d96' },
-  { position: [94, -4, -455], scale: [185, 88, 130], rotationY: 0.12, color: '#7898b0' },
-  { position: [-215, -2, -440], scale: [176, 86, 135], rotationY: -0.18, color: '#6786a0' },
-  { position: [-95, -14, 65], scale: [110, 44, 88], rotationY: 0.5, color: '#6c8aa3' },
-  // Soft intervening foothill saddles so ridgelines blend organically without sharp gaps
-  { position: [-135, -16, -185], scale: [96, 46, 86], rotationY: -0.3, color: '#4d6b57' },
-  { position: [130, -18, -218], scale: [104, 42, 92], rotationY: 0.28, color: '#4b6855' },
-  { position: [-20, -10, -490], scale: [210, 74, 110], rotationY: 0, color: '#83a1b8' },
-];
-
 export interface DistantHimalayanRidgesProps {
   ridges?: readonly HimalayanRidgeSpec[];
+  centerZ?: number;
+}
+
+const _foothillGreen = new THREE.Color('#395645');
+const _midSlopeSage = new THREE.Color('#4d6b5e');
+const _ridgeSlateBlue = new THREE.Color('#64839d');
+const _highMistBlue = new THREE.Color('#84a2ba');
+
+/**
+ * Generates a continuous multi-band Himalayan Shivalik massif ring with smooth elevation ridges
+ * replacing isolated stretched sphere blocks, seamless against terrain skirts and distant horizon fog.
+ */
+function buildContinuousMountainRangeGeometry(
+  ridges?: readonly HimalayanRidgeSpec[],
+  centerZ = -190
+): THREE.BufferGeometry {
+  const segX = 96;
+  const segZ = 72;
+  const width = 920;
+  const depth = 920;
+  const geom = new THREE.PlaneGeometry(width, depth, segX, segZ);
+  geom.rotateX(-Math.PI / 2);
+
+  const pos = geom.attributes.position as THREE.BufferAttribute;
+  const colors = new Float32Array(pos.count * 3);
+  const tmpColor = new THREE.Color();
+
+  for (let i = 0; i < pos.count; i += 1) {
+    const lx = pos.getX(i);
+    const lz = pos.getZ(i);
+    const wx = lx;
+    const wz = lz + centerZ;
+
+    // Normalized radial distance from foreground play corridor
+    const distFromCenter = Math.hypot(lx * 0.95, (wz + 190) * 0.72);
+    const innerClear = THREE.MathUtils.smoothstep(distFromCenter, 55, 195);
+    const farRise = THREE.MathUtils.smoothstep(distFromCenter, 110, 420);
+
+    // Multi-frequency continuous Shivalik ridgelines + valley saddles
+    const ridgeA = Math.sin(wx * 0.015 + wz * 0.011) * 0.5 + 0.5;
+    const ridgeB = Math.cos(wx * 0.024 - wz * 0.019 + 1.1) * 0.5 + 0.5;
+    const ridgeC = Math.sin(wx * 0.045 + wz * 0.038) * 0.5 + 0.5;
+    const directionalBias =
+      Math.max(0, (-wz - 120) / 360) * 32.0 + Math.abs(wx) * 0.065;
+
+    let ridgeBoost = 0;
+    if (ridges && ridges.length > 0) {
+      for (let r = 0; r < ridges.length; r += 1) {
+        const spec = ridges[r];
+        const rx = Math.max(24, spec.scale[0]);
+        const rz = Math.max(24, spec.scale[2]);
+        const d2 = ((wx - spec.position[0]) / rx) ** 2 + ((wz - spec.position[2]) / rz) ** 2;
+        if (d2 < 3.2) {
+          ridgeBoost = Math.max(ridgeBoost, Math.exp(-d2 * 1.45) * spec.scale[1] * 1.05);
+        }
+      }
+    }
+
+    const baseElevation = -20.5;
+    const h =
+      baseElevation +
+      innerClear * (16.0 + ridgeA * 24.0 + ridgeB * 14.0) +
+      farRise * (28.0 + ridgeC * 18.0 + directionalBias) +
+      ridgeBoost * innerClear;
+
+    pos.setXYZ(i, wx, h, wz);
+
+    // Atmospheric elevation & depth tinting (forest foothill green -> hazy slate blue crests)
+    const heightNorm = THREE.MathUtils.clamp((h + 18) / 76, 0, 1);
+    if (heightNorm < 0.35) {
+      tmpColor.copy(_foothillGreen).lerp(_midSlopeSage, heightNorm / 0.35);
+    } else if (heightNorm < 0.72) {
+      tmpColor.copy(_midSlopeSage).lerp(_ridgeSlateBlue, (heightNorm - 0.35) / 0.37);
+    } else {
+      tmpColor.copy(_ridgeSlateBlue).lerp(_highMistBlue, (heightNorm - 0.72) / 0.28);
+    }
+    colors[i * 3] = tmpColor.r;
+    colors[i * 3 + 1] = tmpColor.g;
+    colors[i * 3 + 2] = tmpColor.b;
+  }
+
+  geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geom.computeVertexNormals();
+  return geom;
 }
 
 /**
- * Smooth rolling multi-layered mountain massifs that frame valley vistas organically
- * without harsh low-poly pyramid/triangle walls.
+ * Continuous multi-layered Himalayan foothill & distant peak mesh replacing floating spheres.
  */
 export function DistantHimalayanRidges({
-  ridges = DEFAULT_HIGHWAY_RIDGES,
+  ridges,
+  centerZ = -190,
 }: DistantHimalayanRidgesProps) {
+  const geometry = useMemo(
+    () => buildContinuousMountainRangeGeometry(ridges, centerZ),
+    [ridges, centerZ]
+  );
+
+  useEffect(() => {
+    return () => {
+      geometry.dispose();
+    };
+  }, [geometry]);
+
   return (
-    <group>
-      {ridges.map((ridge, index) => (
-        <mesh
-          key={index}
-          geometry={SHARED_RIDGE_SPHERE_GEOMETRY}
-          position={[ridge.position[0], ridge.position[1], ridge.position[2]]}
-          rotation={[0, ridge.rotationY ?? 0, 0]}
-          scale={[ridge.scale[0], ridge.scale[1], ridge.scale[2]]}
-        >
-          <meshStandardMaterial color={ridge.color} roughness={0.96} metalness={0.02} />
-        </mesh>
-      ))}
-    </group>
+    <mesh geometry={geometry}>
+      <meshStandardMaterial vertexColors roughness={0.97} metalness={0.01} />
+    </mesh>
   );
 }
-

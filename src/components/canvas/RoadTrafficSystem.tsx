@@ -2,6 +2,7 @@
 
 import { useMemo, type RefObject } from 'react';
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
   ARRIVAL_ZONE_DISTANCE,
   VIEWPOINT_TURNOUT_END,
@@ -407,6 +408,532 @@ export function stepTrafficSimulation({
   return { companionAvoidLateralShift };
 }
 
+function bakePartGeometry(
+  source: THREE.BufferGeometry,
+  pos: [number, number, number],
+  rot: [number, number, number] = [0, 0, 0],
+  scale: [number, number, number] = [1, 1, 1],
+  hexColor?: string
+): THREE.BufferGeometry {
+  const nonIndexed = source.index ? source.toNonIndexed() : source.clone();
+  if (nonIndexed.getAttribute('uv')) {
+    nonIndexed.deleteAttribute('uv');
+  }
+  const quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(rot[0], rot[1], rot[2]));
+  const mat = new THREE.Matrix4().compose(
+    new THREE.Vector3(pos[0], pos[1], pos[2]),
+    quat,
+    new THREE.Vector3(scale[0], scale[1], scale[2])
+  );
+  nonIndexed.applyMatrix4(mat);
+  source.dispose();
+
+  if (hexColor !== undefined) {
+    const count = nonIndexed.getAttribute('position').count;
+    const c = new THREE.Color(hexColor);
+    const colors = new Float32Array(count * 3);
+    for (let i = 0; i < count; i += 1) {
+      colors[i * 3] = c.r;
+      colors[i * 3 + 1] = c.g;
+      colors[i * 3 + 2] = c.b;
+    }
+    nonIndexed.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  }
+  return nonIndexed;
+}
+
+function mergeAndDispose(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
+  const merged = mergeGeometries(parts, false);
+  for (let i = 0; i < parts.length; i += 1) {
+    parts[i].dispose();
+  }
+  return merged ?? new THREE.BufferGeometry();
+}
+
+const _sharedDetailMat = new THREE.MeshStandardMaterial({
+  vertexColors: true,
+  roughness: 0.72,
+  metalness: 0.14,
+});
+
+const _sharedWheelMat = new THREE.MeshStandardMaterial({
+  vertexColors: true,
+  roughness: 0.68,
+  metalness: 0.35,
+});
+
+const _sharedGlassMat = new THREE.MeshStandardMaterial({
+  vertexColors: true,
+  transparent: true,
+  opacity: 0.45,
+  roughness: 0.15,
+  metalness: 0.45,
+});
+
+const _sharedShadowMat = new THREE.MeshBasicMaterial({
+  color: '#090d16',
+  transparent: true,
+  opacity: 0.32,
+  depthWrite: false,
+});
+
+const _paintMaterials = new Map<string, THREE.MeshStandardMaterial>();
+function getTrafficPaintMaterial(hexColor: string): THREE.MeshStandardMaterial {
+  let mat = _paintMaterials.get(hexColor);
+  if (!mat) {
+    mat = new THREE.MeshStandardMaterial({
+      color: hexColor,
+      roughness: 0.38,
+      metalness: 0.22,
+    });
+    _paintMaterials.set(hexColor, mat);
+  }
+  return mat;
+}
+
+let _cachedCarWheelGeom: THREE.BufferGeometry | null = null;
+function getCarWheelGeometry(): THREE.BufferGeometry {
+  if (!_cachedCarWheelGeom) {
+    _cachedCarWheelGeom = mergeAndDispose([
+      bakePartGeometry(
+        new THREE.CylinderGeometry(0.28, 0.28, 0.17, 16),
+        [0, 0, 0],
+        [0, 0, Math.PI / 2],
+        [1, 1, 1],
+        '#111827'
+      ),
+      bakePartGeometry(
+        new THREE.CylinderGeometry(0.16, 0.16, 0.18, 10),
+        [0, 0, 0],
+        [0, 0, Math.PI / 2],
+        [1, 1, 1],
+        '#cbd5e1'
+      ),
+      bakePartGeometry(
+        new THREE.BoxGeometry(0.19, 0.26, 0.05),
+        [0, 0, 0],
+        [0, 0, 0],
+        [1, 1, 1],
+        '#64748b'
+      ),
+    ]);
+  }
+  return _cachedCarWheelGeom;
+}
+
+let _cachedMotoWheelGeom: THREE.BufferGeometry | null = null;
+function getMotoWheelGeometry(): THREE.BufferGeometry {
+  if (!_cachedMotoWheelGeom) {
+    _cachedMotoWheelGeom = mergeAndDispose([
+      bakePartGeometry(
+        new THREE.CylinderGeometry(0.23, 0.23, 0.12, 16),
+        [0, 0, 0],
+        [0, 0, Math.PI / 2],
+        [1, 1, 1],
+        '#111827'
+      ),
+      bakePartGeometry(
+        new THREE.CylinderGeometry(0.13, 0.13, 0.13, 10),
+        [0, 0, 0],
+        [0, 0, Math.PI / 2],
+        [1, 1, 1],
+        '#94a3b8'
+      ),
+      bakePartGeometry(
+        new THREE.BoxGeometry(0.14, 0.22, 0.035),
+        [0, 0, 0],
+        [0, 0, 0],
+        [1, 1, 1],
+        '#64748b'
+      ),
+    ]);
+  }
+  return _cachedMotoWheelGeom;
+}
+
+interface CarGeometrySet {
+  shadowGeom: THREE.BufferGeometry;
+  bodyGeom: THREE.BufferGeometry;
+  detailGeom: THREE.BufferGeometry;
+  glassGeom: THREE.BufferGeometry;
+}
+
+const _carGeoCache = new Map<string, CarGeometrySet>();
+function getCarGeometrySet(style: TrafficVehicleStyle, withDriver: boolean): CarGeometrySet {
+  const normalizedStyle: TrafficVehicleStyle =
+    style === 'hill_suv' || style === 'sedan' ? style : 'hatchback';
+  const key = `${normalizedStyle}_${withDriver ? 'drv' : 'parked'}`;
+  const cached = _carGeoCache.get(key);
+  if (cached) return cached;
+
+  const isSuv = normalizedStyle === 'hill_suv';
+  const isSedan = normalizedStyle === 'sedan';
+  const bodyLen = isSedan ? 3.55 : isSuv ? 3.45 : 3.2;
+  const cabinHeight = isSuv ? 0.54 : 0.43;
+  const cabinZ = isSuv ? 0.24 : isSedan ? 0.14 : 0.2;
+
+  const shadowGeom = bakePartGeometry(
+    new THREE.PlaneGeometry(1.68, bodyLen + 0.25),
+    [0, 0.02, 0],
+    [-Math.PI / 2, 0, 0]
+  );
+
+  const bodyParts: THREE.BufferGeometry[] = [
+    bakePartGeometry(
+      new THREE.BoxGeometry(1.56, isSuv ? 0.62 : 0.54, bodyLen),
+      [0, 0.48, 0]
+    ),
+    bakePartGeometry(
+      new THREE.BoxGeometry(1.3, 0.07, isSuv ? 2.1 : 1.75),
+      [0, 0.78 + cabinHeight, cabinZ]
+    ),
+  ];
+  const pillarOffsets: Array<[number, number]> = [
+    [-0.58, cabinZ - 0.75],
+    [0.58, cabinZ - 0.75],
+    [-0.58, cabinZ + 0.05],
+    [0.58, cabinZ + 0.05],
+    [-0.58, cabinZ + 0.82],
+    [0.58, cabinZ + 0.82],
+  ];
+  for (let i = 0; i < pillarOffsets.length; i += 1) {
+    const [px, pz] = pillarOffsets[i];
+    bodyParts.push(
+      bakePartGeometry(
+        new THREE.BoxGeometry(0.08, cabinHeight, 0.09),
+        [px, 0.76 + cabinHeight * 0.45, pz]
+      )
+    );
+  }
+  const bodyGeom = mergeAndDispose(bodyParts);
+
+  const detailParts: THREE.BufferGeometry[] = [
+    // Front & rear bumpers
+    bakePartGeometry(new THREE.BoxGeometry(1.54, 0.14, 0.08), [0, 0.26, -bodyLen * 0.5], [0, 0, 0], [1, 1, 1], '#1f2937'),
+    bakePartGeometry(new THREE.BoxGeometry(1.54, 0.14, 0.08), [0, 0.26, bodyLen * 0.5], [0, 0, 0], [1, 1, 1], '#1f2937'),
+    // Interior upholstery
+    bakePartGeometry(new THREE.BoxGeometry(1.18, 0.3, 1.55), [0, 0.84, cabinZ], [0, 0, 0], [1, 1, 1], '#1e293b'),
+    // Daytime LED headlights (`-Z`) & red taillights (`+Z`)
+    bakePartGeometry(new THREE.BoxGeometry(0.26, 0.14, 0.04), [-0.52, 0.48, -bodyLen * 0.5 - 0.01], [0, 0, 0], [1, 1, 1], '#fef08a'),
+    bakePartGeometry(new THREE.BoxGeometry(0.26, 0.14, 0.04), [0.52, 0.48, -bodyLen * 0.5 - 0.01], [0, 0, 0], [1, 1, 1], '#fef08a'),
+    bakePartGeometry(new THREE.BoxGeometry(0.26, 0.14, 0.04), [-0.52, 0.5, bodyLen * 0.5 + 0.01], [0, 0, 0], [1, 1, 1], '#ef4444'),
+    bakePartGeometry(new THREE.BoxGeometry(0.26, 0.14, 0.04), [0.52, 0.5, bodyLen * 0.5 + 0.01], [0, 0, 0], [1, 1, 1], '#ef4444'),
+  ];
+
+  if (withDriver) {
+    detailParts.push(
+      bakePartGeometry(
+        new THREE.CylinderGeometry(0.14, 0.16, 0.3, 10),
+        [0.3, 0.78 + 0.08, cabinZ - 0.24],
+        [0, 0, 0],
+        [1, 1, 1],
+        '#e2e8f0'
+      ),
+      bakePartGeometry(
+        new THREE.SphereGeometry(0.105, 10, 10),
+        [0.3, 0.78 + 0.29, cabinZ - 0.26],
+        [0, 0, 0],
+        [1, 1, 1],
+        '#c9936d'
+      ),
+      bakePartGeometry(
+        new THREE.SphereGeometry(0.108, 10, 8),
+        [0.3, 0.78 + 0.34, cabinZ - 0.23],
+        [0, 0, 0],
+        [1, 1, 1],
+        '#18181b'
+      )
+    );
+  }
+
+  if (isSuv) {
+    detailParts.push(
+      bakePartGeometry(
+        new THREE.BoxGeometry(1.15, 0.08, 1.45),
+        [0, 0.86 + cabinHeight, cabinZ + 0.05],
+        [0, 0, 0],
+        [1, 1, 1],
+        '#18181b'
+      ),
+      bakePartGeometry(
+        new THREE.CylinderGeometry(0.25, 0.25, 0.14, 14),
+        [0, 0.58, bodyLen * 0.5 + 0.08],
+        [Math.PI / 2, 0, 0],
+        [1, 1, 1],
+        '#111827'
+      )
+    );
+  }
+
+  const detailGeom = mergeAndDispose(detailParts);
+
+  const glassGeom = mergeAndDispose([
+    bakePartGeometry(
+      new THREE.BoxGeometry(1.22, cabinHeight * 0.9, 0.05),
+      [0, 0.77 + cabinHeight * 0.46, cabinZ - 0.86],
+      [-0.36, 0, 0],
+      [1, 1, 1],
+      '#93c5fd'
+    ),
+    bakePartGeometry(
+      new THREE.BoxGeometry(1.28, cabinHeight * 0.76, 1.5),
+      [0, 0.77 + cabinHeight * 0.44, cabinZ + 0.04],
+      [0, 0, 0],
+      [1, 1, 1],
+      '#475569'
+    ),
+  ]);
+
+  const set: CarGeometrySet = { shadowGeom, bodyGeom, detailGeom, glassGeom };
+  _carGeoCache.set(key, set);
+  return set;
+}
+
+interface MotoGeometrySet {
+  shadowGeom: THREE.BufferGeometry;
+  bodyGeom: THREE.BufferGeometry;
+  detailGeom: THREE.BufferGeometry;
+}
+
+const _motoGeoCache = new Map<string, MotoGeometrySet>();
+function getMotoGeometrySet(
+  style: TrafficVehicleStyle,
+  withRider: boolean,
+  hasPillion: boolean,
+  jacketColor: string,
+  helmetColor: string
+): MotoGeometrySet {
+  const isScooter = style === 'scooter';
+  const key = `${isScooter ? 'sct' : 'bike'}_${withRider ? 'rdr' : 'parked'}_${
+    withRider && hasPillion ? 'pil' : 'solo'
+  }_${jacketColor}_${helmetColor}`;
+  const cached = _motoGeoCache.get(key);
+  if (cached) return cached;
+
+  const shadowGeom = bakePartGeometry(
+    new THREE.CircleGeometry(0.68, 14),
+    [0, 0.02, 0],
+    [-Math.PI / 2, 0, 0],
+    [0.55, 1.35, 1]
+  );
+
+  const bodyParts: THREE.BufferGeometry[] = isScooter
+    ? [
+        bakePartGeometry(new THREE.BoxGeometry(0.36, 0.58, 0.24), [0, 0.56, -0.34], [-0.22, 0, 0]),
+        bakePartGeometry(new THREE.BoxGeometry(0.34, 0.28, 0.72), [0, 0.48, 0.24]),
+      ]
+    : [bakePartGeometry(new THREE.BoxGeometry(0.32, 0.22, 0.46), [0, 0.65, -0.22])];
+  const bodyGeom = mergeAndDispose(bodyParts);
+
+  const detailParts: THREE.BufferGeometry[] = isScooter
+    ? [
+        bakePartGeometry(
+          new THREE.BoxGeometry(0.34, 0.08, 0.45),
+          [0, 0.26, -0.05],
+          [0, 0, 0],
+          [1, 1, 1],
+          '#1f2937'
+        ),
+      ]
+    : [
+        bakePartGeometry(
+          new THREE.BoxGeometry(0.26, 0.24, 0.96),
+          [0, 0.42, 0.04],
+          [0, 0, 0],
+          [1, 1, 1],
+          '#1e293b'
+        ),
+        bakePartGeometry(
+          new THREE.CylinderGeometry(0.045, 0.055, 0.68, 10),
+          [0.17, 0.3, 0.28],
+          [Math.PI / 2, 0, 0],
+          [1, 1, 1],
+          '#94a3b8'
+        ),
+      ];
+
+  detailParts.push(
+    // Dual seat
+    bakePartGeometry(
+      new THREE.BoxGeometry(0.28, 0.11, 0.72),
+      [0, isScooter ? 0.65 : 0.62, 0.22],
+      [0, 0, 0],
+      [1, 1, 1],
+      '#18181b'
+    ),
+    // Headlight & taillight
+    bakePartGeometry(
+      new THREE.SphereGeometry(0.09, 10, 8),
+      [0, 0.88, -0.52],
+      [0, 0, 0],
+      [1, 1, 1],
+      '#fef08a'
+    ),
+    bakePartGeometry(
+      new THREE.BoxGeometry(0.16, 0.07, 0.04),
+      [0, 0.63, 0.6],
+      [0, 0, 0],
+      [1, 1, 1],
+      '#ef4444'
+    ),
+    // Front fork & handlebars
+    bakePartGeometry(
+      new THREE.CylinderGeometry(0.022, 0.022, 0.66, 8),
+      [0, 0.92, -0.38],
+      [0, 0, Math.PI / 2],
+      [1, 1, 1],
+      '#1e293b'
+    ),
+    bakePartGeometry(
+      new THREE.CylinderGeometry(0.022, 0.02, 0.62, 8),
+      [-0.1, 0.62, -0.45],
+      [0.25, 0, 0],
+      [1, 1, 1],
+      '#94a3b8'
+    ),
+    bakePartGeometry(
+      new THREE.CylinderGeometry(0.022, 0.02, 0.62, 8),
+      [0.1, 0.62, -0.45],
+      [0.25, 0, 0],
+      [1, 1, 1],
+      '#94a3b8'
+    )
+  );
+
+  if (withRider) {
+    // Rider legs (group offset [0, 0.69, 0.04])
+    for (const lx of [-0.14, 0.14]) {
+      detailParts.push(
+        bakePartGeometry(
+          new THREE.CylinderGeometry(0.054, 0.046, 0.3, 8),
+          [lx, 0.69 - 0.02 - 0.08, 0.04 - 0.02 - 0.11],
+          [0.88, 0, 0],
+          [1, 1, 1],
+          '#1e293b'
+        ),
+        bakePartGeometry(
+          new THREE.CylinderGeometry(0.044, 0.038, 0.28, 8),
+          [lx, 0.69 - 0.02 - 0.24, 0.04 - 0.02 - 0.2],
+          [-0.25, 0, 0],
+          [1, 1, 1],
+          '#1e293b'
+        )
+      );
+    }
+    // Jacket torso & arms
+    detailParts.push(
+      bakePartGeometry(
+        new THREE.CylinderGeometry(0.145, 0.125, 0.44, 10),
+        [0, 0.69 + 0.22, 0.04 - 0.04],
+        [-0.22, 0, 0],
+        [1, 1, 1],
+        jacketColor
+      ),
+      bakePartGeometry(
+        new THREE.CylinderGeometry(0.038, 0.032, 0.42, 8),
+        [-0.17, 0.69 + 0.26, 0.04 - 0.22],
+        [1.05, 0, 0.15],
+        [1, 1, 1],
+        jacketColor
+      ),
+      bakePartGeometry(
+        new THREE.CylinderGeometry(0.038, 0.032, 0.42, 8),
+        [0.17, 0.69 + 0.26, 0.04 - 0.22],
+        [1.05, 0, -0.15],
+        [1, 1, 1],
+        jacketColor
+      ),
+      // Helmet + visor
+      bakePartGeometry(
+        new THREE.SphereGeometry(0.135, 12, 10),
+        [0, 0.69 + 0.52, 0.04 - 0.1],
+        [0, 0, 0],
+        [1, 1, 1],
+        helmetColor
+      ),
+      bakePartGeometry(
+        new THREE.BoxGeometry(0.17, 0.065, 0.08),
+        [0, 0.69 + 0.51, 0.04 - 0.205],
+        [0, 0, 0],
+        [1, 1, 1],
+        '#090d16'
+      )
+    );
+
+    if (hasPillion) {
+      for (const lx of [-0.13, 0.13]) {
+        detailParts.push(
+          bakePartGeometry(
+            new THREE.CylinderGeometry(0.05, 0.044, 0.28, 8),
+            [lx, 0.72 - 0.04 - 0.12, 0.39 - 0.02 - 0.08],
+            [0.65, 0, 0],
+            [1, 1, 1],
+            '#334155'
+          ),
+          bakePartGeometry(
+            new THREE.CylinderGeometry(0.04, 0.035, 0.24, 8),
+            [lx, 0.72 - 0.04 - 0.27, 0.39 - 0.02 - 0.14],
+            [0, 0, 0],
+            [1, 1, 1],
+            '#334155'
+          )
+        );
+      }
+      detailParts.push(
+        bakePartGeometry(
+          new THREE.CylinderGeometry(0.135, 0.12, 0.4, 10),
+          [0, 0.72 + 0.21, 0.39],
+          [-0.1, 0, 0],
+          [1, 1, 1],
+          '#b45309'
+        ),
+        bakePartGeometry(
+          new THREE.CylinderGeometry(0.034, 0.03, 0.34, 8),
+          [-0.15, 0.72 + 0.22, 0.39 - 0.14],
+          [0.75, 0, 0],
+          [1, 1, 1],
+          '#b45309'
+        ),
+        bakePartGeometry(
+          new THREE.CylinderGeometry(0.034, 0.03, 0.34, 8),
+          [0.15, 0.72 + 0.22, 0.39 - 0.14],
+          [0.75, 0, 0],
+          [1, 1, 1],
+          '#b45309'
+        ),
+        bakePartGeometry(
+          new THREE.SphereGeometry(0.128, 12, 10),
+          [0, 0.72 + 0.5, 0.39 - 0.02],
+          [0, 0, 0],
+          [1, 1, 1],
+          '#f59e0b'
+        ),
+        bakePartGeometry(
+          new THREE.BoxGeometry(0.155, 0.058, 0.075),
+          [0, 0.72 + 0.49, 0.39 - 0.118],
+          [0, 0, 0],
+          [1, 1, 1],
+          '#090d16'
+        )
+      );
+    }
+  }
+
+  const detailGeom = mergeAndDispose(detailParts);
+  const set: MotoGeometrySet = { shadowGeom, bodyGeom, detailGeom };
+  _motoGeoCache.set(key, set);
+  return set;
+}
+
+const CAR_WHEEL_POSITIONS: ReadonlyArray<[number, number, number]> = [
+  [-0.78, 0.28, -1.04],
+  [0.78, 0.28, -1.04],
+  [-0.78, 0.28, 1.04],
+  [0.78, 0.28, 1.04],
+];
+
+const MOTO_WHEEL_Z: readonly number[] = [-0.55, 0.56];
+
 export function StylizedTrafficCar({
   color,
   style = 'hatchback',
@@ -418,155 +945,28 @@ export function StylizedTrafficCar({
   withDriver?: boolean;
   castShadow: boolean;
 }) {
-  const isSuv = style === 'hill_suv';
-  const isSedan = style === 'sedan';
-  const bodyLen = isSedan ? 3.55 : isSuv ? 3.45 : 3.2;
-  const cabinHeight = isSuv ? 0.54 : 0.43;
-  const cabinZ = isSuv ? 0.24 : isSedan ? 0.14 : 0.2;
+  const { shadowGeom, bodyGeom, detailGeom, glassGeom } = useMemo(
+    () => getCarGeometrySet(style, withDriver),
+    [style, withDriver]
+  );
+  const wheelGeom = useMemo(() => getCarWheelGeometry(), []);
+  const paintMat = useMemo(() => getTrafficPaintMaterial(color), [color]);
 
   return (
     <group>
-      {/* Contact shadow */}
-      <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[1.68, bodyLen + 0.25]} />
-        <meshBasicMaterial color="#090d16" transparent opacity={0.34} depthWrite={false} />
-      </mesh>
-      {/* Lower body chassis */}
-      <mesh position={[0, 0.48, 0]} castShadow={castShadow}>
-        <boxGeometry args={[1.56, isSuv ? 0.62 : 0.54, bodyLen]} />
-        <meshStandardMaterial color={color} roughness={0.38} metalness={0.22} />
-      </mesh>
-      {/* Front & rear bumpers */}
-      <mesh position={[0, 0.26, -bodyLen * 0.5]}>
-        <boxGeometry args={[1.54, 0.14, 0.08]} />
-        <meshStandardMaterial color="#1f2937" roughness={0.8} />
-      </mesh>
-      <mesh position={[0, 0.26, bodyLen * 0.5]}>
-        <boxGeometry args={[1.54, 0.14, 0.08]} />
-        <meshStandardMaterial color="#1f2937" roughness={0.8} />
-      </mesh>
-
-      {/* Interior dark upholstery + seatbacks */}
-      <mesh position={[0, 0.84, cabinZ]}>
-        <boxGeometry args={[1.18, 0.3, 1.55]} />
-        <meshStandardMaterial color="#1e293b" roughness={0.9} />
-      </mesh>
-
-      {/* Visible seated Indian hill driver silhouette on right seat (`+X`) */}
-      {withDriver && (
-        <group position={[0.3, 0.78, cabinZ - 0.24]}>
-          {/* Seat headrest & torso */}
-          <mesh position={[0, 0.08, 0]}>
-            <cylinderGeometry args={[0.14, 0.16, 0.3, 10]} />
-            <meshStandardMaterial color="#e2e8f0" roughness={0.8} />
-          </mesh>
-          <mesh position={[0, 0.29, -0.02]}>
-            <sphereGeometry args={[0.105, 10, 10]} />
-            <meshStandardMaterial color="#c9936d" roughness={0.75} />
-          </mesh>
-          <mesh position={[0, 0.34, 0.01]}>
-            <sphereGeometry args={[0.108, 10, 8]} />
-            <meshStandardMaterial color="#18181b" roughness={0.88} />
-          </mesh>
-        </group>
-      )}
-
-      {/* Roof pillars & roof panel */}
-      <mesh position={[0, 0.78 + cabinHeight, cabinZ]} castShadow={castShadow}>
-        <boxGeometry args={[1.3, 0.07, isSuv ? 2.1 : 1.75]} />
-        <meshStandardMaterial color={color} roughness={0.38} metalness={0.22} />
-      </mesh>
-      {/* Subtle A/B/C pillars */}
-      {[
-        [-0.58, cabinZ - 0.75],
-        [0.58, cabinZ - 0.75],
-        [-0.58, cabinZ + 0.05],
-        [0.58, cabinZ + 0.05],
-        [-0.58, cabinZ + 0.82],
-        [0.58, cabinZ + 0.82],
-      ].map(([px, pz], idx) => (
-        <mesh key={idx} position={[px, 0.76 + cabinHeight * 0.45, pz]} castShadow={castShadow}>
-          <boxGeometry args={[0.08, cabinHeight, 0.09]} />
-          <meshStandardMaterial color={color} roughness={0.42} />
-        </mesh>
-      ))}
-
-      {/* Translucent front windshield & rear/side glass revealing interior & driver */}
-      <mesh position={[0, 0.77 + cabinHeight * 0.46, cabinZ - 0.86]} rotation={[-0.36, 0, 0]}>
-        <boxGeometry args={[1.22, cabinHeight * 0.9, 0.05]} />
-        <meshStandardMaterial
-          color="#93c5fd"
-          transparent
-          opacity={0.44}
-          roughness={0.14}
-          metalness={0.5}
+      <mesh geometry={shadowGeom} material={_sharedShadowMat} />
+      <mesh geometry={bodyGeom} material={paintMat} castShadow={castShadow} />
+      <mesh geometry={detailGeom} material={_sharedDetailMat} />
+      <mesh geometry={glassGeom} material={_sharedGlassMat} />
+      {CAR_WHEEL_POSITIONS.map((pos, idx) => (
+        <mesh
+          key={idx}
+          name="traffic-wheel"
+          position={pos}
+          geometry={wheelGeom}
+          material={_sharedWheelMat}
+          castShadow={castShadow}
         />
-      </mesh>
-      <mesh position={[0, 0.77 + cabinHeight * 0.44, cabinZ + 0.04]}>
-        <boxGeometry args={[1.28, cabinHeight * 0.76, 1.5]} />
-        <meshStandardMaterial
-          color="#475569"
-          transparent
-          opacity={0.48}
-          roughness={0.16}
-          metalness={0.4}
-        />
-      </mesh>
-
-      {/* Hill SUV roof carrier rack & tailgate spare tire */}
-      {isSuv && (
-        <>
-          <mesh position={[0, 0.86 + cabinHeight, cabinZ + 0.05]}>
-            <boxGeometry args={[1.15, 0.08, 1.45]} />
-            <meshStandardMaterial color="#18181b" roughness={0.75} metalness={0.3} />
-          </mesh>
-          <mesh position={[0, 0.58, bodyLen * 0.5 + 0.08]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.25, 0.25, 0.14, 14]} />
-            <meshStandardMaterial color="#111827" roughness={0.88} />
-          </mesh>
-        </>
-      )}
-
-      {/* Daytime LED headlights (`-Z` forward) & red taillights (`+Z` rear) */}
-      <mesh position={[-0.52, 0.48, -bodyLen * 0.5 - 0.01]}>
-        <boxGeometry args={[0.26, 0.14, 0.04]} />
-        <meshStandardMaterial color="#fef9c3" emissive="#fde047" emissiveIntensity={0.8} />
-      </mesh>
-      <mesh position={[0.52, 0.48, -bodyLen * 0.5 - 0.01]}>
-        <boxGeometry args={[0.26, 0.14, 0.04]} />
-        <meshStandardMaterial color="#fef9c3" emissive="#fde047" emissiveIntensity={0.8} />
-      </mesh>
-      <mesh position={[-0.52, 0.5, bodyLen * 0.5 + 0.01]}>
-        <boxGeometry args={[0.26, 0.14, 0.04]} />
-        <meshStandardMaterial color="#dc2626" emissive="#ef4444" emissiveIntensity={0.6} />
-      </mesh>
-      <mesh position={[0.52, 0.5, bodyLen * 0.5 + 0.01]}>
-        <boxGeometry args={[0.26, 0.14, 0.04]} />
-        <meshStandardMaterial color="#dc2626" emissive="#ef4444" emissiveIntensity={0.6} />
-      </mesh>
-
-      {/* Four spinning wheels with silver alloy hubs */}
-      {[
-        [-0.78, 0.28, -1.04],
-        [0.78, 0.28, -1.04],
-        [-0.78, 0.28, 1.04],
-        [0.78, 0.28, 1.04],
-      ].map(([wx, wy, wz], idx) => (
-        <group key={idx} name="traffic-wheel" position={[wx, wy, wz]}>
-          <mesh rotation={[0, 0, Math.PI / 2]} castShadow={castShadow}>
-            <cylinderGeometry args={[0.28, 0.28, 0.17, 16]} />
-            <meshStandardMaterial color="#111827" roughness={0.92} />
-          </mesh>
-          <mesh rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.16, 0.16, 0.18, 10]} />
-            <meshStandardMaterial color="#cbd5e1" roughness={0.35} metalness={0.75} />
-          </mesh>
-          {/* Hub lug spoke bar so rotation reads crisply */}
-          <mesh>
-            <boxGeometry args={[0.19, 0.26, 0.05]} />
-            <meshStandardMaterial color="#64748b" metalness={0.6} roughness={0.4} />
-          </mesh>
-        </group>
       ))}
     </group>
   );
@@ -589,178 +989,28 @@ function StylizedTrafficMoto({
   castShadow: boolean;
   withRider?: boolean;
 }) {
-  const isScooter = style === 'scooter';
+  const { shadowGeom, bodyGeom, detailGeom } = useMemo(
+    () => getMotoGeometrySet(style, withRider, hasPillion, jacketColor, helmetColor),
+    [style, withRider, hasPillion, jacketColor, helmetColor]
+  );
+  const wheelGeom = useMemo(() => getMotoWheelGeometry(), []);
+  const paintMat = useMemo(() => getTrafficPaintMaterial(color), [color]);
 
   return (
     <group>
-      <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[0.55, 1.35, 1]}>
-        <circleGeometry args={[0.68, 14]} />
-        <meshBasicMaterial color="#090d16" transparent opacity={0.3} depthWrite={false} />
-      </mesh>
-
-      {isScooter ? (
-        <>
-          {/* Step-through scooter cowl + deck */}
-          <mesh position={[0, 0.56, -0.34]} rotation={[-0.22, 0, 0]} castShadow={castShadow}>
-            <boxGeometry args={[0.36, 0.58, 0.24]} />
-            <meshStandardMaterial color={color} roughness={0.36} metalness={0.2} />
-          </mesh>
-          <mesh position={[0, 0.26, -0.05]}>
-            <boxGeometry args={[0.34, 0.08, 0.45]} />
-            <meshStandardMaterial color="#1f2937" roughness={0.88} />
-          </mesh>
-          <mesh position={[0, 0.48, 0.24]} castShadow={castShadow}>
-            <boxGeometry args={[0.34, 0.28, 0.72]} />
-            <meshStandardMaterial color={color} roughness={0.38} metalness={0.2} />
-          </mesh>
-        </>
-      ) : (
-        <>
-          {/* Commuter motorcycle sculpted tank + chassis + exhaust */}
-          <mesh position={[0, 0.42, 0.04]} castShadow={castShadow}>
-            <boxGeometry args={[0.26, 0.24, 0.96]} />
-            <meshStandardMaterial color="#1e293b" roughness={0.65} metalness={0.35} />
-          </mesh>
-          <mesh position={[0, 0.65, -0.22]} castShadow={castShadow}>
-            <boxGeometry args={[0.32, 0.22, 0.46]} />
-            <meshStandardMaterial color={color} roughness={0.32} metalness={0.25} />
-          </mesh>
-          <mesh position={[0.17, 0.3, 0.28]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.045, 0.055, 0.68, 10]} />
-            <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.25} />
-          </mesh>
-        </>
-      )}
-
-      {/* Dual seat */}
-      <mesh position={[0, isScooter ? 0.65 : 0.62, 0.22]}>
-        <boxGeometry args={[0.28, 0.11, 0.72]} />
-        <meshStandardMaterial color="#18181b" roughness={0.88} />
-      </mesh>
-      {/* Headlight & Taillight */}
-      <mesh position={[0, 0.88, -0.52]}>
-        <sphereGeometry args={[0.09, 10, 8]} />
-        <meshStandardMaterial color="#fef9c3" emissive="#fde047" emissiveIntensity={0.85} />
-      </mesh>
-      <mesh position={[0, 0.63, 0.6]}>
-        <boxGeometry args={[0.16, 0.07, 0.04]} />
-        <meshStandardMaterial color="#dc2626" emissive="#ef4444" emissiveIntensity={0.65} />
-      </mesh>
-      {/* Front fork & handlebars */}
-      <mesh position={[0, 0.92, -0.38]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.022, 0.022, 0.66, 8]} />
-        <meshStandardMaterial color="#1e293b" roughness={0.5} />
-      </mesh>
-      <mesh position={[-0.1, 0.62, -0.45]} rotation={[0.25, 0, 0]}>
-        <cylinderGeometry args={[0.022, 0.02, 0.62, 8]} />
-        <meshStandardMaterial color="#94a3b8" metalness={0.65} roughness={0.35} />
-      </mesh>
-      <mesh position={[0.1, 0.62, -0.45]} rotation={[0.25, 0, 0]}>
-        <cylinderGeometry args={[0.022, 0.02, 0.62, 8]} />
-        <meshStandardMaterial color="#94a3b8" metalness={0.65} roughness={0.35} />
-      </mesh>
-
-      {/* Spinning front & rear spoked wheels */}
-      {[-0.55, 0.56].map((wz, idx) => (
-        <group key={idx} name="traffic-wheel" position={[0, 0.23, wz]}>
-          <mesh rotation={[0, 0, Math.PI / 2]} castShadow={castShadow}>
-            <cylinderGeometry args={[0.23, 0.23, 0.12, 16]} />
-            <meshStandardMaterial color="#111827" roughness={0.9} />
-          </mesh>
-          <mesh rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.13, 0.13, 0.13, 10]} />
-            <meshStandardMaterial color="#94a3b8" metalness={0.7} roughness={0.35} />
-          </mesh>
-          <mesh>
-            <boxGeometry args={[0.14, 0.22, 0.035]} />
-            <meshStandardMaterial color="#64748b" metalness={0.6} roughness={0.4} />
-          </mesh>
-        </group>
+      <mesh geometry={shadowGeom} material={_sharedShadowMat} />
+      <mesh geometry={bodyGeom} material={paintMat} castShadow={castShadow} />
+      <mesh geometry={detailGeom} material={_sharedDetailMat} castShadow={castShadow} />
+      {MOTO_WHEEL_Z.map((wz, idx) => (
+        <mesh
+          key={idx}
+          name="traffic-wheel"
+          position={[0, 0.23, wz]}
+          geometry={wheelGeom}
+          material={_sharedWheelMat}
+          castShadow={castShadow}
+        />
       ))}
-
-      {/* Full articulated seated rider on EVERY moving 2-wheeler (arms on bars + legs + visor helmet) */}
-      {withRider && (
-        <group position={[0, 0.69, 0.04]}>
-          {/* Seated thighs & calves astride footpegs */}
-          {[-0.14, 0.14].map((lx, idx) => (
-            <group key={idx} position={[lx, -0.02, -0.02]}>
-              <mesh position={[0, -0.08, -0.11]} rotation={[0.88, 0, 0]}>
-                <cylinderGeometry args={[0.054, 0.046, 0.3, 8]} />
-                <meshStandardMaterial color="#1e293b" roughness={0.86} />
-              </mesh>
-              <mesh position={[0, -0.24, -0.2]} rotation={[-0.25, 0, 0]}>
-                <cylinderGeometry args={[0.044, 0.038, 0.28, 8]} />
-                <meshStandardMaterial color="#1e293b" roughness={0.86} />
-              </mesh>
-            </group>
-          ))}
-          {/* Leaning riding jacket torso */}
-          <mesh position={[0, 0.22, -0.04]} rotation={[-0.22, 0, 0]} castShadow={castShadow}>
-            <cylinderGeometry args={[0.145, 0.125, 0.44, 10]} />
-            <meshStandardMaterial color={jacketColor} roughness={0.8} />
-          </mesh>
-          {/* Rider arms gripping handlebars (`-Z` forward -> positive X tilt around shoulder) */}
-          {[-0.17, 0.17].map((ax, idx) => (
-            <mesh
-              key={idx}
-              position={[ax, 0.26, -0.22]}
-              rotation={[1.05, 0, ax < 0 ? 0.15 : -0.15]}
-            >
-              <cylinderGeometry args={[0.038, 0.032, 0.42, 8]} />
-              <meshStandardMaterial color={jacketColor} roughness={0.78} />
-            </mesh>
-          ))}
-          {/* Helmet + dark glossy visor */}
-          <group position={[0, 0.52, -0.1]}>
-            <mesh castShadow={castShadow}>
-              <sphereGeometry args={[0.135, 12, 10]} />
-              <meshStandardMaterial color={helmetColor} roughness={0.32} metalness={0.2} />
-            </mesh>
-            <mesh position={[0, -0.01, -0.105]}>
-              <boxGeometry args={[0.17, 0.065, 0.08]} />
-              <meshStandardMaterial color="#090d16" roughness={0.18} metalness={0.65} />
-            </mesh>
-          </group>
-        </group>
-      )}
-
-      {/* Optional pillion passenger behind rider */}
-      {withRider && hasPillion && (
-        <group position={[0, 0.72, 0.39]}>
-          {[-0.13, 0.13].map((lx, idx) => (
-            <group key={idx} position={[lx, -0.04, -0.02]}>
-              <mesh position={[0, -0.12, -0.08]} rotation={[0.65, 0, 0]}>
-                <cylinderGeometry args={[0.05, 0.044, 0.28, 8]} />
-                <meshStandardMaterial color="#334155" roughness={0.86} />
-              </mesh>
-              <mesh position={[0, -0.27, -0.14]}>
-                <cylinderGeometry args={[0.04, 0.035, 0.24, 8]} />
-                <meshStandardMaterial color="#334155" roughness={0.86} />
-              </mesh>
-            </group>
-          ))}
-          <mesh position={[0, 0.21, 0]} rotation={[-0.1, 0, 0]} castShadow={castShadow}>
-            <cylinderGeometry args={[0.135, 0.12, 0.4, 10]} />
-            <meshStandardMaterial color="#b45309" roughness={0.82} />
-          </mesh>
-          {[-0.15, 0.15].map((ax, idx) => (
-            <mesh key={idx} position={[ax, 0.22, -0.14]} rotation={[0.75, 0, 0]}>
-              <cylinderGeometry args={[0.034, 0.03, 0.34, 8]} />
-              <meshStandardMaterial color="#b45309" roughness={0.82} />
-            </mesh>
-          ))}
-          <group position={[0, 0.5, -0.02]}>
-            <mesh castShadow={castShadow}>
-              <sphereGeometry args={[0.128, 12, 10]} />
-              <meshStandardMaterial color="#f59e0b" roughness={0.38} />
-            </mesh>
-            <mesh position={[0, -0.01, -0.098]}>
-              <boxGeometry args={[0.155, 0.058, 0.075]} />
-              <meshStandardMaterial color="#090d16" roughness={0.2} />
-            </mesh>
-          </group>
-        </group>
-      )}
     </group>
   );
 }

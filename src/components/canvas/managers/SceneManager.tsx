@@ -407,6 +407,7 @@ export function SceneStage({
   const roadSubStage = useProgressStore((s) => s.roadSubStage);
   const baalKuwariSubStage = useProgressStore((s) => s.baalKuwariSubStage);
   const baalKuwariStairDirection = useProgressStore((s) => s.baalKuwariStairDirection);
+  const stairStepCount = useProgressStore((s) => s.stairStepCount);
   const roadResumeDistance = useProgressStore((s) => s.roadResumeDistance);
   const downgradeQualityProfile = useProgressStore((s) => s.downgradeQualityProfile);
   const isPaused = useProgressStore(selectIsSimulationPaused);
@@ -534,6 +535,7 @@ export function SceneStage({
           ) : mountedSceneId === 9 ? (
             <Scene09_BaalKuwariStairs
               direction={baalKuwariStairDirection}
+              initialStepCount={stairStepCount}
               qualityProfile={qualityProfile}
               paused={scenePaused}
               transitionToken={transitionToken}
