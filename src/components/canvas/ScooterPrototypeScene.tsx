@@ -5,7 +5,16 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { MountainRoadEnvironment } from '@/components/canvas/MountainRoadEnvironment';
 import { PrototypeScooter } from '@/components/canvas/PrototypeScooter';
+import {
+  RoadTrafficVisuals,
+  buildParkedShoulderVehicles,
+  buildRoadTrafficFleet,
+  createTrafficRuntime,
+  stepTrafficSimulation,
+  type TrafficVehicleRuntime,
+} from '@/components/canvas/RoadTrafficSystem';
 import type { DrivingInputState } from '@/hooks/useDrivingInput';
+import { ambientAudio } from '@/lib/ambientAudio';
 import {
   ARRIVAL_ZONE_DISTANCE,
   BOUNDARY_SPRING_K,
@@ -20,15 +29,22 @@ import {
   LEAD_PARK_LATERAL,
   LEAD_START_DISTANCE,
   LEAD_START_LATERAL,
-  ROUTE_STOP_OFFSET,
   SCOOTER_ACCEL,
   SCOOTER_BRAKE_DECEL,
   SCOOTER_COAST_DRAG,
   SCOOTER_MAX_SPEED,
   SCOOTER_STEER_SPEED,
   SOFT_BOUNDARY_THRESHOLD,
+  VIEWPOINT_APPROACH_START,
+  VIEWPOINT_PARK_COMP_LATERAL,
+  VIEWPOINT_PARK_LEAD_LATERAL,
+  VIEWPOINT_STOP_DISTANCE,
+  VIEWPOINT_TURNOUT_END,
+  VIEWPOINT_TURNOUT_START,
   createMountainRoadCurve,
+  getSegmentStopDistance,
   sampleRoadFrame,
+  type MountainRoadSegmentId,
 } from '@/lib/mountainSpline';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
 import type { SceneId } from '@/lib/sceneConfig';
@@ -45,10 +61,16 @@ export interface ScooterPrototypeSceneProps {
   qualityProfile: QualityProfile;
   paused: boolean;
   resetNonce: number;
+  roadSegment?: MountainRoadSegmentId;
+  startDistance?: number;
+  viewpointPullOverNonce?: number;
   transitionToken?: number;
   simulateMountFailure?: boolean;
   onSceneReady?: (token: number, sceneId: SceneId) => void;
   onArrivedChange: (arrived: boolean) => void;
+  onInViewpointZoneChange?: (inZone: boolean) => void;
+  onViewpointArrivedChange?: (arrived: boolean) => void;
+  onTrafficBrush?: () => void;
   onAutoDowngradeQuality?: () => void;
   telemetryRefs: TelemetryRefs;
 }
@@ -56,8 +78,8 @@ export interface ScooterPrototypeSceneProps {
 const WHEEL_RADIUS = 0.22;
 const CAM_BACK_DISTANCE = 8.4;
 const CAM_HEIGHT_OFFSET = 2.65;
-const CAM_LOOK_AHEAD = 2.4;
-const CAM_LOOK_HEIGHT = 0.9;
+const CAM_LOOK_AHEAD = 2.6;
+const CAM_LOOK_HEIGHT = 0.92;
 
 interface SimulationState {
   leadDist: number;
@@ -68,6 +90,12 @@ interface SimulationState {
   compLateral: number;
   compSteerSmoothed: number;
   arrived: boolean;
+  inViewpointZone: boolean;
+  pullingToViewpoint: boolean;
+  viewpointArrived: boolean;
+  viewStopTargetDist: number;
+  collisionCooldown: number;
+  companionAvoidShift: number;
   cameraInitialized: boolean;
   telemetryTimer: number;
   boundaryWarnActive: boolean;
@@ -77,18 +105,26 @@ interface SimulationState {
   autoDowngraded: boolean;
 }
 
-function createInitialSimState(): SimulationState {
+function createInitialSimState(initialLeadDist = LEAD_START_DISTANCE): SimulationState {
+  const safeLead = Math.max(LEAD_START_DISTANCE, initialLeadDist);
+  const safeComp = Math.max(COMPANION_START_DISTANCE, safeLead - FOLLOW_TARGET_GAP);
   return {
-    leadDist: LEAD_START_DISTANCE,
+    leadDist: safeLead,
     leadSpeed: 0,
     leadLateral: LEAD_START_LATERAL,
     leadSteerSmoothed: 0,
-    compDist: COMPANION_START_DISTANCE,
+    compDist: safeComp,
     compLateral: COMPANION_LANE_LATERAL,
     compSteerSmoothed: 0,
     arrived: false,
+    inViewpointZone: false,
+    pullingToViewpoint: false,
+    viewpointArrived: false,
+    viewStopTargetDist: VIEWPOINT_STOP_DISTANCE,
+    collisionCooldown: 0,
+    companionAvoidShift: 0,
     cameraInitialized: false,
-    telemetryTimer: 0,
+    telemetryTimer: 0.08,
     boundaryWarnActive: false,
     fpsFrames: 0,
     fpsElapsed: 0,
@@ -102,10 +138,16 @@ export function ScooterPrototypeScene({
   qualityProfile,
   paused,
   resetNonce,
+  roadSegment = 'to_dhaba',
+  startDistance = LEAD_START_DISTANCE,
+  viewpointPullOverNonce = 0,
   transitionToken = 0,
   simulateMountFailure = false,
   onSceneReady,
   onArrivedChange,
+  onInViewpointZoneChange,
+  onViewpointArrivedChange,
+  onTrafficBrush,
   onAutoDowngradeQuality,
   telemetryRefs,
 }: ScooterPrototypeSceneProps) {
@@ -129,11 +171,11 @@ export function ScooterPrototypeScene({
   }, [paused, clock]);
 
   const { curve, totalLength, stopDist } = useMemo(() => {
-    const roadCurve = createMountainRoadCurve();
+    const roadCurve = createMountainRoadCurve(roadSegment);
     const length = roadCurve.getLength();
-    const stop = Math.max(LEAD_START_DISTANCE + 10, length - ROUTE_STOP_OFFSET);
+    const stop = getSegmentStopDistance(roadSegment, length);
     return { curve: roadCurve, totalLength: length, stopDist: stop };
-  }, []);
+  }, [roadSegment]);
 
   const leadGroupRef = useRef<THREE.Group>(null);
   const leadForkRef = useRef<THREE.Group>(null);
@@ -146,8 +188,15 @@ export function ScooterPrototypeScene({
   const compRearWheelRef = useRef<THREE.Group>(null);
 
   const simRef = useRef<SimulationState>(createInitialSimState());
+  const leadDistRef = useRef<number>(startDistance);
 
-  // Pre-allocated scratch math objects so useFrame never allocates GC objects
+  const trafficFleet = useMemo(() => buildRoadTrafficFleet(roadSegment), [roadSegment]);
+  const parkedVehicles = useMemo(() => buildParkedShoulderVehicles(roadSegment), [roadSegment]);
+  const trafficRuntimeRef = useRef<TrafficVehicleRuntime[]>(
+    createTrafficRuntime(trafficFleet, LEAD_START_DISTANCE)
+  );
+  const trafficMeshRefs = useRef<(THREE.Group | null)[]>([]);
+
   const scratch = useMemo(
     () => ({
       point: new THREE.Vector3(),
@@ -170,7 +219,7 @@ export function ScooterPrototypeScene({
     []
   );
 
-  // Dynamically adapt FOV slightly on narrow portrait screens so both scooters stay in frame
+  // Dynamically adapt FOV on narrow portrait screens so both scooters stay in frame
   useEffect(() => {
     if (camera instanceof THREE.PerspectiveCamera) {
       const aspect = size.width / Math.max(1, size.height);
@@ -182,17 +231,71 @@ export function ScooterPrototypeScene({
     }
   }, [camera, size.width, size.height]);
 
-  // Reset ride back to spline start when resetNonce increments
+  // Reset ride cleanly whenever resetNonce, active roadSegment, or startDistance changes
+  const lastViewpointPullNonceRef = useRef(viewpointPullOverNonce);
+
   useEffect(() => {
     const prevDowngraded = simRef.current.autoDowngraded;
-    simRef.current = createInitialSimState();
+    const resolvedStart =
+      roadSegment === 'to_dhaba'
+        ? Math.min(Math.max(LEAD_START_DISTANCE, startDistance), stopDist - 4)
+        : LEAD_START_DISTANCE;
+    simRef.current = createInitialSimState(resolvedStart);
     simRef.current.autoDowngraded = prevDowngraded;
+    trafficRuntimeRef.current = createTrafficRuntime(trafficFleet, resolvedStart);
     if (leadFrontWheelRef.current) leadFrontWheelRef.current.rotation.x = 0;
     if (leadRearWheelRef.current) leadRearWheelRef.current.rotation.x = 0;
     if (compFrontWheelRef.current) compFrontWheelRef.current.rotation.x = 0;
     if (compRearWheelRef.current) compRearWheelRef.current.rotation.x = 0;
+
+    const initialProgressed = Math.max(0, Math.round(resolvedStart - LEAD_START_DISTANCE));
+    const maxRoute = Math.max(1, Math.round(stopDist - LEAD_START_DISTANCE));
+    if (telemetryRefs.speedEl.current) telemetryRefs.speedEl.current.textContent = '0 km/h';
+    if (telemetryRefs.distanceEl.current) {
+      telemetryRefs.distanceEl.current.textContent = `${initialProgressed} / ${maxRoute} m`;
+    }
+    if (telemetryRefs.gapEl.current) telemetryRefs.gapEl.current.textContent = '4.5 m behind';
+    if (telemetryRefs.boundaryEl.current) telemetryRefs.boundaryEl.current.style.opacity = '0';
+
     onArrivedChange(false);
-  }, [resetNonce, onArrivedChange]);
+    onInViewpointZoneChange?.(false);
+    onViewpointArrivedChange?.(false);
+  }, [
+    resetNonce,
+    roadSegment,
+    startDistance,
+    stopDist,
+    onArrivedChange,
+    onInViewpointZoneChange,
+    onViewpointArrivedChange,
+    telemetryRefs,
+  ]);
+
+  // Trigger Viewpoint pull-over when requested by HUD / `E` key while in Viewpoint zone
+  useEffect(() => {
+    if (viewpointPullOverNonce === lastViewpointPullNonceRef.current) return;
+    lastViewpointPullNonceRef.current = viewpointPullOverNonce;
+    const sim = simRef.current;
+    if (
+      roadSegment === 'to_dhaba' &&
+      !sim.arrived &&
+      !sim.viewpointArrived &&
+      !sim.pullingToViewpoint &&
+      sim.leadDist >= VIEWPOINT_APPROACH_START - 6 &&
+      sim.leadDist <= VIEWPOINT_TURNOUT_END + 6
+    ) {
+      sim.pullingToViewpoint = true;
+      sim.viewStopTargetDist = THREE.MathUtils.clamp(
+        sim.leadDist + 6.0,
+        VIEWPOINT_STOP_DISTANCE,
+        VIEWPOINT_TURNOUT_END - 1.5
+      );
+      if (sim.inViewpointZone) {
+        sim.inViewpointZone = false;
+        onInViewpointZoneChange?.(false);
+      }
+    }
+  }, [viewpointPullOverNonce, roadSegment, onInViewpointZoneChange]);
 
   useFrame((_, rawDelta) => {
     if (paused || (typeof document !== 'undefined' && document.hidden)) {
@@ -226,42 +329,115 @@ export function ScooterPrototypeScene({
 
     const input = inputRef.current;
     const prevLeadDist = sim.leadDist;
+    const prevLeadLateral = sim.leadLateral;
     const prevCompDist = sim.compDist;
     const prevCompLateral = sim.compLateral;
     const remainingDist = Math.max(0, stopDist - sim.leadDist);
 
-    // 1. Lead scooter (Scooter 1: Ishaan & Srishti) longitudinal + lateral dynamics
-    if (!sim.arrived) {
+    // Check discrete scenic Viewpoint approach/turnout window along `to_dhaba`
+    const inViewZoneNow =
+      roadSegment === 'to_dhaba' &&
+      !sim.arrived &&
+      !sim.viewpointArrived &&
+      !sim.pullingToViewpoint &&
+      sim.leadDist >= VIEWPOINT_APPROACH_START &&
+      sim.leadDist <= VIEWPOINT_TURNOUT_END;
+
+    if (inViewZoneNow !== sim.inViewpointZone) {
+      sim.inViewpointZone = inViewZoneNow;
+      onInViewpointZoneChange?.(inViewZoneNow);
+    }
+
+    // Braking slowly inside the Viewpoint turnout voluntarily pulls over cleanly
+    if (
+      roadSegment === 'to_dhaba' &&
+      !sim.arrived &&
+      !sim.viewpointArrived &&
+      !sim.pullingToViewpoint &&
+      sim.leadDist >= VIEWPOINT_TURNOUT_START - 4 &&
+      sim.leadDist <= VIEWPOINT_TURNOUT_END &&
+      input.brake > 0 &&
+      sim.leadSpeed <= 4.0
+    ) {
+      sim.pullingToViewpoint = true;
+      sim.viewStopTargetDist = THREE.MathUtils.clamp(
+        sim.leadDist + 4.5,
+        VIEWPOINT_STOP_DISTANCE,
+        VIEWPOINT_TURNOUT_END - 1.5
+      );
+      if (sim.inViewpointZone) {
+        sim.inViewpointZone = false;
+        onInViewpointZoneChange?.(false);
+      }
+    }
+
+    // 1. Lead scooter (Scooter 1: Ishaan & Srishti) longitudinal + pull-off dynamics
+    if (sim.viewpointArrived) {
+      sim.leadSpeed = 0;
+      sim.leadLateral = THREE.MathUtils.damp(sim.leadLateral, VIEWPOINT_PARK_LEAD_LATERAL, 6.0, delta);
+      sim.leadSteerSmoothed = THREE.MathUtils.damp(sim.leadSteerSmoothed, 0, 8.0, delta);
+    } else if (sim.pullingToViewpoint) {
+      const remViewDist = Math.max(0, sim.viewStopTargetDist - sim.leadDist);
+      const viewProgress = THREE.MathUtils.clamp(remViewDist / 18.0, 0, 1);
+      const targetSpeed =
+        remViewDist <= 0.25 ? 0 : Math.max(0.9, SCOOTER_MAX_SPEED * 0.65 * Math.pow(viewProgress, 0.72));
+      sim.leadSpeed = THREE.MathUtils.damp(sim.leadSpeed, targetSpeed, 4.6, delta);
+      sim.leadLateral = THREE.MathUtils.damp(
+        sim.leadLateral,
+        VIEWPOINT_PARK_LEAD_LATERAL,
+        3.0 + (1 - viewProgress) * 4.5,
+        delta
+      );
+      const latSlopeRatio = THREE.MathUtils.clamp(
+        (sim.leadLateral - prevLeadLateral) / delta / SCOOTER_STEER_SPEED,
+        -0.6,
+        0.6
+      );
+      sim.leadSteerSmoothed = THREE.MathUtils.damp(sim.leadSteerSmoothed, latSlopeRatio, 8.0, delta);
+      sim.leadDist = Math.min(sim.viewStopTargetDist, sim.leadDist + sim.leadSpeed * delta);
+      if (sim.viewStopTargetDist - sim.leadDist <= 0.18) {
+        sim.leadDist = sim.viewStopTargetDist;
+        sim.leadSpeed = 0;
+        sim.pullingToViewpoint = false;
+        sim.viewpointArrived = true;
+        onViewpointArrivedChange?.(true);
+      }
+    } else if (!sim.arrived) {
       if (remainingDist <= ARRIVAL_ZONE_DISTANCE) {
-        // Soft arrival envelope decelerating forward speed to 0 at stopDist without overshoot
-        const arriveProgress = 1 - remainingDist / ARRIVAL_ZONE_DISTANCE;
+        const progressRatio = THREE.MathUtils.clamp(remainingDist / ARRIVAL_ZONE_DISTANCE, 0, 1);
         const speedEnvelope =
-          remainingDist <= 0.2
+          remainingDist <= 0.25
             ? 0
-            : Math.max(1.4, SCOOTER_MAX_SPEED * Math.sqrt(remainingDist / ARRIVAL_ZONE_DISTANCE));
+            : Math.max(0.65, SCOOTER_MAX_SPEED * Math.pow(progressRatio, 0.72));
 
         if (input.brake > 0) {
           sim.leadSpeed = Math.max(0, sim.leadSpeed - SCOOTER_BRAKE_DECEL * input.brake * delta);
         } else {
-          const targetArrivalSpeed =
-            input.throttle > 0 ? speedEnvelope : Math.min(speedEnvelope, Math.max(sim.leadSpeed, 2.1));
-          sim.leadSpeed = THREE.MathUtils.damp(sim.leadSpeed, targetArrivalSpeed, 3.6, delta);
+          const targetSpeed =
+            input.throttle > 0 ? speedEnvelope : Math.min(speedEnvelope, Math.max(sim.leadSpeed, 1.8));
+          sim.leadSpeed = THREE.MathUtils.damp(sim.leadSpeed, targetSpeed, 4.4, delta);
         }
 
-        // Gently guide lateral offset toward parked lane (x1 = +1.3m)
-        const parkLambda = 2.0 + arriveProgress * 5.0;
+        // Pull cleanly off main road onto the right-side dhaba / turnout apron (+5.4m)
+        const parkLambda = 2.4 + (1 - progressRatio) * 5.2;
         sim.leadLateral = THREE.MathUtils.damp(sim.leadLateral, LEAD_PARK_LATERAL, parkLambda, delta);
-        sim.leadSteerSmoothed = THREE.MathUtils.damp(sim.leadSteerSmoothed, 0, 8.0, delta);
+
+        const lateralSlopeRatio = THREE.MathUtils.clamp(
+          (sim.leadLateral - prevLeadLateral) / delta / SCOOTER_STEER_SPEED,
+          -0.6,
+          0.6
+        );
+        sim.leadSteerSmoothed = THREE.MathUtils.damp(sim.leadSteerSmoothed, lateralSlopeRatio, 8.0, delta);
 
         sim.leadDist = Math.min(stopDist, sim.leadDist + sim.leadSpeed * delta);
-        if (stopDist - sim.leadDist <= 0.15) {
+        if (stopDist - sim.leadDist <= 0.18) {
           sim.leadDist = stopDist;
           sim.leadSpeed = 0;
           sim.arrived = true;
           onArrivedChange(true);
         }
       } else {
-        // Normal manual cruise driving
+        // Normal manual cruise driving along mountain highway
         if (input.throttle > 0) {
           sim.leadSpeed += SCOOTER_ACCEL * input.throttle * delta;
         }
@@ -275,11 +451,9 @@ export function ScooterPrototypeScene({
         }
         sim.leadSpeed = THREE.MathUtils.clamp(sim.leadSpeed, 0, SCOOTER_MAX_SPEED);
 
-        // Lateral steering scaled cleanly with speed + minimum authority at idle
         const steerAuthority = THREE.MathUtils.clamp(sim.leadSpeed / 4.0, 0.25, 1.0);
         sim.leadLateral += input.steer * SCOOTER_STEER_SPEED * steerAuthority * delta;
 
-        // Soft restoring boundary spring past +/-2.3m & hard clamp inside +/-2.9m
         if (sim.leadLateral > SOFT_BOUNDARY_THRESHOLD) {
           sim.leadLateral = THREE.MathUtils.damp(
             sim.leadLateral,
@@ -305,39 +479,103 @@ export function ScooterPrototypeScene({
         sim.leadDist = Math.min(stopDist, sim.leadDist + sim.leadSpeed * delta);
       }
     } else {
-      // Settled at terminus stop pad
+      // Parked cleanly at turnout bay (forced 0 km/h)
       sim.leadSpeed = 0;
-      sim.leadLateral = THREE.MathUtils.damp(sim.leadLateral, LEAD_PARK_LATERAL, 5.5, delta);
+      sim.leadLateral = THREE.MathUtils.damp(sim.leadLateral, LEAD_PARK_LATERAL, 6.0, delta);
       sim.leadSteerSmoothed = THREE.MathUtils.damp(sim.leadSteerSmoothed, 0, 8.0, delta);
     }
 
-    // 2. Companion scooter (Scooter 2: Manish & Yash) constrained follow controller
+    leadDistRef.current = sim.leadDist;
+
+    // 2. Companion scooter (Scooter 2: Manish & Yash) constrained follow + traffic avoidance
+    if (sim.collisionCooldown > 0) {
+      sim.collisionCooldown = Math.max(0, sim.collisionCooldown - delta);
+    }
+
     const nextRemainingDist = Math.max(0, stopDist - sim.leadDist);
-    if (!sim.arrived && nextRemainingDist > ARRIVAL_ZONE_DISTANCE) {
+    const companionParkZone = 11.0;
+
+    if (sim.pullingToViewpoint || sim.viewpointArrived) {
+      const remView = Math.max(0, sim.viewStopTargetDist - sim.leadDist);
+      const viewBlend = THREE.MathUtils.clamp(1 - remView / 14.0, 0, 1);
+      const targetGap = THREE.MathUtils.lerp(FOLLOW_TARGET_GAP, 0, viewBlend);
+      const targetCompDist = Math.min(sim.viewStopTargetDist, Math.max(0, sim.leadDist - targetGap));
+      sim.compDist = THREE.MathUtils.damp(sim.compDist, targetCompDist, 4.2, delta);
+      if (sim.viewpointArrived && Math.abs(sim.viewStopTargetDist - sim.compDist) < 0.06) {
+        sim.compDist = sim.viewStopTargetDist;
+      }
+      sim.compLateral = THREE.MathUtils.damp(
+        sim.compLateral,
+        VIEWPOINT_PARK_COMP_LATERAL,
+        4.4,
+        delta
+      );
+    } else if (!sim.arrived && nextRemainingDist > companionParkZone) {
       const desiredCompDist = Math.max(0, sim.leadDist - FOLLOW_TARGET_GAP);
       sim.compDist = THREE.MathUtils.damp(sim.compDist, desiredCompDist, FOLLOW_DAMP_LAMBDA, delta);
 
-      // Strict cruise gap clamp: [3.0m, 7.0m] behind lead scooter
       const minFollowerDist = Math.max(0, sim.leadDist - FOLLOW_MAX_GAP);
       const maxFollowerDist = Math.max(0, sim.leadDist - FOLLOW_MIN_GAP);
       sim.compDist = THREE.MathUtils.clamp(sim.compDist, minFollowerDist, maxFollowerDist);
-      sim.compLateral = THREE.MathUtils.damp(sim.compLateral, COMPANION_LANE_LATERAL, 4.0, delta);
+
+      const baseTarget =
+        nextRemainingDist <= ARRIVAL_ZONE_DISTANCE ? 1.0 : COMPANION_LANE_LATERAL;
+      const lateralTarget = THREE.MathUtils.clamp(
+        baseTarget + sim.companionAvoidShift,
+        -2.55,
+        2.55
+      );
+      sim.compLateral = THREE.MathUtils.damp(sim.compLateral, lateralTarget, 3.6, delta);
     } else {
-      // Glide gracefully alongside Scooter 1 into companion parking lane (x2 = -1.3m)
-      const parkBlend = THREE.MathUtils.clamp(1 - nextRemainingDist / ARRIVAL_ZONE_DISTANCE, 0, 1);
+      const parkBlend = THREE.MathUtils.clamp(1 - nextRemainingDist / companionParkZone, 0, 1);
       const targetGap = THREE.MathUtils.lerp(FOLLOW_TARGET_GAP, 0, parkBlend);
       const targetDist = Math.min(stopDist, Math.max(0, sim.leadDist - targetGap));
-      sim.compDist = THREE.MathUtils.damp(sim.compDist, targetDist, 3.8, delta);
+      sim.compDist = THREE.MathUtils.damp(sim.compDist, targetDist, 4.0, delta);
       if (sim.arrived && Math.abs(stopDist - sim.compDist) < 0.05) {
         sim.compDist = stopDist;
       }
-      sim.compLateral = THREE.MathUtils.damp(sim.compLateral, COMPANION_PARK_LATERAL, 4.2, delta);
+      sim.compLateral = THREE.MathUtils.damp(sim.compLateral, COMPANION_PARK_LATERAL, 4.4, delta);
     }
+
+    // Step oncoming, same-direction & parked road traffic safely
+    const heroInPullOff =
+      sim.arrived ||
+      sim.viewpointArrived ||
+      sim.pullingToViewpoint ||
+      nextRemainingDist <= ARRIVAL_ZONE_DISTANCE;
+
+    const trafficResult = stepTrafficSimulation({
+      vehicles: trafficRuntimeRef.current,
+      curve,
+      totalLength,
+      stopDist,
+      delta,
+      leadDist: sim.leadDist,
+      leadLateral: sim.leadLateral,
+      compDist: sim.compDist,
+      compLateral: sim.compLateral,
+      heroInPullOff,
+      meshRefs: trafficMeshRefs.current,
+      onPassWhoosh: () => ambientAudio.playTrafficPassWhoosh(),
+      canCollide: sim.collisionCooldown <= 0 && sim.leadSpeed > 0.4,
+      onMinorBrush: (nudgeDirection) => {
+        sim.collisionCooldown = 1.4;
+        sim.leadLateral = THREE.MathUtils.clamp(
+          sim.leadLateral + nudgeDirection * 0.72,
+          -2.65,
+          2.65
+        );
+        sim.leadSpeed = Math.max(1.8, sim.leadSpeed * 0.62);
+        ambientAudio.playTrafficHornWarn();
+        onTrafficBrush?.();
+      },
+    });
+    sim.companionAvoidShift = trafficResult.companionAvoidLateralShift;
 
     const compLateralRate = (sim.compLateral - prevCompLateral) / delta;
     sim.compSteerSmoothed = THREE.MathUtils.damp(
       sim.compSteerSmoothed,
-      THREE.MathUtils.clamp(compLateralRate / SCOOTER_STEER_SPEED, -0.8, 0.8),
+      THREE.MathUtils.clamp(compLateralRate / SCOOTER_STEER_SPEED, -0.7, 0.7),
       8.0,
       delta
     );
@@ -410,7 +648,7 @@ export function ScooterPrototypeScene({
       if (compRearWheelRef.current) compRearWheelRef.current.rotation.x -= compWheelSpin;
     }
 
-    // 5. Smooth third-person follow camera (damped with delta time, safe behind u=0)
+    // 5. Smooth third-person follow camera looking cleanly down the continuing road ahead
     const rawCamDist = sim.leadDist - CAM_BACK_DISTANCE;
     sampleRoadFrame(
       curve,
@@ -425,13 +663,13 @@ export function ScooterPrototypeScene({
       scratch.camPoint.addScaledVector(scratch.camTan, rawCamDist);
     }
 
-    const followLateralMix = sim.leadLateral * 0.35;
+    const followLateralMix = sim.leadLateral * 0.42;
     scratch.desiredCamPos
       .copy(scratch.camPoint)
       .addScaledVector(scratch.camRight, followLateralMix)
       .addScaledVector(scratch.camUp, CAM_HEIGHT_OFFSET);
 
-    const lookDist = Math.min(totalLength, sim.leadDist + CAM_LOOK_AHEAD);
+    const lookDist = Math.min(totalLength - 1, sim.leadDist + CAM_LOOK_AHEAD);
     sampleRoadFrame(
       curve,
       lookDist,
@@ -443,7 +681,7 @@ export function ScooterPrototypeScene({
     );
     scratch.desiredLookAt
       .copy(scratch.point)
-      .addScaledVector(scratch.right, sim.leadLateral * 0.5)
+      .addScaledVector(scratch.right, sim.leadLateral * 0.52)
       .addScaledVector(scratch.up, CAM_LOOK_HEIGHT);
 
     if (!sim.cameraInitialized) {
@@ -451,37 +689,37 @@ export function ScooterPrototypeScene({
       scratch.smoothedLookAt.copy(scratch.desiredLookAt);
       sim.cameraInitialized = true;
     } else {
-      camera.position.x = THREE.MathUtils.damp(camera.position.x, scratch.desiredCamPos.x, 6.2, delta);
-      camera.position.y = THREE.MathUtils.damp(camera.position.y, scratch.desiredCamPos.y, 6.2, delta);
-      camera.position.z = THREE.MathUtils.damp(camera.position.z, scratch.desiredCamPos.z, 6.2, delta);
+      camera.position.x = THREE.MathUtils.damp(camera.position.x, scratch.desiredCamPos.x, 7.2, delta);
+      camera.position.y = THREE.MathUtils.damp(camera.position.y, scratch.desiredCamPos.y, 7.2, delta);
+      camera.position.z = THREE.MathUtils.damp(camera.position.z, scratch.desiredCamPos.z, 7.2, delta);
 
       scratch.smoothedLookAt.x = THREE.MathUtils.damp(
         scratch.smoothedLookAt.x,
         scratch.desiredLookAt.x,
-        7.5,
+        9.5,
         delta
       );
       scratch.smoothedLookAt.y = THREE.MathUtils.damp(
         scratch.smoothedLookAt.y,
         scratch.desiredLookAt.y,
-        7.5,
+        9.5,
         delta
       );
       scratch.smoothedLookAt.z = THREE.MathUtils.damp(
         scratch.smoothedLookAt.z,
         scratch.desiredLookAt.z,
-        7.5,
+        9.5,
         delta
       );
     }
     camera.lookAt(scratch.smoothedLookAt);
 
-    // 6. Direct DOM telemetry updates (~12Hz) so React never re-renders during driving
+    // 6. Direct DOM telemetry updates (~12Hz)
     sim.telemetryTimer += delta;
     if (sim.telemetryTimer >= 0.08) {
       sim.telemetryTimer = 0;
 
-      const kmh = Math.round(sim.leadSpeed * 3.6);
+      const kmh = sim.arrived || sim.viewpointArrived ? 0 : Math.round(sim.leadSpeed * 3.6);
       const progressed = Math.max(0, Math.round(sim.leadDist - LEAD_START_DISTANCE));
       const maxRoute = Math.max(1, Math.round(stopDist - LEAD_START_DISTANCE));
       const gapMeters = Math.max(0, sim.leadDist - sim.compDist);
@@ -493,12 +731,17 @@ export function ScooterPrototypeScene({
         telemetryRefs.distanceEl.current.textContent = `${progressed} / ${maxRoute} m`;
       }
       if (telemetryRefs.gapEl.current) {
-        telemetryRefs.gapEl.current.textContent = sim.arrived
-          ? 'Side by side'
-          : `${gapMeters.toFixed(1)} m behind`;
+        telemetryRefs.gapEl.current.textContent = sim.viewpointArrived
+          ? 'Parked at Viewpoint'
+          : sim.arrived
+            ? 'Parked nearby'
+            : `${gapMeters.toFixed(1)} m behind`;
       }
 
-      const nearBoundary = Math.abs(sim.leadLateral) > SOFT_BOUNDARY_THRESHOLD + 0.08 && !sim.arrived;
+      const inPullOff =
+        nextRemainingDist <= ARRIVAL_ZONE_DISTANCE || sim.pullingToViewpoint || sim.viewpointArrived;
+      const nearBoundary =
+        !inPullOff && !sim.arrived && Math.abs(sim.leadLateral) > SOFT_BOUNDARY_THRESHOLD + 0.08;
       if (nearBoundary !== sim.boundaryWarnActive && telemetryRefs.boundaryEl.current) {
         sim.boundaryWarnActive = nearBoundary;
         telemetryRefs.boundaryEl.current.style.opacity = nearBoundary ? '1' : '0';
@@ -511,7 +754,11 @@ export function ScooterPrototypeScene({
       <MountainRoadEnvironment
         curve={curve}
         totalLength={totalLength}
+        stopDist={stopDist}
+        roadSegment={roadSegment}
         qualityProfile={qualityProfile}
+        leadDistRef={leadDistRef}
+        paused={paused}
       />
 
       {/* Scooter 1 (Terracotta): Ishaan & Srishti */}
@@ -533,7 +780,15 @@ export function ScooterPrototypeScene({
         rearWheelRef={compRearWheelRef}
         castShadow={shadowsEnabled}
       />
+
+      <RoadTrafficVisuals
+        fleet={trafficFleet}
+        parkedVehicles={parkedVehicles}
+        curve={curve}
+        totalLength={totalLength}
+        meshRefs={trafficMeshRefs}
+        castShadow={shadowsEnabled}
+      />
     </>
   );
 }
-

@@ -1,3 +1,7 @@
+import type {
+  MountainRoadSegmentId,
+  MountainRoadSubStage,
+} from '@/lib/mountainSpline';
 import { isValidSceneId, type SceneId } from '@/lib/sceneConfig';
 
 export const CHECKPOINT_STORAGE_KEY = 'road_made_us_family_checkpoint';
@@ -8,6 +12,9 @@ export interface CheckpointData {
   committedSceneId: SceneId;
   collectedPolaroids: string[];
   stairStepCount?: number;
+  mountainRoadSegment?: MountainRoadSegmentId;
+  roadSubStage?: MountainRoadSubStage;
+  roadResumeDistance?: number;
   audioMuted: boolean;
   guidedMode: boolean;
   timestamp: number;
@@ -56,6 +63,28 @@ export function validateCheckpointData(raw: unknown): CheckpointData | null {
   ) {
     return null;
   }
+  if (
+    candidate.mountainRoadSegment !== undefined &&
+    candidate.mountainRoadSegment !== 'to_dhaba' &&
+    candidate.mountainRoadSegment !== 'to_neelkanth'
+  ) {
+    return null;
+  }
+  if (
+    candidate.roadSubStage !== undefined &&
+    candidate.roadSubStage !== 'driving' &&
+    candidate.roadSubStage !== 'viewpoint_walk'
+  ) {
+    return null;
+  }
+  if (
+    candidate.roadResumeDistance !== undefined &&
+    (typeof candidate.roadResumeDistance !== 'number' ||
+      !Number.isFinite(candidate.roadResumeDistance) ||
+      candidate.roadResumeDistance < 0)
+  ) {
+    return null;
+  }
   if (typeof candidate.audioMuted !== 'boolean' || typeof candidate.guidedMode !== 'boolean') {
     return null;
   }
@@ -72,6 +101,9 @@ export function validateCheckpointData(raw: unknown): CheckpointData | null {
     committedSceneId: candidate.committedSceneId,
     collectedPolaroids: [...candidate.collectedPolaroids],
     stairStepCount: candidate.stairStepCount,
+    mountainRoadSegment: candidate.mountainRoadSegment,
+    roadSubStage: candidate.roadSubStage,
+    roadResumeDistance: candidate.roadResumeDistance,
     audioMuted: candidate.audioMuted,
     guidedMode: candidate.guidedMode,
     timestamp: candidate.timestamp,

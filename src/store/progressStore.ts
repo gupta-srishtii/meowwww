@@ -10,6 +10,12 @@ import {
   detectInitialQualityProfile,
   type QualityProfile,
 } from '@/lib/qualityProfile';
+import {
+  LEAD_START_DISTANCE,
+  type MountainRoadSegmentId,
+  type MountainRoadSubStage,
+} from '@/lib/mountainSpline';
+import { inferChapterRank } from '@/lib/chapters';
 import type { SceneId } from '@/lib/sceneConfig';
 
 export type TransitionPhase =
@@ -21,6 +27,19 @@ export type TransitionPhase =
   | 'error';
 
 export type DevFailureMode = 'none' | 'load' | 'mount';
+
+export interface NarrationEntry {
+  id: string;
+  badge?: string;
+  speaker?: string;
+  lines: readonly string[];
+  isPlaceholder?: boolean;
+}
+
+export interface ActiveNarrationState {
+  entry: NarrationEntry;
+  lineIndex: number;
+}
 
 export interface ProgressStoreState {
   // Decoupled Scene Lifecycle & Recovery Guards (§7)
@@ -40,7 +59,12 @@ export interface ProgressStoreState {
 
   // Collection & Scene Progress
   collectedPolaroids: string[];
+  furthestChapterRank: number;
   stairStepCount: number;
+  mountainRoadSegment: MountainRoadSegmentId;
+  roadSubStage: MountainRoadSubStage;
+  roadResumeDistance: number;
+  activeNarration: ActiveNarrationState | null;
 
   // Independent Pause & Recovery Flags
   userPaused: boolean;
@@ -72,7 +96,14 @@ export interface ProgressStoreState {
 
   // Collection & Settings Actions
   addPolaroid: (id: string) => void;
+  capturePolaroidAndSave: (id: string) => boolean;
+  showNarration: (entry: NarrationEntry) => void;
+  advanceNarration: () => void;
+  closeNarration: () => void;
   setStairStepCount: (step: number) => void;
+  setMountainRoadSegment: (segment: MountainRoadSegmentId) => void;
+  setRoadSubStage: (subStage: MountainRoadSubStage) => void;
+  setRoadResumeDistance: (distance: number) => void;
   setUserPaused: (paused: boolean) => void;
   setTabHiddenPaused: (paused: boolean) => void;
   setContextLostPaused: (lost: boolean) => void;
@@ -110,7 +141,12 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
   devFailureMode: 'none',
 
   collectedPolaroids: [],
+  furthestChapterRank: 0,
   stairStepCount: 0,
+  mountainRoadSegment: 'to_dhaba',
+  roadSubStage: 'driving',
+  roadResumeDistance: LEAD_START_DISTANCE,
+  activeNarration: null,
 
   userPaused: false,
   tabHiddenPaused: false,
@@ -132,6 +168,7 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
       transitionToken: token,
       mountAttemptedForTransition: false,
       saveOnNextCommit: saveOnCommit,
+      activeNarration: null,
     });
   },
 
@@ -172,10 +209,20 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
 
     const previousId = state.committedSceneId;
     const shouldSave = state.saveOnNextCommit;
+    const nextRank = Math.max(
+      state.furthestChapterRank,
+      inferChapterRank(
+        sceneId,
+        state.mountainRoadSegment,
+        state.roadSubStage,
+        state.collectedPolaroids
+      )
+    );
 
     set({
       previousCommittedSceneId: previousId,
       committedSceneId: sceneId,
+      furthestChapterRank: nextRank,
       transitionPhase: 'fading_in',
       transitionError: null,
       saveOnNextCommit: false,
@@ -249,7 +296,68 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
     );
   },
 
+  capturePolaroidAndSave: (id) => {
+    const state = get();
+    const isNew = !state.collectedPolaroids.includes(id);
+    if (isNew) {
+      const nextPolaroids = [...state.collectedPolaroids, id];
+      const nextRank = Math.max(
+        state.furthestChapterRank,
+        inferChapterRank(
+          state.committedSceneId,
+          state.mountainRoadSegment,
+          state.roadSubStage,
+          nextPolaroids
+        )
+      );
+      set({ collectedPolaroids: nextPolaroids, furthestChapterRank: nextRank });
+    }
+    get().saveCheckpoint();
+    return isNew;
+  },
+
+  showNarration: (entry) => {
+    if (entry.lines.length === 0) return;
+    set({ activeNarration: { entry, lineIndex: 0 } });
+  },
+
+  advanceNarration: () => {
+    const current = get().activeNarration;
+    if (!current) return;
+    const nextIndex = current.lineIndex + 1;
+    if (nextIndex >= current.entry.lines.length) {
+      set({ activeNarration: null });
+    } else {
+      set({ activeNarration: { entry: current.entry, lineIndex: nextIndex } });
+    }
+  },
+
+  closeNarration: () => set({ activeNarration: null }),
+
   setStairStepCount: (step) => set({ stairStepCount: Math.max(0, Math.round(step)) }),
+  setMountainRoadSegment: (segment) =>
+    set((state) => ({
+      mountainRoadSegment: segment,
+      furthestChapterRank: Math.max(
+        state.furthestChapterRank,
+        inferChapterRank(state.committedSceneId, segment, state.roadSubStage, state.collectedPolaroids)
+      ),
+    })),
+  setRoadSubStage: (subStage) =>
+    set((state) => ({
+      roadSubStage: subStage,
+      furthestChapterRank: Math.max(
+        state.furthestChapterRank,
+        inferChapterRank(
+          state.committedSceneId,
+          state.mountainRoadSegment,
+          subStage,
+          state.collectedPolaroids
+        )
+      ),
+    })),
+  setRoadResumeDistance: (distance) =>
+    set({ roadResumeDistance: Math.max(LEAD_START_DISTANCE, distance) }),
 
   setUserPaused: (paused) => set({ userPaused: paused }),
   setTabHiddenPaused: (paused) => set({ tabHiddenPaused: paused }),
@@ -274,6 +382,9 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
       committedSceneId: state.committedSceneId,
       collectedPolaroids: [...state.collectedPolaroids],
       stairStepCount: state.stairStepCount > 0 ? state.stairStepCount : undefined,
+      mountainRoadSegment: state.mountainRoadSegment,
+      roadSubStage: state.roadSubStage,
+      roadResumeDistance: state.roadResumeDistance,
       audioMuted: state.audioMuted,
       guidedMode: state.guidedMode,
       timestamp: Date.now(),
@@ -292,30 +403,50 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
   },
 
   restoreCheckpointSettings: (data) => {
-    set({
+    const seg = data.mountainRoadSegment ?? 'to_dhaba';
+    const sub = data.roadSubStage ?? 'driving';
+    set((state) => ({
       collectedPolaroids: [...data.collectedPolaroids],
+      furthestChapterRank: Math.max(
+        state.furthestChapterRank,
+        inferChapterRank(data.committedSceneId, seg, sub, data.collectedPolaroids)
+      ),
       stairStepCount: data.stairStepCount ?? 0,
+      mountainRoadSegment: seg,
+      roadSubStage: sub,
+      roadResumeDistance: data.roadResumeDistance ?? LEAD_START_DISTANCE,
       audioMuted: data.audioMuted,
       guidedMode: data.guidedMode,
       lastCheckpoint: data,
       pendingResumeCheckpoint: null,
-      checkpointStatusNote: `Restored Scene ${data.committedSceneId} checkpoint`,
-    });
+      checkpointStatusNote: 'Saved progress restored',
+    }));
   },
 
   hydrateCheckpointFromStorage: () => {
     const result = readCheckpointFromStorage();
     if (result.status === 'ok' && result.data) {
-      set({
-        collectedPolaroids: [...result.data.collectedPolaroids],
-        stairStepCount: result.data.stairStepCount ?? 0,
-        audioMuted: result.data.audioMuted,
-        guidedMode: result.data.guidedMode,
+      const seg = result.data.mountainRoadSegment ?? 'to_dhaba';
+      const sub = result.data.roadSubStage ?? 'driving';
+      set((state) => ({
+        collectedPolaroids: [...result.data!.collectedPolaroids],
+        furthestChapterRank: Math.max(
+          state.furthestChapterRank,
+          inferChapterRank(
+            result.data!.committedSceneId,
+            seg,
+            sub,
+            result.data!.collectedPolaroids
+          )
+        ),
+        stairStepCount: result.data!.stairStepCount ?? 0,
+        audioMuted: result.data!.audioMuted,
+        guidedMode: result.data!.guidedMode,
         lastCheckpoint: result.data,
         pendingResumeCheckpoint: result.data,
         checkpointStorageBlocked: false,
-        checkpointStatusNote: `Found saved checkpoint for Scene ${result.data.committedSceneId}`,
-      });
+        checkpointStatusNote: 'Saved journey found',
+      }));
       return result.data;
     }
 
@@ -347,6 +478,11 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
     set({
       lastCheckpoint: null,
       pendingResumeCheckpoint: null,
+      collectedPolaroids: [],
+      furthestChapterRank: 0,
+      mountainRoadSegment: 'to_dhaba',
+      roadSubStage: 'driving',
+      roadResumeDistance: LEAD_START_DISTANCE,
       checkpointStatusNote: removed
         ? 'Cleared saved checkpoint'
         : 'Cleared in-memory checkpoint (storage unavailable)',

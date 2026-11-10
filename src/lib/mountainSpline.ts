@@ -1,21 +1,24 @@
 import * as THREE from 'three';
 
+export type MountainRoadSegmentId = 'to_dhaba' | 'to_neelkanth';
+export type MountainRoadSubStage = 'driving' | 'viewpoint_walk';
+
 export const ROAD_WIDTH = 7.0;
 export const ROAD_HALF_WIDTH = ROAD_WIDTH / 2; // 3.5m
 export const SCOOTER_HALF_WIDTH = 0.4; // 0.8m full body width
-export const SOFT_BOUNDARY_THRESHOLD = 2.3; // meters from centerline
-export const HARD_CENTER_CLAMP = 2.9; // 2.9m + 0.4m = 3.3m (< 3.5m edge)
+export const SOFT_BOUNDARY_THRESHOLD = 2.3; // meters from centerline during cruise
+export const HARD_CENTER_CLAMP = 2.9; // 2.9m + 0.4m = 3.3m (< 3.5m road edge)
 export const BOUNDARY_SPRING_K = 18.0;
 
-export const SCOOTER_MAX_SPEED = 12.0; // m/s
-export const SCOOTER_ACCEL = 7.5; // m/s^2
-export const SCOOTER_BRAKE_DECEL = 12.0; // m/s^2 (~6m stop from 12 m/s)
-export const SCOOTER_COAST_DRAG = 0.28; // /s
+export const SCOOTER_MAX_SPEED = 12.5; // m/s (~45 km/h cruising feel)
+export const SCOOTER_ACCEL = 7.8; // m/s^2
+export const SCOOTER_BRAKE_DECEL = 12.5; // m/s^2
+export const SCOOTER_COAST_DRAG = 0.34; // /s smooth deceleration
 export const SCOOTER_STEER_SPEED = 4.2; // m/s max lateral response
 
-export const LEAD_START_DISTANCE = 6.0;
+export const LEAD_START_DISTANCE = 8.0;
 export const LEAD_START_LATERAL = 1.1;
-export const COMPANION_START_DISTANCE = 1.5;
+export const COMPANION_START_DISTANCE = 3.5;
 export const COMPANION_LANE_LATERAL = -1.2;
 
 export const FOLLOW_TARGET_GAP = 4.5;
@@ -23,10 +26,23 @@ export const FOLLOW_MIN_GAP = 3.0;
 export const FOLLOW_MAX_GAP = 7.0;
 export const FOLLOW_DAMP_LAMBDA = 4.5;
 
-export const ARRIVAL_ZONE_DISTANCE = 18.0; // meters before spline end
-export const ROUTE_STOP_OFFSET = 3.0; // stops 3m before final point
-export const LEAD_PARK_LATERAL = 1.3;
-export const COMPANION_PARK_LATERAL = -1.3;
+export const ARRIVAL_ZONE_DISTANCE = 22.0; // smooth braking zone before pull-off bay
+export const LEAD_PARK_LATERAL = 5.4; // widened right-side dhaba / turnout pull-off bay
+export const COMPANION_PARK_LATERAL = 3.2;
+
+export const DHABA_TURNOUT_START = 244.0;
+export const DHABA_STOP_DISTANCE = 266.0;
+export const DHABA_TURNOUT_END = 288.0;
+
+export const VIEWPOINT_APPROACH_START = 96.0;
+export const VIEWPOINT_TURNOUT_START = 114.0;
+export const VIEWPOINT_STOP_DISTANCE = 126.0;
+export const VIEWPOINT_TURNOUT_END = 138.0;
+export const VIEWPOINT_RESUME_DISTANCE = 138.0;
+export const VIEWPOINT_PARK_LEAD_LATERAL = 5.0;
+export const VIEWPOINT_PARK_COMP_LATERAL = 2.9;
+
+export const NEELKANTH_APPROACH_STOP_DISTANCE = 324.0;
 
 export interface RoadFrame {
   point: THREE.Vector3;
@@ -38,23 +54,53 @@ export interface RoadFrame {
 const _worldUp = new THREE.Vector3(0, 1, 0);
 
 /**
- * Creates a smooth ~260m Himalayan mountain-road spline with gentle S-curves
- * and gradual elevation gain.
+ * Creates a smooth ~435m–475m Himalayan mountain-road spline with fine arc-length
+ * subdivision so the road continues past pull-offs into distant bends and temple approaches.
  */
-export function createMountainRoadCurve(): THREE.CatmullRomCurve3 {
-  const controlPoints = [
-    new THREE.Vector3(0, 0, 0),
-    new THREE.Vector3(4, 0.8, -32),
-    new THREE.Vector3(-12, 2.2, -68),
-    new THREE.Vector3(-28, 4.0, -104),
-    new THREE.Vector3(-10, 6.2, -142),
-    new THREE.Vector3(18, 8.5, -178),
-    new THREE.Vector3(24, 10.6, -214),
-    new THREE.Vector3(6, 12.2, -248),
-    new THREE.Vector3(0, 12.8, -272),
-  ];
+export function createMountainRoadCurve(
+  segment: MountainRoadSegmentId = 'to_dhaba'
+): THREE.CatmullRomCurve3 {
+  const controlPoints =
+    segment === 'to_dhaba'
+      ? [
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(5, 1.0, -38),
+          new THREE.Vector3(-12, 2.5, -78),
+          new THREE.Vector3(-26, 4.2, -120),
+          new THREE.Vector3(-14, 6.0, -165),
+          new THREE.Vector3(10, 8.0, -210),
+          new THREE.Vector3(24, 9.6, -252), // sweeps smoothly past roadside dhaba pull-off
+          new THREE.Vector3(28, 10.6, -296), // road continues around valley bend
+          new THREE.Vector3(10, 11.8, -342),
+          new THREE.Vector3(-24, 13.0, -386),
+          new THREE.Vector3(-64, 14.2, -418),
+        ]
+      : [
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(-10, 1.5, -42),
+          new THREE.Vector3(-30, 3.6, -86),
+          new THREE.Vector3(-18, 5.8, -134),
+          new THREE.Vector3(14, 8.0, -182),
+          new THREE.Vector3(34, 10.2, -230),
+          new THREE.Vector3(22, 12.2, -278),
+          new THREE.Vector3(-4, 13.8, -328), // Neelkanth Mahadev gateway plaza ~324m
+          new THREE.Vector3(-34, 15.2, -374), // road curves past temple toward future Baal Kuwari forest route
+          new THREE.Vector3(-72, 16.4, -416),
+          new THREE.Vector3(-112, 17.6, -448),
+        ];
 
-  return new THREE.CatmullRomCurve3(controlPoints, false, 'catmullrom', 0.5);
+  const curve = new THREE.CatmullRomCurve3(controlPoints, false, 'catmullrom', 0.5);
+  // Fine arc-length lookup eliminates piecewise tangent micro-jitter along S-curves.
+  curve.arcLengthDivisions = 1200;
+  curve.updateArcLengths();
+  return curve;
+}
+
+export function getSegmentStopDistance(segment: MountainRoadSegmentId, totalLength: number): number {
+  if (segment === 'to_dhaba') {
+    return Math.min(DHABA_STOP_DISTANCE, totalLength - 60);
+  }
+  return Math.min(NEELKANTH_APPROACH_STOP_DISTANCE, totalLength - 60);
 }
 
 /**
@@ -84,4 +130,3 @@ export function sampleRoadFrame(
   // Cross(right, tangent) points perpendicular upward from the sloped road surface.
   outUp.crossVectors(outRight, outTangent).normalize();
 }
-

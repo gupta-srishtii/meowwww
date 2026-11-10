@@ -18,3 +18,6 @@ next-env.d.ts
 # Private memories
 private-assets/
 personal-photos/
+
+# Local scratch/backup docs
+MASTER_PLAN_BACKUP.md

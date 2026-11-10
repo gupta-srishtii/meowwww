@@ -15,7 +15,7 @@ interface TouchFlags {
   brake: boolean;
 }
 
-export function useDrivingInput(onResetRequested?: () => void) {
+export function useDrivingInput(onResetRequested?: () => void, enabled = true) {
   const pressedKeysRef = useRef<Set<string>>(new Set());
   const touchFlagsRef = useRef<TouchFlags>({
     steerLeft: false,
@@ -62,7 +62,17 @@ export function useDrivingInput(onResetRequested?: () => void) {
   }, []);
 
   useEffect(() => {
+    if (!enabled) {
+      clearAllInputs();
+      return;
+    }
+
     const handleKeyDown = (event: KeyboardEvent) => {
+      const targetTag = (event.target as HTMLElement | null)?.tagName;
+      if (targetTag === 'INPUT' || targetTag === 'SELECT' || targetTag === 'TEXTAREA') {
+        return;
+      }
+
       if (
         event.code === 'ArrowUp' ||
         event.code === 'ArrowDown' ||
@@ -105,8 +115,9 @@ export function useDrivingInput(onResetRequested?: () => void) {
       window.removeEventListener('blur', clearAllInputs);
       window.removeEventListener('pointercancel', clearAllInputs);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearAllInputs();
     };
-  }, [clearAllInputs, onResetRequested, recomputeInput]);
+  }, [clearAllInputs, enabled, onResetRequested, recomputeInput]);
 
   const setMoveZoneControl = useCallback(
     (side: 'left' | 'right', active: boolean, pointerId: number) => {

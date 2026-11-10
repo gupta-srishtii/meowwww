@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'The Road That Made Us Family',
-  description: 'Phase 1A 3D Canvas shell for The Road That Made Us Family.',
+  description: 'An interactive 3D mountain scooter journey from Rishikesh to Neelkanth Mahadev.',
 };
 
 export const viewport: Viewport = {

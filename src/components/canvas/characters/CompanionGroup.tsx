@@ -1,0 +1,182 @@
+'use client';
+
+import { useMemo, useRef } from 'react';
+import type * as THREE from 'three';
+import type { HumanRigRefs } from '@/components/canvas/characters/animateCharacterRig';
+import {
+  StylizedPlaceholderCharacter,
+  type CharacterVariant,
+} from '@/components/canvas/characters/StylizedPlaceholderCharacter';
+
+export type FriendCompanionId = 'ishaan' | 'friend_black_tee' | 'friend_plaid';
+
+export type CompanionRigMap = Record<FriendCompanionId, HumanRigRefs>;
+
+interface SingleFriendProps {
+  variant: CharacterVariant;
+  hairColor: string;
+  scale: number;
+  initialPosition: [number, number, number];
+  initialYaw: number;
+  holdingChaiCup?: boolean;
+  holdingFork?: boolean;
+  onRegisterRefs: (id: FriendCompanionId, refs: HumanRigRefs) => void;
+  id: FriendCompanionId;
+}
+
+function FriendRigInstance({
+  id,
+  variant,
+  hairColor,
+  scale,
+  initialPosition,
+  initialYaw,
+  holdingChaiCup = false,
+  holdingFork = false,
+  onRegisterRefs,
+}: SingleFriendProps) {
+  const groupRef = useRef<THREE.Group | null>(null);
+  const torsoRef = useRef<THREE.Group | null>(null);
+  const headRef = useRef<THREE.Group | null>(null);
+  const leftLegRef = useRef<THREE.Group | null>(null);
+  const leftKneeRef = useRef<THREE.Group | null>(null);
+  const rightLegRef = useRef<THREE.Group | null>(null);
+  const rightKneeRef = useRef<THREE.Group | null>(null);
+  const leftArmRef = useRef<THREE.Group | null>(null);
+  const rightArmRef = useRef<THREE.Group | null>(null);
+  const rightForearmRef = useRef<THREE.Group | null>(null);
+
+  useMemo(() => {
+    onRegisterRefs(id, {
+      get group() {
+        return groupRef.current;
+      },
+      get torso() {
+        return torsoRef.current;
+      },
+      get head() {
+        return headRef.current;
+      },
+      get leftLeg() {
+        return leftLegRef.current;
+      },
+      get leftKnee() {
+        return leftKneeRef.current;
+      },
+      get rightLeg() {
+        return rightLegRef.current;
+      },
+      get rightKnee() {
+        return rightKneeRef.current;
+      },
+      get leftArm() {
+        return leftArmRef.current;
+      },
+      get rightArm() {
+        return rightArmRef.current;
+      },
+      get rightForearm() {
+        return rightForearmRef.current;
+      },
+    });
+  }, [id, onRegisterRefs]);
+
+  return (
+    <StylizedPlaceholderCharacter
+      characterVariant={variant}
+      groupRef={groupRef}
+      torsoRef={torsoRef}
+      headRef={headRef}
+      leftLegRef={leftLegRef}
+      leftKneeRef={leftKneeRef}
+      rightLegRef={rightLegRef}
+      rightKneeRef={rightKneeRef}
+      leftArmRef={leftArmRef}
+      rightArmRef={rightArmRef}
+      rightForearmRef={rightForearmRef}
+      position={initialPosition}
+      rotationY={initialYaw}
+      hairColor={hairColor}
+      scale={scale}
+      holdingChaiCup={holdingChaiCup}
+      holdingFork={holdingFork}
+    />
+  );
+}
+
+export interface CompanionGroupProps {
+  initialPositions: Record<FriendCompanionId, { x: number; z: number; yaw: number }>;
+  holdingChaiCup?: boolean;
+  holdingFork?: boolean;
+  onRigsReady: (rigs: CompanionRigMap) => void;
+}
+
+/**
+ * Shared articulated group of Srishti's three traveling friends (`Ishaan` plus the two
+ * verified Scooter 2 companions without inventing unconfirmed individual driver/name assignments).
+ */
+export function CompanionGroup({
+  initialPositions,
+  holdingChaiCup = false,
+  holdingFork = false,
+  onRigsReady,
+}: CompanionGroupProps) {
+  const rigMapRef = useRef<Partial<CompanionRigMap>>({});
+
+  const handleRegister = useMemo(
+    () => (id: FriendCompanionId, refs: HumanRigRefs) => {
+      rigMapRef.current[id] = refs;
+      if (
+        rigMapRef.current.ishaan &&
+        rigMapRef.current.friend_black_tee &&
+        rigMapRef.current.friend_plaid
+      ) {
+        onRigsReady(rigMapRef.current as CompanionRigMap);
+      }
+    },
+    [onRigsReady]
+  );
+
+  return (
+    <>
+      <FriendRigInstance
+        id="ishaan"
+        variant="ishaan"
+        hairColor="#18181b"
+        scale={0.99}
+        initialPosition={[initialPositions.ishaan.x, 0, initialPositions.ishaan.z]}
+        initialYaw={initialPositions.ishaan.yaw}
+        holdingChaiCup={holdingChaiCup}
+        holdingFork={holdingFork}
+        onRegisterRefs={handleRegister}
+      />
+      <FriendRigInstance
+        id="friend_black_tee"
+        variant="friend_black_tee"
+        hairColor="#1c1917"
+        scale={1.01}
+        initialPosition={[
+          initialPositions.friend_black_tee.x,
+          0,
+          initialPositions.friend_black_tee.z,
+        ]}
+        initialYaw={initialPositions.friend_black_tee.yaw}
+        holdingChaiCup={holdingChaiCup}
+        holdingFork={holdingFork}
+        onRegisterRefs={handleRegister}
+      />
+      <FriendRigInstance
+        id="friend_plaid"
+        variant="friend_plaid"
+        hairColor="#111827"
+        scale={0.99}
+        initialPosition={[initialPositions.friend_plaid.x, 0, initialPositions.friend_plaid.z]}
+        initialYaw={initialPositions.friend_plaid.yaw}
+        holdingChaiCup={holdingChaiCup}
+        holdingFork={holdingFork}
+        onRegisterRefs={handleRegister}
+      />
+    </>
+  );
+}
+

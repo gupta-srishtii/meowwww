@@ -7,6 +7,10 @@ import {
 } from '@/components/canvas/managers/AssetManager';
 import type { SceneManagerController } from '@/components/canvas/managers/SceneManager';
 import { CHECKPOINT_STORAGE_KEY } from '@/lib/checkpoint';
+import {
+  LEAD_START_DISTANCE,
+  VIEWPOINT_STOP_DISTANCE,
+} from '@/lib/mountainSpline';
 import { getSceneDefinition, type SceneId } from '@/lib/sceneConfig';
 import { useProgressStore } from '@/store/progressStore';
 
@@ -44,6 +48,12 @@ export function DevPhase1BPanel({
   const checkpointStatusNote = useProgressStore((s) => s.checkpointStatusNote);
   const checkpointStorageBlocked = useProgressStore((s) => s.checkpointStorageBlocked);
   const lastCheckpoint = useProgressStore((s) => s.lastCheckpoint);
+  const collectedPolaroids = useProgressStore((s) => s.collectedPolaroids);
+  const mountainRoadSegment = useProgressStore((s) => s.mountainRoadSegment);
+  const roadSubStage = useProgressStore((s) => s.roadSubStage);
+  const setMountainRoadSegment = useProgressStore((s) => s.setMountainRoadSegment);
+  const setRoadSubStage = useProgressStore((s) => s.setRoadSubStage);
+  const setRoadResumeDistance = useProgressStore((s) => s.setRoadResumeDistance);
   const setUserPaused = useProgressStore((s) => s.setUserPaused);
 
   useEffect(() => {
@@ -53,15 +63,37 @@ export function DevPhase1BPanel({
   }, []);
 
   const committedDef = getSceneDefinition(committedSceneId);
-  const otherPlayableSceneId: SceneId = committedSceneId === 5 ? 0 : 5;
+  const otherPlayableSceneId: SceneId = committedSceneId === 5 ? 6 : 5;
   const isBusy = transitionPhase !== 'idle';
 
   const switchTo = (targetId: SceneId, failureMode?: 'load' | 'mount') => {
     setCorruptInjectedNote(null);
+    if (targetId === 5) {
+      setRoadSubStage('driving');
+      setRoadResumeDistance(LEAD_START_DISTANCE);
+    }
     controller.requestSceneTransition(targetId, {
       simulateFailureMode: failureMode,
       clearInputs: onBeforeTransition,
     });
+  };
+
+  const jumpToViewpointStop = () => {
+    setCorruptInjectedNote(null);
+    if (committedSceneId === 5) {
+      controller.requestRoadSubStageTransition('viewpoint_walk', {
+        roadSegment: 'to_dhaba',
+        resumeDistance: VIEWPOINT_STOP_DISTANCE,
+        clearInputs: onBeforeTransition,
+      });
+    } else {
+      setMountainRoadSegment('to_dhaba');
+      setRoadSubStage('viewpoint_walk');
+      setRoadResumeDistance(VIEWPOINT_STOP_DISTANCE);
+      controller.requestSceneTransition(5, {
+        clearInputs: onBeforeTransition,
+      });
+    }
   };
 
   const handleInjectCorruptCheckpoint = () => {
@@ -77,9 +109,8 @@ export function DevPhase1BPanel({
 
   return (
     <div
-      className={`pointer-events-none fixed right-3 z-20 flex justify-end sm:right-4 ${
-        touchControlsVisible ? 'bottom-24' : 'bottom-24 sm:bottom-4'
-      }`}
+      className={`pointer-events-none fixed right-3 z-20 flex justify-end sm:right-4 ${touchControlsVisible ? 'bottom-24' : 'bottom-24 sm:bottom-4'
+        }`}
     >
       {!open ? (
         <button
@@ -153,10 +184,11 @@ export function DevPhase1BPanel({
               </dd>
             </div>
             <div className="col-span-2">
-              <dt className="text-slate-400">Pause Flags</dt>
+              <dt className="text-slate-400">Pause Flags, Segment &amp; Polaroids</dt>
               <dd className="text-slate-300">
                 user={String(userPaused)} · hidden={String(tabHiddenPaused)} · ctxLost=
-                {String(contextLostPaused)}
+                {String(contextLostPaused)} · road={mountainRoadSegment} ({roadSubStage}) ·
+                polaroids={collectedPolaroids.length}
               </dd>
             </div>
           </dl>
@@ -166,22 +198,71 @@ export function DevPhase1BPanel({
             <p className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
               Switch Implemented Scenes (Fade + Ready Token)
             </p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               <button
                 type="button"
-                disabled={isBusy || committedSceneId === 5}
-                onClick={() => switchTo(5)}
-                className="rounded-lg border border-amber-400/40 bg-amber-500/15 px-2.5 py-1.5 text-[11px] font-medium text-amber-200 transition hover:bg-amber-500/25 disabled:cursor-not-allowed disabled:opacity-45"
+                disabled={isBusy || (committedSceneId === 5 && roadSubStage === 'driving')}
+                onClick={() => {
+                  if (committedSceneId === 5) {
+                    setCorruptInjectedNote(null);
+                    controller.requestRoadSubStageTransition('driving', {
+                      roadSegment: 'to_dhaba',
+                      resumeDistance: LEAD_START_DISTANCE,
+                      clearInputs: onBeforeTransition,
+                    });
+                  } else {
+                    switchTo(5);
+                  }
+                }}
+                className="rounded-lg border border-amber-400/40 bg-amber-500/15 px-2 py-1.5 text-[11px] font-medium text-amber-200 transition hover:bg-amber-500/25 disabled:cursor-not-allowed disabled:opacity-45"
               >
-                Scene 5: Scooter Prototype
+                #5 Road Ride
+              </button>
+              <button
+                type="button"
+                disabled={isBusy || committedSceneId === 6}
+                onClick={() => switchTo(6)}
+                className="rounded-lg border border-emerald-400/40 bg-emerald-500/15 px-2 py-1.5 text-[11px] font-medium text-emerald-200 transition hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                #6 Maggi &amp; Chai
+              </button>
+              <button
+                type="button"
+                disabled={isBusy || committedSceneId === 7}
+                onClick={() => switchTo(7)}
+                className="rounded-lg border border-orange-400/40 bg-orange-500/15 px-2 py-1.5 text-[11px] font-medium text-orange-200 transition hover:bg-orange-500/25 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                #7 Neelkanth
               </button>
               <button
                 type="button"
                 disabled={isBusy || committedSceneId === 0}
                 onClick={() => switchTo(0)}
-                className="rounded-lg border border-teal-400/40 bg-teal-500/15 px-2.5 py-1.5 text-[11px] font-medium text-teal-200 transition hover:bg-teal-500/25 disabled:cursor-not-allowed disabled:opacity-45"
+                className="rounded-lg border border-teal-400/40 bg-teal-500/15 px-2 py-1.5 text-[11px] font-medium text-teal-200 transition hover:bg-teal-500/25 disabled:cursor-not-allowed disabled:opacity-45"
               >
-                Scene 0: Temp Test Stage
+                #0 Test Stage
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={isBusy}
+                onClick={jumpToViewpointStop}
+                className="rounded-lg border border-sky-400/40 bg-sky-500/15 px-2.5 py-1 text-[11px] font-medium text-sky-200 transition hover:bg-sky-500/25 disabled:opacity-45"
+              >
+                Jump → #5 Viewpoint Stop
+              </button>
+              <button
+                type="button"
+                disabled={isBusy}
+                onClick={() =>
+                  setMountainRoadSegment(
+                    mountainRoadSegment === 'to_dhaba' ? 'to_neelkanth' : 'to_dhaba'
+                  )
+                }
+                className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 text-[11px] text-slate-300 hover:bg-slate-800 disabled:opacity-45"
+              >
+                Road Stretch: {mountainRoadSegment}
               </button>
             </div>
           </div>
@@ -232,7 +313,7 @@ export function DevPhase1BPanel({
                 onChange={(e) => setStubTargetId(Number(e.target.value) as SceneId)}
                 className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-[11px] text-slate-200"
               >
-                {[1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14].map((id) => (
+                {[1, 2, 3, 4, 8, 9, 10, 11, 12, 13, 14].map((id) => (
                   <option key={id} value={id}>
                     Scene {id}: {getSceneDefinition(id as SceneId).title}
                   </option>

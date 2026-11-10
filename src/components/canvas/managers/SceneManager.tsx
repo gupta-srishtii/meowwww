@@ -9,12 +9,20 @@ import {
   type RefObject,
 } from 'react';
 import type { TelemetryRefs } from '@/components/canvas/ScooterPrototypeScene';
-import { ScooterPrototypeScene } from '@/components/canvas/ScooterPrototypeScene';
 import { CameraDirector } from '@/components/canvas/managers/CameraDirector';
 import { assetManager } from '@/components/canvas/managers/AssetManager';
 import { SceneErrorBoundary } from '@/components/canvas/managers/SceneErrorBoundary';
+import { Scene05_MountainRoad } from '@/components/canvas/scenes/Scene05_MountainRoad';
+import {
+  Scene05_ViewpointStop,
+  type ViewpointPhotoMoment,
+} from '@/components/canvas/scenes/Scene05_ViewpointStop';
+import { Scene06_MaggiChai } from '@/components/canvas/scenes/Scene06_MaggiChai';
+import { Scene07_NeelkanthTemple } from '@/components/canvas/scenes/Scene07_NeelkanthTemple';
 import { TempPhase1BTestScene } from '@/components/canvas/scenes/TempPhase1BTestScene';
 import type { DrivingInputState } from '@/hooks/useDrivingInput';
+import type { WalkHotspot, WalkInputState } from '@/hooks/useWalkController';
+import type { MountainRoadSegmentId, MountainRoadSubStage } from '@/lib/mountainSpline';
 import type { SceneId } from '@/lib/sceneConfig';
 import {
   selectIsSimulationPaused,
@@ -29,8 +37,18 @@ export interface RequestTransitionOptions {
   clearInputs?: () => void;
 }
 
+export interface RoadSubStageTransitionOptions {
+  roadSegment?: MountainRoadSegmentId;
+  resumeDistance?: number;
+  clearInputs?: () => void;
+}
+
 export interface SceneManagerController {
   requestSceneTransition: (targetId: SceneId, options?: RequestTransitionOptions) => void;
+  requestRoadSubStageTransition: (
+    nextSubStage: MountainRoadSubStage,
+    options?: RoadSubStageTransitionOptions
+  ) => void;
   retryTransition: () => void;
   revertToCommittedScene: () => void;
   onMountedSceneReady: (token: number, sceneId: SceneId) => void;
@@ -131,6 +149,34 @@ export function useSceneTransitionController(): SceneManagerController {
     [cancelPendingAsync, runLoadingPipeline]
   );
 
+  const requestRoadSubStageTransition = useCallback(
+    (nextSubStage: MountainRoadSubStage, options?: RoadSubStageTransitionOptions) => {
+      cancelPendingAsync();
+      options?.clearInputs?.();
+
+      const token = ++transitionTokenRef.current;
+      const store = useProgressStore.getState();
+      store.beginFadeOut(5, token, true);
+
+      fadeOutTimerRef.current = window.setTimeout(() => {
+        fadeOutTimerRef.current = null;
+        if (token !== transitionTokenRef.current) return;
+
+        const nextStore = useProgressStore.getState();
+        if (options?.roadSegment) {
+          nextStore.setMountainRoadSegment(options.roadSegment);
+        }
+        if (options?.resumeDistance !== undefined) {
+          nextStore.setRoadResumeDistance(options.resumeDistance);
+        }
+        nextStore.setRoadSubStage(nextSubStage);
+        nextStore.enterLoadingPhase(5, token);
+        nextStore.enterMountingPhase(token);
+      }, FADE_DURATION_MS);
+    },
+    [cancelPendingAsync]
+  );
+
   const onMountedSceneReady = useCallback((token: number, sceneId: SceneId) => {
     if (token !== transitionTokenRef.current) {
       useProgressStore.getState().recordStaleCallbackRejected();
@@ -192,6 +238,7 @@ export function useSceneTransitionController(): SceneManagerController {
 
   return {
     requestSceneTransition,
+    requestRoadSubStageTransition,
     retryTransition,
     revertToCommittedScene,
     onMountedSceneReady,
@@ -203,9 +250,29 @@ export function useSceneTransitionController(): SceneManagerController {
 export interface SceneStageProps {
   controller: SceneManagerController;
   inputRef: RefObject<DrivingInputState>;
+  walkInputRef: RefObject<WalkInputState>;
   resetNonce: number;
+  viewpointPullOverNonce: number;
   telemetryRefs: TelemetryRefs;
+  ateMaggi: boolean;
+  sippedChai: boolean;
+  capturedDhabaPolaroid: boolean;
+  foodCinematicActive: boolean;
+  onFoodCinematicComplete: () => void;
+  capturedViewpointSolo: boolean;
+  capturedViewpointGroup: boolean;
+  viewpointPhotoMoment: ViewpointPhotoMoment;
+  rangBell: boolean;
+  bellSwingImpulseNonce: number;
+  litDiya: boolean;
+  hadDarshan: boolean;
+  activeDarshanPan: boolean;
+  capturedNeelkanthPolaroid: boolean;
+  onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onArrivedChange: (arrived: boolean) => void;
+  onInViewpointZoneChange: (inZone: boolean) => void;
+  onViewpointArrivedChange: (arrived: boolean) => void;
+  onTrafficBrush?: () => void;
 }
 
 /**
@@ -215,9 +282,29 @@ export interface SceneStageProps {
 export function SceneStage({
   controller,
   inputRef,
+  walkInputRef,
   resetNonce,
+  viewpointPullOverNonce,
   telemetryRefs,
+  ateMaggi,
+  sippedChai,
+  capturedDhabaPolaroid,
+  foodCinematicActive,
+  onFoodCinematicComplete,
+  capturedViewpointSolo,
+  capturedViewpointGroup,
+  viewpointPhotoMoment,
+  rangBell,
+  bellSwingImpulseNonce,
+  litDiya,
+  hadDarshan,
+  activeDarshanPan,
+  capturedNeelkanthPolaroid,
+  onNearbyHotspotChange,
   onArrivedChange,
+  onInViewpointZoneChange,
+  onViewpointArrivedChange,
+  onTrafficBrush,
 }: SceneStageProps) {
   const committedSceneId = useProgressStore((s) => s.committedSceneId);
   const requestedSceneId = useProgressStore((s) => s.requestedSceneId);
@@ -227,6 +314,9 @@ export function SceneStage({
   const mountAttemptedForTransition = useProgressStore((s) => s.mountAttemptedForTransition);
   const devFailureMode = useProgressStore((s) => s.devFailureMode);
   const qualityProfile = useProgressStore((s) => s.qualityProfile);
+  const mountainRoadSegment = useProgressStore((s) => s.mountainRoadSegment);
+  const roadSubStage = useProgressStore((s) => s.roadSubStage);
+  const roadResumeDistance = useProgressStore((s) => s.roadResumeDistance);
   const downgradeQualityProfile = useProgressStore((s) => s.downgradeQualityProfile);
   const isPaused = useProgressStore(selectIsSimulationPaused);
 
@@ -247,7 +337,7 @@ export function SceneStage({
   const simulateMountFailure =
     transitionPhase === 'mounting' && devFailureMode === 'mount';
 
-  const boundaryResetKey = `${mountedSceneId}-${retryNonce}`;
+  const boundaryResetKey = `${mountedSceneId}-${mountedSceneId === 5 ? roadSubStage : 'base'}-${retryNonce}`;
 
   return (
     <>
@@ -258,17 +348,68 @@ export function SceneStage({
       >
         <Suspense fallback={null}>
           {mountedSceneId === 5 ? (
-            <ScooterPrototypeScene
-              inputRef={inputRef}
+            roadSubStage === 'viewpoint_walk' ? (
+              <Scene05_ViewpointStop
+                walkInputRef={walkInputRef}
+                qualityProfile={qualityProfile}
+                paused={scenePaused}
+                transitionToken={transitionToken}
+                capturedSolo={capturedViewpointSolo}
+                capturedGroup={capturedViewpointGroup}
+                activePhotoMoment={viewpointPhotoMoment}
+                onNearbyHotspotChange={onNearbyHotspotChange}
+                onSceneReady={controller.onMountedSceneReady}
+              />
+            ) : (
+              <Scene05_MountainRoad
+                inputRef={inputRef}
+                qualityProfile={qualityProfile}
+                paused={scenePaused}
+                resetNonce={resetNonce}
+                roadSegment={mountainRoadSegment}
+                startDistance={roadResumeDistance}
+                viewpointPullOverNonce={viewpointPullOverNonce}
+                transitionToken={transitionToken}
+                simulateMountFailure={simulateMountFailure}
+                onSceneReady={transitionToken > 0 ? controller.onMountedSceneReady : undefined}
+                onArrivedChange={onArrivedChange}
+                onInViewpointZoneChange={onInViewpointZoneChange}
+                onViewpointArrivedChange={onViewpointArrivedChange}
+                onTrafficBrush={onTrafficBrush}
+                onAutoDowngradeQuality={downgradeQualityProfile}
+                telemetryRefs={telemetryRefs}
+              />
+            )
+          ) : mountedSceneId === 6 ? (
+            <Scene06_MaggiChai
+              walkInputRef={walkInputRef}
               qualityProfile={qualityProfile}
               paused={scenePaused}
-              resetNonce={resetNonce}
               transitionToken={transitionToken}
               simulateMountFailure={simulateMountFailure}
-              onSceneReady={transitionToken > 0 ? controller.onMountedSceneReady : undefined}
-              onArrivedChange={onArrivedChange}
-              onAutoDowngradeQuality={downgradeQualityProfile}
-              telemetryRefs={telemetryRefs}
+              ateMaggi={ateMaggi}
+              sippedChai={sippedChai}
+              capturedPolaroid={capturedDhabaPolaroid}
+              foodCinematicActive={foodCinematicActive}
+              onFoodCinematicComplete={onFoodCinematicComplete}
+              onNearbyHotspotChange={onNearbyHotspotChange}
+              onSceneReady={controller.onMountedSceneReady}
+            />
+          ) : mountedSceneId === 7 ? (
+            <Scene07_NeelkanthTemple
+              walkInputRef={walkInputRef}
+              qualityProfile={qualityProfile}
+              paused={scenePaused}
+              transitionToken={transitionToken}
+              simulateMountFailure={simulateMountFailure}
+              rangBell={rangBell}
+              bellSwingImpulseNonce={bellSwingImpulseNonce}
+              litDiya={litDiya}
+              hadDarshan={hadDarshan}
+              activeDarshanPan={activeDarshanPan}
+              capturedPolaroid={capturedNeelkanthPolaroid}
+              onNearbyHotspotChange={onNearbyHotspotChange}
+              onSceneReady={controller.onMountedSceneReady}
             />
           ) : (
             <TempPhase1BTestScene

@@ -20,6 +20,7 @@ export type SharedAssetKey =
 export type Phase1BStageKind =
   | 'milestone_0_prototype'
   | 'temp_test_scene'
+  | 'phase2_playable'
   | 'unimplemented_stub';
 
 export interface PersistentSharedAssetDescriptor {
@@ -218,9 +219,17 @@ export const SCENE_REGISTRY: Record<SceneId, SceneDefinition> = {
     estDuration: '90–120s',
     cameraMode: 'follow',
     checkpointPolicy: 'on_commit',
-    phase1BStage: 'unimplemented_stub',
-    sharedAssets: ['srishti', 'ishaan', 'manish', 'yash', 'scooter'],
-    sceneOwnedAssets: [],
+    phase1BStage: 'phase2_playable',
+    sharedAssets: ['srishti', 'ishaan', 'manish', 'yash', 'scooter', 'shared-palette-atlas'],
+    sceneOwnedAssets: [
+      {
+        id: 'dhaba-procedural-env',
+        label: 'Roadside Dhaba Clearing (Placeholder Greybox)',
+        url: 'procedural://dhaba-clearing',
+        ownership: 'scene_owned',
+        loadedKind: 'procedural',
+      },
+    ],
   },
   7: {
     id: 7,
@@ -231,9 +240,17 @@ export const SCENE_REGISTRY: Record<SceneId, SceneDefinition> = {
     estDuration: '90–120s',
     cameraMode: 'follow',
     checkpointPolicy: 'on_commit',
-    phase1BStage: 'unimplemented_stub',
-    sharedAssets: ['srishti', 'ishaan', 'manish', 'yash'],
-    sceneOwnedAssets: [],
+    phase1BStage: 'phase2_playable',
+    sharedAssets: ['srishti', 'ishaan', 'manish', 'yash', 'scooter', 'shared-palette-atlas'],
+    sceneOwnedAssets: [
+      {
+        id: 'neelkanth-temple-env',
+        label: 'Neelkanth Mahadev Temple Courtyard & Gopuram',
+        url: 'procedural://neelkanth-temple',
+        ownership: 'scene_owned',
+        loadedKind: 'procedural',
+      },
+    ],
   },
   8: {
     id: 8,
@@ -332,7 +349,8 @@ export const ALL_SCENE_IDS: readonly SceneId[] = [
   0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
 ];
 
-export const PHASE1B_PLAYABLE_SCENE_IDS: readonly SceneId[] = [5, 0];
+export const PHASE1B_PLAYABLE_SCENE_IDS: readonly SceneId[] = [5, 6, 7, 0];
+export const PHASE2A_PLAYABLE_SCENE_IDS: readonly SceneId[] = [5, 6, 7, 0];
 
 export function isValidSceneId(value: unknown): value is SceneId {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 14;
