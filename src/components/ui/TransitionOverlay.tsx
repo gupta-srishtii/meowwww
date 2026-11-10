@@ -29,15 +29,16 @@ function getFriendlyStopTitle(
   if (sceneId === 7) return 'Neelkanth Mahadev Temple';
   if (sceneId === 8) {
     if (baalKuwariSubStage === 'maggi_stop') return 'Roadside Maggi Clearing';
-    if (baalKuwariSubStage === 'forest_footpath') return 'Forest Trail to Baal Kuwari Stairs';
+    if (baalKuwariSubStage === 'driving_to_stairs') return 'Scooter Ride to Baal Kuwari Stairs';
     return 'Off-Road Track to Baal Kuwari';
   }
   if (sceneId === 9) return 'Baal Kuwari: The ~400 Stairs';
   if (sceneId === 10) return 'Baal Kuwari Summit Temple';
   if (sceneId === 11) return 'Evening Safe Return to Rishikesh';
-  if (sceneId === 12) return 'Rishikesh Hotel Return & Farewell';
+  if (sceneId === 12) return 'Rishikesh Stay & Rooftop Terrace';
   if (sceneId === 5) {
     if (subStage === 'viewpoint_walk') return 'Scenic Mountain Viewpoint';
+    if (segment === 'to_baalkuwari_stairs') return 'Scooter Ride to Baal Kuwari Stairs';
     if (segment === 'to_baalkuwari') return 'Mountain Route to Baal Kuwari';
     if (segment === 'to_hotel_return') return 'Evening Safe Return to Rishikesh';
     return segment === 'to_neelkanth' ? 'Forest Road to Neelkanth' : 'Rishikesh Mountain Road';
@@ -89,7 +90,7 @@ export function TransitionOverlay({
       {/* Smooth Cinematic Fade Curtain */}
       <div
         aria-hidden={!curtainOpaque}
-        className={`fixed inset-0 z-30 flex items-center justify-center bg-[#060913] transition-opacity duration-[380ms] ease-out ${
+        className={`fixed inset-0 z-30 flex items-center justify-center bg-[#060913] transition-opacity duration-[260ms] ease-out ${
           curtainOpaque
             ? 'pointer-events-auto opacity-100'
             : 'pointer-events-none opacity-0'

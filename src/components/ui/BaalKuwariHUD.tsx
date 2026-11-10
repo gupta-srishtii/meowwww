@@ -9,7 +9,7 @@ import {
 import type { WalkHotspot } from '@/hooks/useWalkController';
 
 export interface BaalKuwariHUDProps {
-  mode: 'maggi_stop' | 'footpath' | 'stairs' | 'descent' | 'temple';
+  mode: 'maggi_stop' | 'stairs' | 'descent' | 'temple';
   audioMuted?: boolean;
   onToggleAudioMute?: () => void;
   touchControlsVisible: boolean;
@@ -74,26 +74,22 @@ export function BaalKuwariHUD({
   const title =
     mode === 'maggi_stop'
       ? 'Roadside Maggi Clearing'
-      : mode === 'footpath'
-        ? 'Forest Path to Baal Kuwari'
-        : mode === 'stairs'
-          ? 'Baal Kuwari: The ~400 Stairs'
-          : mode === 'descent'
-            ? 'Back Down the Baal Kuwari Steps'
-            : 'Baal Kuwari Temple';
+      : mode === 'stairs'
+        ? 'Baal Kuwari: The ~400 Stairs'
+        : mode === 'descent'
+          ? 'Back Down the Baal Kuwari Steps'
+          : 'Baal Kuwari Temple';
 
   const subtitle =
     mode === 'maggi_stop'
       ? ateMaggi
-        ? 'Walk north onto the forest path toward the Baal Kuwari stairs'
-        : 'Hot Maggi in a quiet clearing before the long climb'
-      : mode === 'footpath'
-        ? 'Walk uphill through the pines right to the base of the stone steps'
-        : mode === 'stairs'
-          ? '4 winding hillside flights together'
-          : mode === 'descent'
-            ? 'Lightly jogging down after darshan together'
-            : 'Quiet summit temple above the Rishikesh hills';
+        ? 'Walk back to your scooters — seedhiyon ke gate tak aage scooty ride hai'
+        : 'Hot Maggi in a quiet clearing before continuing toward the stairs'
+      : mode === 'stairs'
+        ? '4 winding hillside flights together'
+        : mode === 'descent'
+          ? 'Lightly jogging down after darshan together'
+          : 'Quiet summit temple above the Rishikesh hills';
 
   if (mode === 'temple' && arrivalCinematicActive) {
     return (
@@ -142,7 +138,7 @@ export function BaalKuwariHUD({
                 onClick={onBeginClimbFromMaggi}
                 className="rounded-md bg-amber-400 px-2.5 py-0.5 font-semibold text-slate-950 transition hover:bg-amber-300"
               >
-                Walk Forest Path →
+                Ride Scooters to Stairs →
               </button>
             )}
           </div>

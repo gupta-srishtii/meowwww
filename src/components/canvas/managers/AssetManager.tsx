@@ -189,7 +189,7 @@ class AssetManagerRegistry {
         this.loadedSceneSet.add(sceneId);
         this.emit();
         resolve();
-      }, 110);
+      }, 55);
 
       const cleanup = () => {
         clearTimeout(timeoutHandle);

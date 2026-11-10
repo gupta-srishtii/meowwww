@@ -48,11 +48,11 @@ export function HotelReturnHUD({
   return (
     <>
       <MinimalTopBar
-        title="Rishikesh Hotel Courtyard"
+        title="Rishikesh Stay &amp; Rooftop Terrace"
         subtitle={
           farewellDone
-            ? 'Shaam ki bus se pehle Srishti apne group se mili — safely wapas!'
-            : 'Apna shared hotel · Srishti ko unke doston ke paas drop karke wave karo'
+            ? 'Shaam se pehle safely wapsi — Srishti apne friends se mili!'
+            : 'Main road ke paas gali mein stay · Upar chhat (terrace) par bhi jaa sakte ho'
         }
         polaroidCount={polaroidCount}
         audioMuted={audioMuted}
@@ -73,7 +73,7 @@ export function HotelReturnHUD({
               capturedPolaroid ? 'bg-sky-950/80 text-sky-300' : 'bg-slate-800/80 text-slate-300'
             }`}
           >
-            {capturedPolaroid ? '✓ Polaroid' : '○ Evening Photo'}
+            {capturedPolaroid ? '✓ Terrace / Stay Photo' : '○ Evening Photo'}
           </span>
         </div>
       </MinimalTopBar>
@@ -81,7 +81,7 @@ export function HotelReturnHUD({
       {polaroidToastVisible && (
         <PolaroidToastCard
           polaroidId="scene12_hotel_farewell"
-          caption="Hotel Courtyard · Safe Wapsi"
+          caption="Rishikesh Stay & Terrace · Evening Wapsi"
           title="Rishikesh Evening"
           gradientClass="from-amber-200 via-orange-100 to-slate-300"
           onDismiss={onDismissPolaroidToast}
@@ -98,7 +98,7 @@ export function HotelReturnHUD({
               Until Next Time, Ishaan
             </h2>
             <p className="mt-2 text-xs leading-relaxed text-slate-300">
-              Baal Kuwari se shaam ki bus se pehle safely wapas — Lucknow ki train aur Delhi ki bus ke beech yeh Rishikesh trip hamari sabse pyaari yaadon mein se ek ban gaya. Srishti apne friends ke paas wapas chali gayi aur tum, Manish aur Yash apni side wave karte rahe.
+              Baal Kuwari se shaam se pehle safely Rishikesh ki gali mein stay par wapas — terrace se pahaadon aur chhaton ka nazara dekha, aur Srishti apne friends ke group se mili. Tum, Manish aur Yash ne muskurake bye wave kiya.
             </p>
             <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/70 px-3.5 py-2.5 text-[11px] text-slate-300">
               <p className="font-medium text-amber-200">
@@ -124,7 +124,7 @@ export function HotelReturnHUD({
                 onClick={onDismissTripSummary}
                 className="flex-1 rounded-xl border border-slate-600 bg-slate-800 px-4 py-2 text-xs font-medium text-slate-200 transition hover:bg-slate-700"
               >
-                Stay in Courtyard
+                Keep Exploring Stay &amp; Terrace
               </button>
             </div>
           </div>

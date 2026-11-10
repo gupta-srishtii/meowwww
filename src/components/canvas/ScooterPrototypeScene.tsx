@@ -463,7 +463,9 @@ export function ScooterPrototypeScene({
       } else {
         // Normal manual cruise driving along mountain highway
         const segmentMaxSpeed =
-          roadSegment === 'to_baalkuwari' ? SCOOTER_MAX_SPEED * 0.88 : SCOOTER_MAX_SPEED;
+          roadSegment === 'to_baalkuwari' || roadSegment === 'to_baalkuwari_stairs'
+            ? SCOOTER_MAX_SPEED * 0.88
+            : SCOOTER_MAX_SPEED;
         if (input.throttle > 0) {
           sim.leadSpeed += SCOOTER_ACCEL * input.throttle * delta;
         }
@@ -606,7 +608,8 @@ export function ScooterPrototypeScene({
       delta
     );
 
-    const isOffroadSegment = roadSegment === 'to_baalkuwari';
+    const isOffroadSegment =
+      roadSegment === 'to_baalkuwari' || roadSegment === 'to_baalkuwari_stairs';
     const leadBump = isOffroadSegment
       ? sampleOffroadTrackBump(sim.leadDist, sim.leadLateral, stopDist)
       : { heaveY: 0, pitchRad: 0, rollRad: 0 };

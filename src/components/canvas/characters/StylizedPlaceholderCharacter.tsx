@@ -2,6 +2,7 @@
 
 import { useMemo, type RefObject } from 'react';
 import type * as THREE from 'three';
+import { CharacterHeadOverlay } from '@/components/canvas/characters/CharacterHeadOverlay';
 import { SlingBagAccessory } from '@/components/canvas/characters/SlingBagAccessory';
 import {
   getDenimTexture,
@@ -39,6 +40,7 @@ export interface StylizedPlaceholderCharacterProps {
   holdingChaiCup?: boolean;
   holdingFork?: boolean;
   castShadow?: boolean;
+  showNameTag?: boolean;
 }
 
 /**
@@ -70,6 +72,7 @@ export function StylizedPlaceholderCharacter({
   holdingChaiCup = false,
   holdingFork = false,
   castShadow = false,
+  showNameTag = true,
 }: StylizedPlaceholderCharacterProps) {
   const floralPeplumTex = useMemo(() => getSrishtiFloralPeplumTexture(), []);
   const denimTex = useMemo(() => getDenimTexture(), []);
@@ -371,6 +374,7 @@ export function StylizedPlaceholderCharacter({
                 <meshStandardMaterial color="#121215" roughness={0.88} />
               </mesh>
             </group>
+            <CharacterHeadOverlay variant="srishti" showTag={showNameTag} headY={0.28} />
           </group>
         </group>
       </group>
@@ -664,6 +668,7 @@ export function StylizedPlaceholderCharacter({
               <meshStandardMaterial color={hairColor} roughness={0.88} />
             </mesh>
           )}
+          <CharacterHeadOverlay variant={characterVariant} showTag={showNameTag} headY={0.28} />
         </group>
       </group>
     </group>

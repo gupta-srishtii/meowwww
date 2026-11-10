@@ -228,7 +228,25 @@ export default function Experience() {
   const collectedPolaroids = useProgressStore((s) => s.collectedPolaroids);
   const capturePolaroidAndSave = useProgressStore((s) => s.capturePolaroidAndSave);
   const activeNarration = useProgressStore((s) => s.activeNarration);
-  const showNarration = useProgressStore((s) => s.showNarration);
+  const [activeCaption, setActiveCaption] = useState<{
+    speaker: string;
+    text: string;
+  } | null>(null);
+  const captionTimerRef = useRef<number | null>(null);
+
+  const showTimedCaption = useCallback(
+    (speaker: string, text: string, durationMs = 3200) => {
+      if (captionTimerRef.current !== null) {
+        window.clearTimeout(captionTimerRef.current);
+      }
+      setActiveCaption({ speaker, text });
+      captionTimerRef.current = window.setTimeout(() => {
+        captionTimerRef.current = null;
+        setActiveCaption(null);
+      }, durationMs);
+    },
+    []
+  );
   const mountainRoadSegment = useProgressStore((s) => s.mountainRoadSegment);
   const setMountainRoadSegment = useProgressStore((s) => s.setMountainRoadSegment);
   const roadSubStage = useProgressStore((s) => s.roadSubStage);
@@ -242,8 +260,8 @@ export default function Experience() {
 
   const isBaalKuwariDriveActive = committedSceneId === 8 && baalKuwariSubStage === 'driving';
   const isBaalKuwariMaggiActive = committedSceneId === 8 && baalKuwariSubStage === 'maggi_stop';
-  const isBaalKuwariFootpathActive =
-    committedSceneId === 8 && baalKuwariSubStage === 'forest_footpath';
+  const isBaalKuwariStairsDriveActive =
+    committedSceneId === 8 && baalKuwariSubStage === 'driving_to_stairs';
   const isBaalKuwariStairsActive = committedSceneId === 9;
   const isBaalKuwariTempleActive = committedSceneId === 10;
   const isSafeReturnDriveActive = committedSceneId === 11;
@@ -252,6 +270,7 @@ export default function Experience() {
   const isDrivingSceneActive =
     (committedSceneId === 5 && roadSubStage === 'driving') ||
     isBaalKuwariDriveActive ||
+    isBaalKuwariStairsDriveActive ||
     isSafeReturnDriveActive;
   const isViewpointWalkActive = committedSceneId === 5 && roadSubStage === 'viewpoint_walk';
   const isDhabaWalkActive = committedSceneId === 6;
@@ -261,7 +280,6 @@ export default function Experience() {
     isViewpointWalkActive ||
     isNeelkanthWalkActive ||
     isBaalKuwariMaggiActive ||
-    isBaalKuwariFootpathActive ||
     isBaalKuwariTempleActive ||
     isHotelReturnWalkActive;
   const capturedDhabaPolaroid = collectedPolaroids.includes('scene06_dhaba');
@@ -313,15 +331,13 @@ export default function Experience() {
     }, 4500);
 
     if (isNew) {
-      showNarration({
-        id: 'scene06-polaroid',
-        speaker: 'Maggi Tapri Yaad',
-        lines: [
-          'Pahadi tapri waali Polaroid Yaadein mein save ho gayi!',
-        ],
-      });
+      showTimedCaption(
+        'Maggi Tapri Yaad',
+        'Pahadi tapri waali Polaroid Yaadein mein save ho gayi!',
+        2800
+      );
     }
-  }, [capturePolaroidAndSave, showNarration]);
+  }, [capturePolaroidAndSave, showTimedCaption]);
 
   const sceneController = useSceneTransitionController();
   const clearInputsRef = useRef<() => void>(() => {});
@@ -393,14 +409,12 @@ export default function Experience() {
     setFoodCinematicActive(false);
     setAteMaggi(true);
     setSippedChai(true);
-    showNarration({
-      id: 'scene06-maggi-complete',
-      speaker: 'Maggi & Chai Stop',
-      lines: [
-        'Late uthne ("Kumbhkaran"!) ke baad bhi garma-garam Maggi aur chai saath mein mil hi gayi — ab aage Neelkanth chalein?',
-      ],
-    });
-  }, [showNarration]);
+    showTimedCaption(
+      'Maggi & Chai Stop',
+      'Late uthne ("Kumbhkaran"!) ke baad bhi garma-garam Maggi aur chai saath mein mil gayi — ab aage Neelkanth chalein?',
+      3600
+    );
+  }, [showTimedCaption]);
 
   const handleDhabaInteract = useCallback(() => {
     if (foodCinematicActive || useProgressStore.getState().activeNarration !== null) return;
@@ -412,26 +426,22 @@ export default function Experience() {
         setFoodCinematicPlayedThisVisit(true);
         setFoodCinematicActive(true);
       } else {
-        showNarration({
-          id: 'scene06-maggi-recheck',
-          speaker: 'Maggi & Chai Stop',
-          lines: [
-            'Maggi aur kulhad chai ho chuki — jab ready ho, wapas scooty pe chalte hain!',
-          ],
-        });
+        showTimedCaption(
+          'Maggi & Chai Stop',
+          'Maggi aur kulhad chai ho chuki — jab ready ho, wapas scooty pe chalte hain!',
+          2800
+        );
       }
       return;
     }
 
     if (nearbyHotspot.id === 'chai') {
       setSippedChai(true);
-      showNarration({
-        id: 'scene06-chai',
-        speaker: 'Mountain Chai',
-        lines: [
-          'Pahaadon ki thandi hawa, garma-garam Maggi aur chai... aur saath mein apne log.',
-        ],
-      });
+      showTimedCaption(
+        'Mountain Chai',
+        'Pahaadon ki thandi hawa, garma-garam Maggi aur chai... aur saath mein apne log.',
+        3200
+      );
       return;
     }
 
@@ -449,7 +459,7 @@ export default function Experience() {
     handleCaptureDhabaPolaroid,
     handleContinueRidingFromDhaba,
     nearbyHotspot,
-    showNarration,
+    showTimedCaption,
   ]);
 
   const handleCaptureNeelkanthPolaroid = useCallback(() => {
@@ -468,15 +478,13 @@ export default function Experience() {
     }, 4500);
 
     if (isNew) {
-      showNarration({
-        id: 'scene07-polaroid',
-        speaker: 'Neelkanth Yaad',
-        lines: [
-          'Neelkanth Mandir ke courtyard ki Polaroid Yaadein mein save ho gayi!',
-        ],
-      });
+      showTimedCaption(
+        'Neelkanth Yaad',
+        'Neelkanth Mandir ke courtyard ki Polaroid Yaadein mein save ho gayi!',
+        2800
+      );
     }
-  }, [activeDarshanPan, capturePolaroidAndSave, showNarration]);
+  }, [activeDarshanPan, capturePolaroidAndSave, showTimedCaption]);
 
   const handleNeelkanthInteract = useCallback(() => {
     if (useProgressStore.getState().activeNarration !== null || activeDarshanPan) return;
@@ -486,26 +494,22 @@ export default function Experience() {
       setRangBell(true);
       setBellSwingImpulseNonce((n) => n + 1);
       ambientAudio.playTempleBell();
-      showNarration({
-        id: 'scene07-bell',
-        speaker: 'Mandir ki Ghanti',
-        lines: [
-          'Neelkanth aangan mein peetal ki ghanti ki aawaaz goonj uthi.',
-        ],
-      });
+      showTimedCaption(
+        'Mandir ki Ghanti',
+        'Neelkanth aangan mein peetal ki ghanti ki aawaaz goonj uthi.',
+        2600
+      );
       return;
     }
 
     if (nearbyHotspot.id === 'diya') {
       setLitDiya(true);
       ambientAudio.playDiyaChime();
-      showNarration({
-        id: 'scene07-diya',
-        speaker: 'Diya Stand',
-        lines: [
-          'Tumne diya jalaya — mandap ke neeche halki si warmth aur roshni.',
-        ],
-      });
+      showTimedCaption(
+        'Diya Stand',
+        'Tumne diya jalaya — mandap ke neeche halki si warmth aur roshni.',
+        2800
+      );
       return;
     }
 
@@ -521,13 +525,11 @@ export default function Experience() {
           neelkanthDarshanTimerRef.current = null;
           setActiveDarshanPan(false);
           setHadDarshan(true);
-          showNarration({
-            id: 'scene07-darshan',
-            speaker: 'Neelkanth Darshan',
-            lines: [
-              'Kumbhkaran ki neend ke baad der se hi sahi, par hum sabne Mahadev ke darshan saath mein kiye!',
-            ],
-          });
+          showTimedCaption(
+            'Neelkanth Darshan',
+            'Kumbhkaran ki neend ke baad der se hi sahi, par hum sabne Mahadev ke darshan saath mein kiye!',
+            3600
+          );
         },
         reducedMotion ? 320 : 2350
       );
@@ -548,20 +550,18 @@ export default function Experience() {
     handleCaptureNeelkanthPolaroid,
     nearbyHotspot,
     reducedMotion,
-    showNarration,
+    showTimedCaption,
   ]);
 
   const handleTrailheadMaggiComplete = useCallback(() => {
     setTrailheadEatingActive(false);
     setAteTrailheadMaggi(true);
-    showNarration({
-      id: 'scene08-maggi-complete',
-      speaker: 'Roadside Maggi Clearing',
-      lines: [
-        'Seedhiyon se pehle Maggi break ho gaya — ab jungle ki pagdandi se upar Baal Kuwari stairs ki taraf chalo!',
-      ],
-    });
-  }, [showNarration]);
+    showTimedCaption(
+      'Roadside Maggi Clearing',
+      'Seedhiyon se pehle Maggi break ho gaya — ab wapas scooty pe seedhiyon ke gate tak chalo!',
+      3400
+    );
+  }, [showTimedCaption]);
 
   const handleCaptureBaalKuwariPolaroid = useCallback(
     (kind: 'stairs' | 'summit') => {
@@ -582,18 +582,16 @@ export default function Experience() {
       }, 4500);
 
       if (isNew) {
-        showNarration({
-          id: `baalkuwari-polaroid-${kind}`,
-          speaker: kind === 'stairs' ? 'Climb Rest Overlook' : 'Baal Kuwari Summit',
-          lines: [
-            kind === 'stairs'
-              ? 'Snapped a forest valley Polaroid mid-climb! Saved to your memories.'
-              : 'Captured the Baal Kuwari summit courtyard Polaroid! Saved to your memories.',
-          ],
-        });
+        showTimedCaption(
+          kind === 'stairs' ? 'Climb Rest Overlook' : 'Baal Kuwari Summit',
+          kind === 'stairs'
+            ? 'Halfway rest par jungle valley Polaroid memories mein save ho gayi!'
+            : 'Baal Kuwari summit courtyard Polaroid memories mein save ho gayi!',
+          3000
+        );
       }
     },
-    [capturePolaroidAndSave, showNarration]
+    [capturePolaroidAndSave, showTimedCaption]
   );
 
   const handleCaptureHotelPolaroid = useCallback(() => {
@@ -612,13 +610,13 @@ export default function Experience() {
     }, 4500);
 
     if (isNew) {
-      showNarration({
-        id: 'scene12-hotel-polaroid',
-        speaker: 'Rishikesh Hotel Courtyard',
-        lines: ['Wapas hotel pahunch kar aakhri Rishikesh shaam ki Polaroid save kar li!'],
-      });
+      showTimedCaption(
+        'Rishikesh Stay & Terrace',
+        'Rishikesh stay aur terrace shaam ki aakhri Polaroid save kar li!',
+        3000
+      );
     }
-  }, [capturePolaroidAndSave, showNarration]);
+  }, [capturePolaroidAndSave, showTimedCaption]);
 
   const handleWalkInteract = useCallback(() => {
     if (isViewpointWalkActive) {
@@ -640,15 +638,16 @@ export default function Experience() {
           clearInputsRef.current();
           setTrailheadEatingActive(true);
         } else {
-          showNarration({
-            id: 'scene08-maggi-done',
-            speaker: 'Roadside Maggi Clearing',
-            lines: ['Pre-climb Maggi finished — head north onto the forest footpath toward the stairs.'],
-          });
+          showTimedCaption(
+            'Roadside Maggi Clearing',
+            'Pre-climb Maggi finished — head back to your scooters to ride toward the staircase gate.',
+            3000
+          );
         }
-      } else if (nearbyHotspot.id === 'begin_footpath') {
+      } else if (nearbyHotspot.id === 'ride_to_stairs') {
         clearInputsRef.current();
-        sceneController.requestBaalKuwariSubStageTransition('forest_footpath', {
+        sceneController.requestBaalKuwariSubStageTransition('driving_to_stairs', {
+          resumeDistance: LEAD_START_DISTANCE,
           clearInputs: clearInputsRef.current,
         });
       } else if (nearbyHotspot.id === 'back_to_road') {
@@ -657,16 +656,6 @@ export default function Experience() {
           resumeDistance: LEAD_START_DISTANCE,
           clearInputs: clearInputsRef.current,
         });
-      }
-      return;
-    }
-    if (isBaalKuwariFootpathActive) {
-      if (!nearbyHotspot || useProgressStore.getState().activeNarration !== null) return;
-      if (nearbyHotspot.id === 'enter_stairs') {
-        clearInputsRef.current();
-        setBaalKuwariStairDirection('ascent');
-        setStairStepCount(0);
-        sceneController.requestSceneTransition(9, { clearInputs: clearInputsRef.current });
       }
       return;
     }
@@ -696,7 +685,17 @@ export default function Experience() {
       if (hotelSummaryOpen || !nearbyHotspot || useProgressStore.getState().activeNarration !== null) {
         return;
       }
-      if (nearbyHotspot.id === 'rejoin_farewell') {
+      if (nearbyHotspot.id === 'go_to_terrace') {
+        clearInputsRef.current();
+        window.dispatchEvent(
+          new CustomEvent('scene12:toggle-terrace', { detail: { direction: 'up' } })
+        );
+      } else if (nearbyHotspot.id === 'back_to_lane') {
+        clearInputsRef.current();
+        window.dispatchEvent(
+          new CustomEvent('scene12:toggle-terrace', { detail: { direction: 'down' } })
+        );
+      } else if (nearbyHotspot.id === 'rejoin_farewell') {
         clearInputsRef.current();
         setHotelFarewellDone(true);
         if (hotelSummaryTimerRef.current !== null) {
@@ -727,7 +726,6 @@ export default function Experience() {
     handleNeelkanthInteract,
     handleResumeRidingFromViewpoint,
     hotelSummaryOpen,
-    isBaalKuwariFootpathActive,
     isBaalKuwariMaggiActive,
     isBaalKuwariTempleActive,
     isHotelReturnWalkActive,
@@ -738,7 +736,7 @@ export default function Experience() {
     sceneController,
     setBaalKuwariStairDirection,
     setStairStepCount,
-    showNarration,
+    showTimedCaption,
     summitArrivalCinematicActive,
     trailheadEatingActive,
     triggerViewpointPhoto,
@@ -882,7 +880,8 @@ export default function Experience() {
 
   const handleBeginClimbFromMaggi = useCallback(() => {
     clearInputsRef.current();
-    sceneController.requestBaalKuwariSubStageTransition('forest_footpath', {
+    sceneController.requestBaalKuwariSubStageTransition('driving_to_stairs', {
+      resumeDistance: LEAD_START_DISTANCE,
       clearInputs: clearInputsRef.current,
     });
   }, [sceneController]);
@@ -923,14 +922,12 @@ export default function Experience() {
 
   const handleSummitArrivalCinematicComplete = useCallback(() => {
     setSummitArrivalCinematicActive(false);
-    showNarration({
-      id: 'scene10-evening-bus-cue',
-      speaker: 'Baal Kuwari Temple',
-      lines: [
-        '400 seedhiyon ke baad upar ki thandi hawa — ghanti bajao, valley dekho, aur jab ready ho neeche bhaagte hue wapas chalein!',
-      ],
-    });
-  }, [showNarration]);
+    showTimedCaption(
+      'Baal Kuwari Temple',
+      '400 seedhiyon ke baad upar ki thandi hawa — ghanti bajao, valley dekho, aur jab ready ho neeche chalte hain!',
+      3800
+    );
+  }, [showTimedCaption]);
 
   const handleStairHalfwayMilestone = useCallback(() => {
     setStairStepCount(200);
@@ -1054,7 +1051,10 @@ export default function Experience() {
 
       if (chapter.targetSceneId === 8) {
         const bkSub = chapter.targetBaalSubStage ?? 'driving';
-        setMountainRoadSegment('to_baalkuwari');
+        const targetSeg =
+          chapter.targetSegment ??
+          (bkSub === 'driving_to_stairs' ? 'to_baalkuwari_stairs' : 'to_baalkuwari');
+        setMountainRoadSegment(targetSeg);
         setRoadResumeDistance(LEAD_START_DISTANCE);
         setTrailheadEatingActive(false);
         setAteTrailheadMaggi(false);
@@ -1183,6 +1183,9 @@ export default function Experience() {
       if (hotelToastTimerRef.current !== null) {
         window.clearTimeout(hotelToastTimerRef.current);
       }
+      if (captionTimerRef.current !== null) {
+        window.clearTimeout(captionTimerRef.current);
+      }
     };
   }, []);
 
@@ -1199,7 +1202,7 @@ export default function Experience() {
               ? 'dhaba'
               : isNeelkanthWalkActive
                 ? 'neelkanth'
-                : isBaalKuwariStairsActive || isBaalKuwariFootpathActive
+                : isBaalKuwariStairsActive
                   ? 'baalkuwari_stairs'
                   : isBaalKuwariTempleActive
                     ? 'baalkuwari_temple'
@@ -1215,7 +1218,6 @@ export default function Experience() {
   }, [
     audioMuted,
     escalatedToFallback,
-    isBaalKuwariFootpathActive,
     isBaalKuwariMaggiActive,
     isBaalKuwariStairsActive,
     isBaalKuwariTempleActive,
@@ -1278,6 +1280,11 @@ export default function Experience() {
     setHotelFarewellDone(false);
     setHotelSummaryOpen(false);
     setHotelToastVisible(false);
+    if (captionTimerRef.current !== null) {
+      window.clearTimeout(captionTimerRef.current);
+      captionTimerRef.current = null;
+    }
+    setActiveCaption(null);
     if (committedSceneId === 8 && baalKuwariSubStage === 'maggi_stop') {
       setAteTrailheadMaggi(false);
     }
@@ -1556,7 +1563,9 @@ export default function Experience() {
             trafficWarningVisible={trafficWarningVisible}
             roadSegment={
               committedSceneId === 8
-                ? 'to_baalkuwari'
+                ? baalKuwariSubStage === 'driving_to_stairs'
+                  ? 'to_baalkuwari_stairs'
+                  : 'to_baalkuwari'
                 : committedSceneId === 11
                   ? 'to_hotel_return'
                   : mountainRoadSegment
@@ -1573,6 +1582,7 @@ export default function Experience() {
             onContinueToDhaba={handleContinueToDhaba}
             onEnterNeelkanthTemple={handleEnterNeelkanthTemple}
             onEnterBaalKuwariMaggi={handleEnterBaalKuwariMaggi}
+            onEnterBaalKuwariStairs={handleEnterStaircaseFromFootpath}
             onEnterHotelCourtyard={handleEnterHotelCourtyard}
             onReplayPreDhabaSegment={handleReplayPreDhabaSegment}
             telemetryRefs={telemetryRefs}
@@ -1694,7 +1704,6 @@ export default function Experience() {
           />
         </>
       ) : isBaalKuwariMaggiActive ||
-        isBaalKuwariFootpathActive ||
         isBaalKuwariStairsActive ||
         isBaalKuwariTempleActive ? (
         <>
@@ -1702,13 +1711,11 @@ export default function Experience() {
             mode={
               isBaalKuwariMaggiActive
                 ? 'maggi_stop'
-                : isBaalKuwariFootpathActive
-                  ? 'footpath'
-                  : isBaalKuwariStairsActive
-                    ? baalKuwariStairDirection === 'descent'
-                      ? 'descent'
-                      : 'stairs'
-                    : 'temple'
+                : isBaalKuwariStairsActive
+                  ? baalKuwariStairDirection === 'descent'
+                    ? 'descent'
+                    : 'stairs'
+                  : 'temple'
             }
             audioMuted={audioMuted}
             onToggleAudioMute={toggleAudio}
@@ -1799,6 +1806,23 @@ export default function Experience() {
           />
         </>
       ) : null}
+
+      {activeCaption && activeNarration === null && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none fixed inset-x-0 bottom-24 z-20 flex justify-center px-4 sm:bottom-20"
+        >
+          <div className="max-w-lg rounded-2xl border border-amber-300/45 bg-slate-950/85 px-4 py-2 text-center shadow-xl backdrop-blur-md">
+            <p className="text-[10px] font-semibold tracking-[0.14em] text-amber-300 uppercase">
+              {activeCaption.speaker}
+            </p>
+            <p className="mt-0.5 text-xs font-medium text-slate-100">
+              {activeCaption.text}
+            </p>
+          </div>
+        </div>
+      )}
 
       <NarrationCard touchControlsVisible={touchControlsVisible} />
 

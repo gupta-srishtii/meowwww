@@ -4,9 +4,10 @@ export type MountainRoadSegmentId =
   | 'to_dhaba'
   | 'to_neelkanth'
   | 'to_baalkuwari'
+  | 'to_baalkuwari_stairs'
   | 'to_hotel_return';
 export type MountainRoadSubStage = 'driving' | 'viewpoint_walk';
-export type BaalKuwariSubStage = 'driving' | 'maggi_stop' | 'forest_footpath';
+export type BaalKuwariSubStage = 'driving' | 'maggi_stop' | 'driving_to_stairs';
 
 export const ROAD_WIDTH = 7.0;
 export const ROAD_HALF_WIDTH = ROAD_WIDTH / 2; // 3.5m
@@ -49,6 +50,7 @@ export const VIEWPOINT_PARK_COMP_LATERAL = 2.9;
 
 export const NEELKANTH_APPROACH_STOP_DISTANCE = 324.0;
 export const BAAL_KUWARI_STOP_DISTANCE = 278.0;
+export const BAAL_KUWARI_STAIRS_STOP_DISTANCE = 258.0;
 export const HOTEL_RETURN_STOP_DISTANCE = 266.0;
 
 export interface RoadFrame {
@@ -110,18 +112,31 @@ export function createMountainRoadCurve(
               new THREE.Vector3(56, 19.4, -368),
               new THREE.Vector3(96, 21.0, -406),
             ]
-          : [
-              // Evening Safe Return Descent toward Rishikesh Hotel Courtyard (~266m stop bay)
-              new THREE.Vector3(0, 15.6, 0),
-              new THREE.Vector3(-10, 13.8, -42),
-              new THREE.Vector3(-26, 11.4, -86),
-              new THREE.Vector3(-14, 9.0, -132),
-              new THREE.Vector3(14, 6.4, -178),
-              new THREE.Vector3(24, 3.8, -224),
-              new THREE.Vector3(8, 1.4, -268), // Rishikesh hotel arrival pull-off ~266m
-              new THREE.Vector3(-16, 0.4, -314),
-              new THREE.Vector3(-48, 0.0, -356),
-            ];
+          : segment === 'to_baalkuwari_stairs'
+            ? [
+                // Post-Maggi winding rugged mountain scooter trail straight up to Baal Kuwari staircase base (~258m)
+                new THREE.Vector3(0, 0, 0),
+                new THREE.Vector3(-12, 2.4, -36),
+                new THREE.Vector3(-34, 5.2, -76),
+                new THREE.Vector3(-22, 8.0, -122),
+                new THREE.Vector3(14, 11.2, -168),
+                new THREE.Vector3(28, 13.8, -214),
+                new THREE.Vector3(8, 16.0, -256), // Staircase entrance gate & parking bay (~258m)
+                new THREE.Vector3(-20, 17.6, -298),
+                new THREE.Vector3(-56, 18.8, -338),
+              ]
+            : [
+                // Evening Safe Return Descent toward Rishikesh Accommodation Lane (~266m stop bay)
+                new THREE.Vector3(0, 15.6, 0),
+                new THREE.Vector3(-10, 13.8, -42),
+                new THREE.Vector3(-26, 11.4, -86),
+                new THREE.Vector3(-14, 9.0, -132),
+                new THREE.Vector3(14, 6.4, -178),
+                new THREE.Vector3(24, 3.8, -224),
+                new THREE.Vector3(8, 1.4, -268),
+                new THREE.Vector3(-16, 0.4, -314),
+                new THREE.Vector3(-48, 0.0, -356),
+              ];
 
   const curve = new THREE.CatmullRomCurve3(controlPoints, false, 'catmullrom', 0.5);
   // Fine arc-length lookup eliminates piecewise tangent micro-jitter along S-curves.
@@ -136,6 +151,9 @@ export function getSegmentStopDistance(segment: MountainRoadSegmentId, totalLeng
   }
   if (segment === 'to_baalkuwari') {
     return Math.min(BAAL_KUWARI_STOP_DISTANCE, totalLength - 60);
+  }
+  if (segment === 'to_baalkuwari_stairs') {
+    return Math.min(BAAL_KUWARI_STAIRS_STOP_DISTANCE, totalLength - 60);
   }
   if (segment === 'to_hotel_return') {
     return Math.min(HOTEL_RETURN_STOP_DISTANCE, totalLength - 60);

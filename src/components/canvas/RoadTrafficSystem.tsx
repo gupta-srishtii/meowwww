@@ -52,7 +52,7 @@ export interface ParkedShoulderVehicleSpec {
 }
 
 export function buildRoadTrafficFleet(segment: MountainRoadSegmentId): TrafficVehicleSpec[] {
-  if (segment === 'to_baalkuwari') {
+  if (segment === 'to_baalkuwari' || segment === 'to_baalkuwari_stairs') {
     // Rugged dirt track: oncoming keeps its own left (+right), forward keeps hero left (-right)
     return [
       {
@@ -213,7 +213,9 @@ export function buildParkedShoulderVehicles(
             ? 76
             : segment === 'to_baalkuwari'
               ? 94
-              : 108,
+              : segment === 'to_baalkuwari_stairs'
+                ? 82
+                : 108,
       lateral: -4.15,
       facingSign: 1,
       color: '#475569',
@@ -221,7 +223,8 @@ export function buildParkedShoulderVehicles(
     {
       id: 'parked-2',
       kind: 'car',
-      vehicleStyle: segment === 'to_baalkuwari' ? 'hill_suv' : 'hatchback',
+      vehicleStyle:
+        segment === 'to_baalkuwari' || segment === 'to_baalkuwari_stairs' ? 'hill_suv' : 'hatchback',
       dist:
         segment === 'to_dhaba'
           ? 196
@@ -229,7 +232,9 @@ export function buildParkedShoulderVehicles(
             ? 212
             : segment === 'to_baalkuwari'
               ? 208
-              : 184,
+              : segment === 'to_baalkuwari_stairs'
+                ? 172
+                : 184,
       lateral: -4.25,
       facingSign: -1,
       color: '#e5e7eb',

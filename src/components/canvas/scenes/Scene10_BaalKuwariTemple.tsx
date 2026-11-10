@@ -57,22 +57,22 @@ const TEMPLE_COMPANION_INIT: Record<FriendCompanionId, { x: number; z: number; y
 const TEMPLE_COMPANION_CONFIGS: readonly CompanionAgentConfig[] = [
   {
     id: 'srishti',
-    followAngleOffset: -0.58,
-    followDistance: 1.45,
+    followAngleOffset: -1.32,
+    followDistance: 1.08,
     idlePose: 'chat_nod',
     gesturePhase: 0.4,
   },
   {
     id: 'friend_black_tee',
-    followAngleOffset: 0.62,
-    followDistance: 1.6,
+    followAngleOffset: 0.72,
+    followDistance: 1.82,
     idlePose: 'look_around',
     gesturePhase: 1.8,
   },
   {
     id: 'friend_plaid',
-    followAngleOffset: -0.12,
-    followDistance: 2.0,
+    followAngleOffset: -0.38,
+    followDistance: 2.15,
     idlePose: 'look_around',
     gesturePhase: 3.1,
   },
@@ -197,14 +197,14 @@ export function Scene10_BaalKuwariTemple({
     let walkSpeed = 0;
 
     if (arrivalCinematicActive) {
-      const dur = reducedMotion ? 0.65 : 4.2;
+      const dur = reducedMotion ? 0.65 : 14.5;
       sim.arrivalTimer += delta;
       sim.velX = 0;
       sim.velZ = 0;
-      sim.posZ = THREE.MathUtils.damp(sim.posZ, 1.4, 1.8, delta);
+      sim.posZ = THREE.MathUtils.damp(sim.posZ, 1.4, 0.9, delta);
       if (Math.abs(sim.posZ - 1.4) > 0.1) {
-        strideRatio = 0.55;
-        sim.stridePhase += delta * 5.2;
+        strideRatio = 0.52;
+        sim.stridePhase += delta * 4.8;
       }
       if (!sim.arrivalDone && sim.arrivalTimer >= dur) {
         sim.arrivalDone = true;
@@ -277,13 +277,18 @@ export function Scene10_BaalKuwariTemple({
     }
 
     if (arrivalCinematicActive) {
-      const sweepU = Math.min(1, sim.arrivalTimer / 4.2);
+      const sweepU = Math.min(1, sim.arrivalTimer / 14.5);
+      const smoothU = sweepU * sweepU * (3 - 2 * sweepU);
       scratch.camPos.set(
-        THREE.MathUtils.lerp(-4.2, 3.8, sweepU),
-        THREE.MathUtils.lerp(4.6, 2.35, sweepU),
-        THREE.MathUtils.lerp(5.8, 3.6, sweepU)
+        THREE.MathUtils.lerp(-4.6, 1.25, smoothU) + Math.sin(smoothU * Math.PI) * 3.1,
+        THREE.MathUtils.lerp(4.75, 2.35, smoothU),
+        THREE.MathUtils.lerp(6.1, 4.9, smoothU)
       );
-      scratch.lookAt.set(0, THREE.MathUtils.lerp(2.2, 1.35, sweepU), -2.4);
+      scratch.lookAt.set(
+        THREE.MathUtils.lerp(0, sim.posX, smoothU * 0.45),
+        THREE.MathUtils.lerp(2.2, 1.32, smoothU),
+        THREE.MathUtils.lerp(-2.5, 0.2, smoothU)
+      );
     } else {
       const hDist = Math.cos(sim.orbitPitch) * CAM_DISTANCE;
       const vOff = 1.2 + Math.sin(sim.orbitPitch) * CAM_DISTANCE;

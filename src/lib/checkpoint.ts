@@ -73,12 +73,14 @@ export function validateCheckpointData(raw: unknown): CheckpointData | null {
   ) {
     return null;
   }
+  const rawSegment = candidate.mountainRoadSegment;
   if (
-    candidate.mountainRoadSegment !== undefined &&
-    candidate.mountainRoadSegment !== 'to_dhaba' &&
-    candidate.mountainRoadSegment !== 'to_neelkanth' &&
-    candidate.mountainRoadSegment !== 'to_baalkuwari' &&
-    candidate.mountainRoadSegment !== 'to_hotel_return'
+    rawSegment !== undefined &&
+    rawSegment !== 'to_dhaba' &&
+    rawSegment !== 'to_neelkanth' &&
+    rawSegment !== 'to_baalkuwari' &&
+    rawSegment !== 'to_baalkuwari_stairs' &&
+    rawSegment !== 'to_hotel_return'
   ) {
     return null;
   }
@@ -89,11 +91,14 @@ export function validateCheckpointData(raw: unknown): CheckpointData | null {
   ) {
     return null;
   }
+  const rawBaalSubStage = candidate.baalKuwariSubStage;
+  const isLegacyFootpath = rawBaalSubStage === 'forest_footpath';
   if (
-    candidate.baalKuwariSubStage !== undefined &&
-    candidate.baalKuwariSubStage !== 'driving' &&
-    candidate.baalKuwariSubStage !== 'maggi_stop' &&
-    candidate.baalKuwariSubStage !== 'forest_footpath'
+    rawBaalSubStage !== undefined &&
+    rawBaalSubStage !== 'driving' &&
+    rawBaalSubStage !== 'maggi_stop' &&
+    rawBaalSubStage !== 'driving_to_stairs' &&
+    !isLegacyFootpath
   ) {
     return null;
   }
@@ -116,16 +121,28 @@ export function validateCheckpointData(raw: unknown): CheckpointData | null {
     return null;
   }
 
+  // Seamlessly migrate legacy saved checkpoints that stopped on the old footpath stage
+  // onto the corrected post-Maggi mountain scooter route toward the Baal Kuwari staircase base.
+  const normalizedBaalSubStage: BaalKuwariSubStage | undefined = isLegacyFootpath
+    ? 'driving_to_stairs'
+    : (rawBaalSubStage as BaalKuwariSubStage | undefined);
+  const normalizedSegment: MountainRoadSegmentId | undefined = isLegacyFootpath
+    ? 'to_baalkuwari_stairs'
+    : (rawSegment as MountainRoadSegmentId | undefined);
+  const normalizedResumeDist: number | undefined = isLegacyFootpath
+    ? undefined
+    : candidate.roadResumeDistance;
+
   return {
     version: CHECKPOINT_VERSION,
     committedSceneId: candidate.committedSceneId,
     collectedPolaroids: [...candidate.collectedPolaroids],
     stairStepCount: candidate.stairStepCount,
     baalKuwariStairDirection: candidate.baalKuwariStairDirection,
-    mountainRoadSegment: candidate.mountainRoadSegment,
+    mountainRoadSegment: normalizedSegment,
     roadSubStage: candidate.roadSubStage,
-    baalKuwariSubStage: candidate.baalKuwariSubStage,
-    roadResumeDistance: candidate.roadResumeDistance,
+    baalKuwariSubStage: normalizedBaalSubStage,
+    roadResumeDistance: normalizedResumeDist,
     audioMuted: candidate.audioMuted,
     guidedMode: candidate.guidedMode,
     timestamp: candidate.timestamp,

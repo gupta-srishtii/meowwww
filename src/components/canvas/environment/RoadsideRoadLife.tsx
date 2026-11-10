@@ -120,6 +120,28 @@ const SHACKS_BY_SEGMENT: Record<MountainRoadSegmentId, readonly ShackSpec[]> = {
       showParkedScooter: true,
     },
   ],
+  to_baalkuwari_stairs: [
+    {
+      id: 'road-chai-bks-1',
+      dist: 86,
+      variant: 'chai_tapri',
+      keeperShirt: '#0f766e',
+      guestAColor: '#475569',
+      guestBColor: '#9a3412',
+      showSecondCustomer: true,
+      showParkedScooter: false,
+    },
+    {
+      id: 'road-fruit-bks-2',
+      dist: 184,
+      variant: 'fruit_coconut',
+      keeperShirt: '#b45309',
+      guestAColor: '#334155',
+      guestBColor: '#64748b',
+      showSecondCustomer: true,
+      showParkedScooter: true,
+    },
+  ],
   to_hotel_return: [
     {
       id: 'road-chai-ret-1',
@@ -229,6 +251,28 @@ const WALKERS_BY_SEGMENT: Record<MountainRoadSegmentId, readonly WalkerSpec[]> =
       speedMps: 1.1,
       phaseOffset: 2.4,
       shirtColor: '#c2410c',
+      pantsColor: '#334155',
+    },
+  ],
+  to_baalkuwari_stairs: [
+    {
+      id: 'walker-bks-1',
+      centerDist: 64,
+      lateral: -4.18,
+      spanMeters: 7.0,
+      speedMps: 1.08,
+      phaseOffset: 1.1,
+      shirtColor: '#15803d',
+      pantsColor: '#1e293b',
+    },
+    {
+      id: 'walker-bks-2',
+      centerDist: 152,
+      lateral: -4.18,
+      spanMeters: 6.5,
+      speedMps: 1.02,
+      phaseOffset: 2.8,
+      shirtColor: '#b45309',
       pantsColor: '#334155',
     },
   ],
@@ -487,6 +531,7 @@ export function RoadsideRoadLife({
 
       {/* Yellow/Black hill road curve warning chevrons (highway/paved segments only) */}
       {roadSegment !== 'to_baalkuwari' &&
+        roadSegment !== 'to_baalkuwari_stairs' &&
         chevronTransforms.map(({ id, pos, quat }) => (
         <group key={id} position={pos} quaternion={quat}>
           <mesh position={[0, 0.68, 0]}>

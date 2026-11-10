@@ -43,6 +43,7 @@ const STALL_DISTS_BY_SEGMENT: Record<MountainRoadSegmentId, readonly number[]> =
   to_dhaba: [48, 96, 214],
   to_neelkanth: [96, 242],
   to_baalkuwari: [76, 178],
+  to_baalkuwari_stairs: [86, 184],
   to_hotel_return: [88, 196],
 };
 
@@ -115,7 +116,8 @@ function sampleHillsideY(distance: number, lateral: number, segment: MountainRoa
     Math.sin(distance * 0.19) * 0.18;
   const toeY = alcove * smoothStep01(distOut / 1.8) * 0.24;
 
-  const hillSlopeGain = segment === 'to_baalkuwari' ? 0.68 : 0.56;
+  const hillSlopeGain =
+    segment === 'to_baalkuwari' || segment === 'to_baalkuwari_stairs' ? 0.68 : 0.56;
   // Blend steep ascent into broader ridge undulations near outer edge (`> 26m`) so slopes connect naturally to distant massifs
   const ridgeCap = climbRaw > 28 ? (climbRaw - 28) * 0.12 : 0;
   return (
@@ -391,7 +393,8 @@ export function MountainRoadEnvironment({
   const shrubCount = Math.min(MAX_ROADSIDE_SHRUBS, Math.round(MAX_ROADSIDE_SHRUBS * densityRatio));
   const rockCount = Math.min(MAX_CLIFF_ROCKS, Math.round(MAX_CLIFF_ROCKS * densityRatio));
 
-  const isOffroad = roadSegment === 'to_baalkuwari';
+  const isOffroad =
+    roadSegment === 'to_baalkuwari' || roadSegment === 'to_baalkuwari_stairs';
   const asphaltTex = useMemo(() => getAsphaltRoadTexture(), []);
   const offroadDirtTex = useMemo(() => getOffroadDirtTrackTexture(), []);
   const gopuramTex = useMemo(() => getGopuramDetailTexture(), []);
@@ -981,7 +984,7 @@ export function MountainRoadEnvironment({
             ? '#b8d8f0'
             : roadSegment === 'to_hotel_return'
               ? '#dca67a'
-              : roadSegment === 'to_baalkuwari'
+              : roadSegment === 'to_baalkuwari' || roadSegment === 'to_baalkuwari_stairs'
                 ? '#c9dfef'
                 : '#c6def0',
         ]}
@@ -993,7 +996,7 @@ export function MountainRoadEnvironment({
             ? '#b8d8f0'
             : roadSegment === 'to_hotel_return'
               ? '#cf9b7d'
-              : roadSegment === 'to_baalkuwari'
+              : roadSegment === 'to_baalkuwari' || roadSegment === 'to_baalkuwari_stairs'
                 ? '#d4e5f2'
                 : '#cddff0',
           95,
@@ -1008,7 +1011,9 @@ export function MountainRoadEnvironment({
             : roadSegment === 'to_hotel_return'
               ? '#ffd6aa'
               : '#fff3e0',
-          roadSegment === 'to_baalkuwari' ? '#4d6048' : '#686b57',
+          roadSegment === 'to_baalkuwari' || roadSegment === 'to_baalkuwari_stairs'
+            ? '#4d6048'
+            : '#686b57',
           roadSegment === 'to_hotel_return' ? 0.85 : 0.98,
         ]}
       />
@@ -1022,7 +1027,7 @@ export function MountainRoadEnvironment({
             ? '#fff4db'
             : roadSegment === 'to_hotel_return'
               ? '#ffb878'
-              : roadSegment === 'to_baalkuwari'
+              : roadSegment === 'to_baalkuwari' || roadSegment === 'to_baalkuwari_stairs'
                 ? '#ffe6bf'
                 : '#ffeacc'
         }
@@ -1223,32 +1228,99 @@ export function MountainRoadEnvironment({
             </mesh>
           </group>
         </group>
+      ) : roadSegment === 'to_baalkuwari_stairs' ? (
+        <group position={landmarks.stallCenter} quaternion={landmarks.stopQuat}>
+          {/* Baal Kuwari Staircase Entrance Plaza, Torana Archway & Ascending Hillside Steps */}
+          <mesh position={[2.8, -4.5, 0]} receiveShadow={shadowsEnabled}>
+            <boxGeometry args={[10.4, 9.0, 12.6]} />
+            <meshStandardMaterial color="#675d4f" roughness={0.96} />
+          </mesh>
+          <mesh position={[1.3, -0.04, 0]} receiveShadow={shadowsEnabled}>
+            <boxGeometry args={[6.4, 0.14, 11.4]} />
+            <meshStandardMaterial color="#9c8d77" roughness={0.94} />
+          </mesh>
+          {/* Stone staircase entrance archway pillars & lintel */}
+          <group position={[3.2, 0, 0]}>
+            {[-1.55, 1.55].map((pz, idx) => (
+              <mesh key={idx} position={[0, 1.5, pz]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+                <boxGeometry args={[0.46, 3.0, 0.46]} />
+                <meshStandardMaterial color="#b09f84" roughness={0.88} />
+              </mesh>
+            ))}
+            <mesh position={[0, 3.12, 0]} castShadow={shadowsEnabled}>
+              <boxGeometry args={[0.58, 0.44, 3.9]} />
+              <meshStandardMaterial color="#9a3412" roughness={0.82} />
+            </mesh>
+            <mesh position={[-0.31, 3.12, 0]}>
+              <boxGeometry args={[0.06, 0.28, 2.25]} />
+              <meshStandardMaterial color="#fef3c7" roughness={0.75} />
+            </mesh>
+            {/* Hanging temple bell under arch */}
+            <mesh position={[0, 2.66, 0]}>
+              <cylinderGeometry args={[0.02, 0.02, 0.34, 6]} />
+              <meshStandardMaterial color="#78350f" roughness={0.7} />
+            </mesh>
+            <mesh position={[0, 2.42, 0]} castShadow={shadowsEnabled}>
+              <cylinderGeometry args={[0.08, 0.16, 0.22, 12]} />
+              <meshStandardMaterial color="#d97706" metalness={0.72} roughness={0.28} />
+            </mesh>
+            {/* Ascending stone stairs disappearing upward into the mountain pine slope */}
+            {[0, 1, 2, 3, 4, 5, 6].map((stepIdx) => (
+              <mesh
+                key={stepIdx}
+                position={[0.75 + stepIdx * 0.62, 0.18 + stepIdx * 0.28, 0]}
+                castShadow={shadowsEnabled}
+                receiveShadow={shadowsEnabled}
+              >
+                <boxGeometry args={[0.68, 0.28, 2.75]} />
+                <meshStandardMaterial color={stepIdx % 2 === 0 ? '#a89b86' : '#968976'} roughness={0.94} />
+              </mesh>
+            ))}
+          </group>
+        </group>
       ) : roadSegment === 'to_hotel_return' ? (
         <group position={landmarks.stallCenter} quaternion={landmarks.stopQuat}>
-          {/* Rishikesh Hotel Forecourt Gate & Lantern Veranda at Road Arrival Bay */}
+          {/* Rishikesh Main-Road Corner Shops Turning Into Narrow Residential Guesthouse Lane */}
           <mesh position={[2.8, -4.5, 0]} receiveShadow={shadowsEnabled}>
-            <boxGeometry args={[9.6, 9.0, 13.0]} />
-            <meshStandardMaterial color="#736655" roughness={0.95} />
+            <boxGeometry args={[10.4, 9.0, 13.8]} />
+            <meshStandardMaterial color="#74695a" roughness={0.95} />
           </mesh>
           <mesh position={[1.4, -0.04, 0]} receiveShadow={shadowsEnabled}>
-            <boxGeometry args={[6.8, 0.16, 12.6]} />
-            <meshStandardMaterial color="#a69a86" roughness={0.92} />
+            <boxGeometry args={[7.2, 0.14, 13.0]} />
+            <meshStandardMaterial color="#949aa3" roughness={0.9} />
           </mesh>
-          <group position={[3.8, 0, 0]}>
-            <mesh position={[0, 2.5, 0]} castShadow={shadowsEnabled}>
-              <boxGeometry args={[4.4, 5.0, 9.2]} />
-              <meshStandardMaterial color="#efe3cf" roughness={0.86} />
+          {/* Main-road shuttered local shop on south side of lane turn */}
+          <group position={[3.4, 0, 3.7]}>
+            <mesh position={[0, 1.85, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+              <boxGeometry args={[3.8, 3.7, 4.4]} />
+              <meshStandardMaterial color="#e5dccb" roughness={0.88} />
             </mesh>
-            <mesh position={[0, 5.2, 0]} castShadow={shadowsEnabled}>
-              <boxGeometry args={[4.8, 0.36, 9.6]} />
-              <meshStandardMaterial color="#b45309" roughness={0.8} />
+            <mesh position={[-1.92, 1.35, 0]}>
+              <boxGeometry args={[0.08, 2.2, 2.6]} />
+              <meshStandardMaterial color="#3b82f6" roughness={0.65} metalness={0.3} />
             </mesh>
-            <mesh position={[-2.25, 2.4, 0]}>
-              <boxGeometry args={[0.3, 0.18, 9.2]} />
-              <meshStandardMaterial color="#8c5e42" roughness={0.85} />
+            <mesh position={[-2.15, 2.75, 0]} rotation={[0, 0, 0.22]}>
+              <boxGeometry args={[0.85, 0.08, 3.2]} />
+              <meshStandardMaterial color="#9a3412" roughness={0.8} />
             </mesh>
-            <pointLight position={[-2.6, 2.1, 0]} intensity={1.8} color="#fbbf24" distance={10} />
           </group>
+          {/* Modest painted brick residential building flanking north side of narrow interior lane */}
+          <group position={[3.6, 0, -3.9]}>
+            <mesh position={[0, 2.4, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+              <boxGeometry args={[4.2, 4.8, 4.8]} />
+              <meshStandardMaterial color="#eedfc8" roughness={0.86} />
+            </mesh>
+            <mesh position={[0, 4.92, 0]}>
+              <boxGeometry args={[4.5, 0.28, 5.1]} />
+              <meshStandardMaterial color="#b45309" roughness={0.82} />
+            </mesh>
+          </group>
+          {/* Lane opening stone strip & warm warm dusk bulb */}
+          <mesh position={[3.2, 0.03, -0.2]} receiveShadow={shadowsEnabled}>
+            <boxGeometry args={[5.4, 0.06, 2.9]} />
+            <meshStandardMaterial color="#8c8f96" roughness={0.92} />
+          </mesh>
+          <pointLight position={[-1.2, 2.6, -0.2]} intensity={1.7} color="#fbbf24" distance={11} />
         </group>
       ) : (
         <group position={landmarks.stallCenter} quaternion={landmarks.stopQuat}>

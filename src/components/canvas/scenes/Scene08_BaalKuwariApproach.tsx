@@ -19,15 +19,6 @@ import {
   type CharacterIdlePose,
 } from '@/components/canvas/characters/animateCharacterRig';
 import {
-  BaalKuwariFootpathEnvironment,
-  FOOTPATH_END_SPOT,
-  FOOTPATH_MAX_Z,
-  FOOTPATH_MIN_Z,
-  getFootpathWalkHalfWidth,
-  sampleFootpathCenterX,
-  sampleFootpathY,
-} from '@/components/canvas/environment/BaalKuwariFootpathEnvironment';
-import {
   BAAL_KUWARI_MAGGI_HOTSPOTS,
   BAAL_KUWARI_MAGGI_OBSTACLES,
   BAAL_KUWARI_MAGGI_SEAT_SLOTS,
@@ -85,31 +76,31 @@ const MAGGI_COMPANION_INIT: Record<FriendCompanionId, { x: number; z: number; ya
 const MAGGI_COMPANION_CONFIGS: readonly CompanionAgentConfig[] = [
   {
     id: 'srishti',
-    followAngleOffset: -0.95,
-    followDistance: 1.45,
+    followAngleOffset: -1.32,
+    followDistance: 1.08,
     idlePose: 'chat_nod',
     gesturePhase: 0.3,
   },
   {
     id: 'friend_black_tee',
-    followAngleOffset: 0.98,
-    followDistance: 1.55,
+    followAngleOffset: 0.72,
+    followDistance: 1.82,
     idlePose: 'look_around',
     gesturePhase: 1.8,
   },
   {
     id: 'friend_plaid',
-    followAngleOffset: -0.22,
-    followDistance: 1.95,
+    followAngleOffset: -0.42,
+    followDistance: 2.18,
     idlePose: 'chat_nod',
     gesturePhase: 3.1,
   },
 ];
 
-const FOOTPATH_ENTRY_TARGETS: Record<FriendCompanionId, CompanionTargetSlot> = {
-  srishti: { x: -0.78, z: -3.05, facingYaw: 0 },
-  friend_black_tee: { x: 0.88, z: -2.95, facingYaw: 0.1 },
-  friend_plaid: { x: -1.18, z: -2.2, facingYaw: -0.15 },
+const SCOOTER_DEPART_TARGETS: Record<FriendCompanionId, CompanionTargetSlot> = {
+  srishti: { x: -0.95, z: 2.15, facingYaw: Math.PI },
+  friend_black_tee: { x: 1.45, z: 2.05, facingYaw: Math.PI },
+  friend_plaid: { x: 1.85, z: 2.38, facingYaw: Math.PI },
 };
 
 const ISHAAN_STAND_SAFE_POS = { x: 0.45, z: 0.24, facingYaw: 0 } as const;
@@ -353,7 +344,7 @@ function MaggiStopWalkView({
       ? mappedEat < 1.35 || mappedEat >= 6.9
         ? 'gather'
         : 'sit_dine'
-      : ateMaggi && sim.posZ < -1.8
+      : ateMaggi && sim.posZ > 0.8
         ? 'scooter_return'
         : distToTable < 2.65 && !ateMaggi
           ? 'gather'
@@ -378,7 +369,7 @@ function MaggiStopWalkView({
               friend_plaid: BAAL_KUWARI_MAGGI_SEAT_SLOTS.friend_plaid,
             }
           : compMode === 'scooter_return'
-            ? FOOTPATH_ENTRY_TARGETS
+            ? SCOOTER_DEPART_TARGETS
             : undefined,
     });
 
@@ -447,9 +438,12 @@ function MaggiStopWalkView({
     }
     camera.lookAt(scratch.smoothLook);
 
+    const activeHotspots = BAAL_KUWARI_MAGGI_HOTSPOTS.filter((h) =>
+      ateMaggi ? h.id !== 'back_to_road' : h.id !== 'ride_to_stairs'
+    );
     const nearest = eatingActive
       ? null
-      : findNearestWalkHotspot(sim.posX, sim.posZ, BAAL_KUWARI_MAGGI_HOTSPOTS);
+      : findNearestWalkHotspot(sim.posX, sim.posZ, activeHotspots);
     const nextId = nearest?.id ?? null;
     if (nextId !== sim.lastHotspotId) {
       sim.lastHotspotId = nextId;
@@ -492,307 +486,9 @@ function MaggiStopWalkView({
   );
 }
 
-const FOOTPATH_COMPANION_CONFIGS: readonly CompanionAgentConfig[] = [
-  {
-    id: 'srishti',
-    followAngleOffset: -0.78,
-    followDistance: 1.5,
-    idlePose: 'chat_nod',
-    gesturePhase: 0.25,
-  },
-  {
-    id: 'friend_black_tee',
-    followAngleOffset: 0.82,
-    followDistance: 1.65,
-    idlePose: 'look_around',
-    gesturePhase: 1.65,
-  },
-  {
-    id: 'friend_plaid',
-    followAngleOffset: -0.18,
-    followDistance: 2.05,
-    idlePose: 'chat_nod',
-    gesturePhase: 3.1,
-  },
-];
-
-const FOOTPATH_ARRIVAL_HOTSPOT: WalkHotspot = {
-  id: 'enter_stairs',
-  label: 'Begin Baal Kuwari Climb',
-  x: FOOTPATH_END_SPOT.x,
-  z: FOOTPATH_END_SPOT.z,
-  radius: 3.1,
-  actionType: 'interact',
-};
-
-function ForestFootpathWalkView({
-  walkInputRef,
-  qualityProfile,
-  paused,
-  transitionToken,
-  onNearbyHotspotChange,
-  onEnterStaircase,
-  onSceneReady,
-}: Pick<
-  Scene08BaalKuwariApproachProps,
-  | 'walkInputRef'
-  | 'qualityProfile'
-  | 'paused'
-  | 'transitionToken'
-  | 'onNearbyHotspotChange'
-  | 'onEnterStaircase'
-  | 'onSceneReady'
->) {
-  const { camera, size, clock } = useThree();
-  const shadowsEnabled = QUALITY_PRESETS[qualityProfile].shadows;
-  const reducedMotion = useReducedMotion();
-
-  const initialCompPositions: Record<
-    FriendCompanionId,
-    { x: number; y: number; z: number; yaw: number }
-  > = useMemo(
-    () => ({
-      srishti: { x: -0.82, y: sampleFootpathY(1.7), z: 1.7, yaw: 0 },
-      friend_black_tee: { x: 0.85, y: sampleFootpathY(1.85), z: 1.85, yaw: 0 },
-      friend_plaid: { x: -0.1, y: sampleFootpathY(2.2), z: 2.2, yaw: 0 },
-    }),
-    []
-  );
-
-  const playerGroupRef = useRef<THREE.Group>(null);
-  const playerTorsoRef = useRef<THREE.Group>(null);
-  const playerHeadRef = useRef<THREE.Group>(null);
-  const leftLegRef = useRef<THREE.Group>(null);
-  const leftKneeRef = useRef<THREE.Group>(null);
-  const rightLegRef = useRef<THREE.Group>(null);
-  const rightKneeRef = useRef<THREE.Group>(null);
-  const leftArmRef = useRef<THREE.Group>(null);
-  const rightArmRef = useRef<THREE.Group>(null);
-  const autoEnteredStairsRef = useRef(false);
-
-  const companionRigsRef = useRef<CompanionRigMap | null>(null);
-  const companionStatesRef = useRef(
-    createCompanionStates(
-      FOOTPATH_COMPANION_CONFIGS.map((c) => {
-        const p = initialCompPositions[c.id as FriendCompanionId];
-        return { id: c.id, x: p.x, z: p.z, facingYaw: p.yaw };
-      })
-    )
-  );
-
-  const simRef = useRef({
-    posX: 0,
-    posZ: 0.9,
-    velX: 0,
-    velZ: 0,
-    facingYaw: 0,
-    orbitYaw: 0.12,
-    orbitPitch: 0.25,
-    stridePhase: 0,
-    cameraInitialized: false,
-    lastHotspotId: null as string | null,
-  });
-
-  const scratch = useMemo(
-    () => ({
-      camPos: new THREE.Vector3(),
-      lookAt: new THREE.Vector3(),
-      smoothLook: new THREE.Vector3(),
-    }),
-    []
-  );
-
-  const handleRigsReady = useCallback((rigs: CompanionRigMap) => {
-    companionRigsRef.current = rigs;
-  }, []);
-
-  useEffect(() => {
-    if (transitionToken > 0) {
-      onSceneReady(transitionToken, 8);
-    }
-  }, [onSceneReady, transitionToken]);
-
-  useEffect(() => {
-    if (!paused) clock.getDelta();
-  }, [paused, clock]);
-
-  useEffect(() => {
-    if (camera instanceof THREE.PerspectiveCamera) {
-      const aspect = size.width / Math.max(1, size.height);
-      const nextFov = aspect < 0.8 ? 58 : 52;
-      if (Math.abs(camera.fov - nextFov) > 0.1) {
-        camera.fov = nextFov;
-        camera.updateProjectionMatrix();
-      }
-    }
-  }, [camera, size.width, size.height]);
-
-  useEffect(() => {
-    return () => onNearbyHotspotChange(null);
-  }, [onNearbyHotspotChange]);
-
-  useFrame((state, rawDelta) => {
-    if (paused || (typeof document !== 'undefined' && document.hidden)) return;
-    const delta = Math.min(rawDelta, 0.05);
-    if (delta <= 0) return;
-
-    const sim = simRef.current;
-    const t = state.clock.elapsedTime;
-    const centerAtZ = sampleFootpathCenterX(sim.posZ);
-    const halfW = getFootpathWalkHalfWidth(sim.posZ);
-
-    const bounds = {
-      minX: centerAtZ - halfW,
-      maxX: centerAtZ + halfW,
-      minZ: FOOTPATH_MIN_Z,
-      maxZ: FOOTPATH_MAX_Z,
-    };
-
-    const moveDist = stepWalkSimulation(sim, walkInputRef.current, delta, bounds, []);
-    const newCenter = sampleFootpathCenterX(sim.posZ);
-    const newHalfW = getFootpathWalkHalfWidth(sim.posZ);
-    sim.posX = THREE.MathUtils.clamp(sim.posX, newCenter - newHalfW, newCenter + newHalfW);
-
-    const walkSpeed = Math.hypot(sim.velX, sim.velZ);
-    const strideRatio = THREE.MathUtils.clamp(walkSpeed / WALK_SPEED_MPS, 0, 1);
-    if (strideRatio > 0.03) sim.stridePhase += moveDist * 3.8;
-
-    const groundY = sampleFootpathY(sim.posZ);
-
-    animateIshaanWalkRig({
-      refs: {
-        group: playerGroupRef.current,
-        torso: playerTorsoRef.current,
-        head: playerHeadRef.current,
-        leftLeg: leftLegRef.current,
-        leftKnee: leftKneeRef.current,
-        rightLeg: rightLegRef.current,
-        rightKnee: rightKneeRef.current,
-        leftArm: leftArmRef.current,
-        rightArm: rightArmRef.current,
-      },
-      posX: sim.posX,
-      posZ: sim.posZ,
-      facingYaw: sim.facingYaw,
-      strideRatio,
-      stridePhase: sim.stridePhase,
-      elapsed: t,
-      delta,
-      groundY,
-      reducedMotion,
-    });
-
-    stepGroupCompanions({
-      agents: companionStatesRef.current,
-      configs: FOOTPATH_COMPANION_CONFIGS,
-      playerX: sim.posX,
-      playerZ: sim.posZ,
-      playerFacingYaw: sim.facingYaw,
-      playerSpeed: walkSpeed,
-      bounds: {
-        minX: newCenter - newHalfW,
-        maxX: newCenter + newHalfW,
-        minZ: FOOTPATH_MIN_Z,
-        maxZ: FOOTPATH_MAX_Z,
-      },
-      obstacles: [],
-      delta,
-      mode: 'follow',
-    });
-
-    const rigs = companionRigsRef.current;
-    if (rigs) {
-      companionStatesRef.current.forEach((agent, i) => {
-        const ac = sampleFootpathCenterX(agent.posZ);
-        const aw = getFootpathWalkHalfWidth(agent.posZ);
-        agent.posX = THREE.MathUtils.clamp(agent.posX, ac - aw, ac + aw);
-        const rig = rigs[agent.id as FriendCompanionId];
-        if (!rig) return;
-        applyCompanionRigFrame({
-          agent,
-          config: FOOTPATH_COMPANION_CONFIGS[i],
-          refs: rig,
-          lookTargetX: sim.posX,
-          lookTargetZ: sim.posZ,
-          elapsed: t,
-          delta,
-          groundY: sampleFootpathY(agent.posZ),
-          reducedMotion,
-        });
-      });
-    }
-
-    const camDist = 5.4;
-    const hDist = Math.cos(sim.orbitPitch) * camDist;
-    const vOff = 1.35 + Math.sin(sim.orbitPitch) * camDist;
-    scratch.camPos.set(
-      sim.posX + Math.sin(sim.orbitYaw) * hDist,
-      groundY + vOff,
-      sim.posZ + Math.cos(sim.orbitYaw) * hDist
-    );
-    const lookZ = Math.max(FOOTPATH_MIN_Z, sim.posZ - 3.2);
-    scratch.lookAt.set(sampleFootpathCenterX(lookZ) * 0.55 + sim.posX * 0.45, sampleFootpathY(lookZ) + 1.05, lookZ);
-
-    if (!sim.cameraInitialized || reducedMotion) {
-      camera.position.copy(scratch.camPos);
-      scratch.smoothLook.copy(scratch.lookAt);
-      sim.cameraInitialized = true;
-    } else {
-      camera.position.x = THREE.MathUtils.damp(camera.position.x, scratch.camPos.x, 8.2, delta);
-      camera.position.y = THREE.MathUtils.damp(camera.position.y, scratch.camPos.y, 8.2, delta);
-      camera.position.z = THREE.MathUtils.damp(camera.position.z, scratch.camPos.z, 8.2, delta);
-      scratch.smoothLook.x = THREE.MathUtils.damp(scratch.smoothLook.x, scratch.lookAt.x, 10, delta);
-      scratch.smoothLook.y = THREE.MathUtils.damp(scratch.smoothLook.y, scratch.lookAt.y, 10, delta);
-      scratch.smoothLook.z = THREE.MathUtils.damp(scratch.smoothLook.z, scratch.lookAt.z, 10, delta);
-    }
-    camera.lookAt(scratch.smoothLook);
-
-    if (!autoEnteredStairsRef.current && sim.posZ <= -56.6) {
-      autoEnteredStairsRef.current = true;
-      sim.lastHotspotId = null;
-      onNearbyHotspotChange(null);
-      onEnterStaircase();
-      return;
-    }
-
-    const hotspot = findNearestWalkHotspot(sim.posX, sim.posZ, [FOOTPATH_ARRIVAL_HOTSPOT]);
-    const nextId = hotspot?.id ?? null;
-    if (nextId !== sim.lastHotspotId) {
-      sim.lastHotspotId = nextId;
-      onNearbyHotspotChange(hotspot);
-    }
-  });
-
-  return (
-    <>
-      <BaalKuwariFootpathEnvironment qualityProfile={qualityProfile} paused={paused} />
-
-      <StylizedPlaceholderCharacter
-        characterVariant="ishaan"
-        groupRef={playerGroupRef}
-        torsoRef={playerTorsoRef}
-        headRef={playerHeadRef}
-        leftLegRef={leftLegRef}
-        leftKneeRef={leftKneeRef}
-        rightLegRef={rightLegRef}
-        rightKneeRef={rightKneeRef}
-        leftArmRef={leftArmRef}
-        rightArmRef={rightArmRef}
-        position={[0, sampleFootpathY(0.9), 0.9]}
-        castShadow={shadowsEnabled}
-      />
-
-      <CompanionGroup
-        initialPositions={initialCompPositions}
-        onRigsReady={handleRigsReady}
-      />
-    </>
-  );
-}
-
 /**
- * Scene 8 — Off-Road Route (`driving`), Separate Roadside Maggi Clearing (`maggi_stop`),
- * and Forest Footpath Approach (`forest_footpath`) before Baal Kuwari Stairs.
+ * Scene 8 — Off-Road Route (`driving`), Roadside Maggi Clearing (`maggi_stop`),
+ * and Post-Maggi Scooter Ride (`driving_to_stairs`) directly to Baal Kuwari Staircase Gate.
  */
 export function Scene08_BaalKuwariApproach(props: Scene08BaalKuwariApproachProps) {
   if (props.simulateMountFailure) {
@@ -815,19 +511,8 @@ export function Scene08_BaalKuwariApproach(props: Scene08BaalKuwariApproachProps
     );
   }
 
-  if (props.subStage === 'forest_footpath') {
-    return (
-      <ForestFootpathWalkView
-        walkInputRef={props.walkInputRef}
-        qualityProfile={props.qualityProfile}
-        paused={props.paused}
-        transitionToken={props.transitionToken}
-        onNearbyHotspotChange={props.onNearbyHotspotChange}
-        onEnterStaircase={props.onEnterStaircase}
-        onSceneReady={props.onSceneReady}
-      />
-    );
-  }
+  const activeSegment =
+    props.subStage === 'driving_to_stairs' ? 'to_baalkuwari_stairs' : 'to_baalkuwari';
 
   return (
     <ScooterPrototypeScene
@@ -835,7 +520,7 @@ export function Scene08_BaalKuwariApproach(props: Scene08BaalKuwariApproachProps
       qualityProfile={props.qualityProfile}
       paused={props.paused}
       resetNonce={props.resetNonce}
-      roadSegment="to_baalkuwari"
+      roadSegment={activeSegment}
       startDistance={props.startDistance}
       transitionToken={props.transitionToken}
       onSceneReady={(_token, _sceneId) => props.onSceneReady(props.transitionToken, 8)}

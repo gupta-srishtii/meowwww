@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { StylizedPlaceholderCharacter } from '@/components/canvas/characters/StylizedPlaceholderCharacter';
-import { ConnectedHillTerrain } from '@/components/canvas/environment/ConnectedHillTerrain';
+import {
+  buildConnectedHillGeometry,
+  ConnectedHillTerrain,
+} from '@/components/canvas/environment/ConnectedHillTerrain';
 import {
   DistantHimalayanRidges,
   type HimalayanRidgeSpec,
@@ -13,105 +15,211 @@ import { HotspotBeaconSparkle } from '@/components/canvas/environment/HotspotBea
 import { PrototypeScooter } from '@/components/canvas/PrototypeScooter';
 import type { WalkBounds, WalkHotspot, WalkObstacle } from '@/hooks/useWalkController';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { getAsphaltRoadTexture, getStoneCourtyardTexture } from '@/lib/proceduralTextures';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
+import { createTerrainMeshSampler } from '@/lib/terrainMeshSampler';
+
+export const TERRACE_Y = 4.65;
 
 export const HOTEL_WALK_BOUNDS: WalkBounds = {
-  minX: -6.5,
-  maxX: 6.5,
-  minZ: -3.9,
-  maxZ: 4.8,
+  minX: -5.1,
+  maxX: 5.1,
+  minZ: -0.25,
+  maxZ: 7.45,
+};
+
+export const TERRACE_WALK_BOUNDS: WalkBounds = {
+  minX: -4.15,
+  maxX: 4.15,
+  minZ: -5.35,
+  maxZ: -0.95,
 };
 
 export const HOTEL_OBSTACLES: readonly WalkObstacle[] = [
-  // Two-story Rishikesh hotel facade & porch pillar line
-  { kind: 'box', minX: -7.5, maxX: 7.5, minZ: -6.5, maxZ: -4.1 },
-  // Original group & luggage cluster waiting by hotel stairs (`x ~ 2.75, z ~ -1.8`)
-  { kind: 'box', minX: 1.95, maxX: 4.35, minZ: -2.65, maxZ: -1.15 },
-  // Parked scooters by hotel entrance driveway
-  { kind: 'box', minX: 0.4, maxX: 2.3, minZ: 3.1, maxZ: 4.0 },
-  { kind: 'box', minX: -2.15, maxX: -0.25, minZ: 3.1, maxZ: 4.0 },
+  // Parked scooters on left yard corner
+  { kind: 'box', minX: -4.75, maxX: -2.25, minZ: 1.55, maxZ: 2.85 },
+  // Lane border planter boxes flanking interior alley mouth
+  { kind: 'box', minX: -5.4, maxX: -2.55, minZ: 3.85, maxZ: 7.6 },
+  { kind: 'box', minX: 2.55, maxX: 5.4, minZ: 3.85, maxZ: 7.6 },
+  // Exterior staircase side parapet block
+  { kind: 'box', minX: 2.45, maxX: 4.55, minZ: -0.35, maxZ: 0.72 },
+  // Srishti's original Rishikesh trip friends standing in a natural casual circle
+  { kind: 'circle', x: 0.92, z: 3.05, radius: 0.36 },
+  { kind: 'circle', x: 1.85, z: 3.65, radius: 0.36 },
+  { kind: 'circle', x: 0.62, z: 4.18, radius: 0.36 },
+];
+
+export const TERRACE_OBSTACLES: readonly WalkObstacle[] = [
+  // Water tank platform on NW corner
+  { kind: 'box', minX: -4.45, maxX: -2.85, minZ: -5.65, maxZ: -4.25 },
+  // Plastic tea table & chairs
+  { kind: 'circle', x: 1.15, z: -4.15, radius: 0.72 },
 ];
 
 export const HOTEL_HOTSPOTS: readonly WalkHotspot[] = [
   {
+    id: 'go_to_terrace',
+    label: 'Walk Up to Rooftop Terrace',
+    x: 3.32,
+    z: 1.25,
+    radius: 1.55,
+    actionType: 'interact',
+  },
+  {
     id: 'rejoin_farewell',
-    label: 'Drop Srishti to Her Friends & Wave Goodbye',
-    x: 2.15,
-    z: -0.85,
-    radius: 2.25,
+    label: "Meet Srishti's Friends & Wave Goodbye",
+    x: 0.95,
+    z: 2.55,
+    radius: 1.95,
     actionType: 'interact',
   },
   {
     id: 'hotel_polaroid',
-    label: 'Take Evening Courtyard Polaroid',
-    x: -0.35,
-    z: 0.45,
-    radius: 1.8,
+    label: 'Capture Rishikesh Stay Polaroid',
+    x: -2.15,
+    z: 2.05,
+    radius: 1.75,
     actionType: 'photo',
   },
 ];
 
-const HOTEL_RIDGES: readonly HimalayanRidgeSpec[] = [
-  { position: [-58, -8, -56], scale: [46, 26, 36], rotationY: 0.2, color: '#4d5d73' },
-  { position: [8, -6, -74], scale: [58, 32, 42], rotationY: -0.1, color: '#58677f' },
-  { position: [62, -8, -54], scale: [46, 25, 36], rotationY: -0.25, color: '#48596e' },
+export const TERRACE_HOTSPOTS: readonly WalkHotspot[] = [
+  {
+    id: 'back_to_lane',
+    label: 'Go Downstairs to House Lane',
+    x: 3.35,
+    z: -1.45,
+    radius: 1.6,
+    actionType: 'interact',
+  },
+  {
+    id: 'hotel_polaroid',
+    label: 'Capture Rooftop Terrace Sunset Polaroid',
+    x: -0.65,
+    z: -4.45,
+    radius: 2.15,
+    actionType: 'photo',
+  },
 ];
 
-function sampleHotelTerrainY(x: number, z: number): number {
-  const sideDist = Math.max(0, Math.abs(x) - 8.6);
-  const backDist = z < -7.5 ? -7.5 - z : 0;
-  const frontDist = z > 7.6 ? z - 7.6 : 0;
-  const wave = Math.sin(x * 0.1 + z * 0.09) * 0.6;
-  if (Math.abs(x) <= 8.5 && z >= -7.5 && z <= 7.5) return -0.26;
-  const edge = Math.max(sideDist, backDist, frontDist);
-  return -0.26 + Math.max(0, sideDist + backDist) * 0.24 - frontDist * 0.12 + wave * Math.min(1, edge / 8);
+function smooth01(t: number): number {
+  const c = Math.max(0, Math.min(1, t));
+  return c * c * (3 - 2 * c);
 }
+
+function sampleTownBasinY(wx: number, wz: number): number {
+  // Keep Rishikesh street, interior lane, and neighboring house blocks flat around y = -0.04
+  const edgeX = Math.max(0, Math.abs(wx) - 18.0);
+  const edgeNorth = Math.max(0, -14.0 - wz);
+  const rise = Math.max(edgeX * 0.65, edgeNorth * 0.78);
+  const hillMask = smooth01(rise / 10.0);
+  const undulate =
+    (Math.sin(wx * 0.085) * 1.4 + Math.cos(wz * 0.075 + 0.6) * 1.6) * hillMask;
+  return -0.04 + Math.pow(rise + 0.001, 0.85) * 0.62 + undulate;
+}
+
+const _townSoil = new THREE.Color('#65685a');
+const _hillPine = new THREE.Color('#35523b');
+const _townMoss = new THREE.Color('#4a6643');
+
+function sampleTownTerrainColor(wx: number, _wz: number, y: number, out: THREE.Color): void {
+  const greenBlend = smooth01((y - 0.35) / 5.5);
+  out.copy(_townSoil).lerp(_townMoss, greenBlend * 0.85);
+  if (y > 4.0) {
+    out.lerp(_hillPine, smooth01((y - 4.0) / 8.0) * 0.65 + (Math.sin(wx * 0.25) * 0.5 + 0.5) * 0.15);
+  }
+}
+
+const HOTEL_RIDGES: readonly HimalayanRidgeSpec[] = [
+  { position: [-72, -11, -72], scale: [62, 34, 30], rotationY: 0.2, color: '#3b4a5e' },
+  { position: [4, -10, -84], scale: [74, 38, 34], rotationY: -0.08, color: '#3f5066' },
+  { position: [76, -11, -72], scale: [60, 34, 30], rotationY: -0.24, color: '#3a495d' },
+  { position: [-44, -9, -116], scale: [72, 42, 36], rotationY: 0.14, color: '#4f5a75' },
+  { position: [50, -9, -120], scale: [72, 42, 36], rotationY: -0.18, color: '#535e79' },
+];
+
+export const ORIGIN_FRIEND_SLOTS = [
+  { x: 0.82, z: 3.12, rotY: 0.72, shirt: '#db2777', trousers: '#1e293b', hair: '#1c1917' },
+  { x: 1.88, z: 3.58, rotY: -1.18, shirt: '#2563eb', trousers: '#334155', hair: '#292524' },
+  { x: 0.58, z: 4.22, rotY: 2.35, shirt: '#ea580c', trousers: '#1e293b', hair: '#18181b' },
+] as const;
 
 export interface HotelReturnEnvironmentProps {
   qualityProfile: QualityProfile;
   paused: boolean;
   farewellDone: boolean;
   capturedPolaroid: boolean;
+  onTerrace: boolean;
 }
 
 /**
- * Shared Rishikesh hotel courtyard in golden-evening light:
- * ground-floor veranda (Ishaan & friends) & first-floor balcony stairs (Srishti),
- * parked scooters, and Srishti's original group waiting warmly at the courtyard.
+ * Scene 12 Environment — Rishikesh Main Road Corner turning into a Narrow Residential Lane,
+ * Modest 2-Storey House/Guesthouse Stay, Accessible Rooftop Terrace overlooking neighborhood rooftops & hills.
  */
 export function HotelReturnEnvironment({
   qualityProfile,
   paused,
   farewellDone,
   capturedPolaroid,
+  onTerrace,
 }: HotelReturnEnvironmentProps) {
   const shadowsEnabled = QUALITY_PRESETS[qualityProfile].shadows;
   const reducedMotion = useReducedMotion();
+  const courtyardTex = useMemo(() => getStoneCourtyardTexture(), []);
+  const asphaltTex = useMemo(() => getAsphaltRoadTexture(), []);
 
-  const origTorso0 = useRef<THREE.Group | null>(null);
-  const origTorso1 = useRef<THREE.Group | null>(null);
-  const origTorso2 = useRef<THREE.Group | null>(null);
-  const origArm0 = useRef<THREE.Group | null>(null);
-  const origArm1 = useRef<THREE.Group | null>(null);
-  const origArm2 = useRef<THREE.Group | null>(null);
-  const origTorsoRefs = useMemo(() => [origTorso0, origTorso1, origTorso2], []);
-  const origRightArmRefs = useMemo(() => [origArm0, origArm1, origArm2], []);
+  const terrainGeometry = useMemo(
+    () =>
+      buildConnectedHillGeometry({
+        width: 170,
+        depth: 160,
+        centerX: 0,
+        centerZ: -20,
+        segX: 72,
+        segZ: 68,
+        heightFn: sampleTownBasinY,
+        colorFn: sampleTownTerrainColor,
+      }),
+    []
+  );
+
+  useEffect(() => {
+    return () => {
+      terrainGeometry.dispose();
+    };
+  }, [terrainGeometry]);
+
+  const terrainSampler = useMemo(
+    () => createTerrainMeshSampler([terrainGeometry], 3.5),
+    [terrainGeometry]
+  );
+
   const trunkInstRef = useRef<THREE.InstancedMesh>(null);
   const crownInstRef = useRef<THREE.InstancedMesh>(null);
-  const animPhaseRef = useRef(0);
+  const friendGroupRefs = useRef<(THREE.Group | null)[]>([]);
+  const lanternLightsRef = useRef<(THREE.Mesh | null)[]>([]);
+  const phaseRef = useRef(0);
 
-  const MAX_PINES = 36;
-  const pinePositions = useMemo(() => {
+  const MAX_PINES = 48;
+  const pineTransforms = useMemo(() => {
     const items: Array<[number, number, number, number]> = [];
     for (let i = 0; i < MAX_PINES; i += 1) {
+      const band = i % 3;
       const side = i % 2 === 0 ? -1 : 1;
-      const x = side * (9.5 + (i % 6) * 4.4);
-      const z = -16 + ((i * 5.2) % 32);
-      const s = 0.85 + ((i * 9) % 6) * 0.07;
-      items.push([x, sampleHotelTerrainY(x, z) - 0.55 * s, z, s]);
+      const x =
+        band === 0
+          ? -38 + ((i * 7.2) % 76)
+          : side * (19.5 + (i % 7) * 4.4);
+      const z =
+        band === 0
+          ? -20 - (i % 6) * 5.2
+          : -28 + ((i * 5.8) % 44);
+      const scale = 0.88 + ((i * 5) % 6) * 0.09;
+      const groundY = terrainSampler.trySampleY(x, z) ?? sampleTownBasinY(x, z);
+      items.push([x, groundY - 0.12 * scale, z, scale]);
     }
     return items;
-  }, []);
+  }, [terrainSampler]);
 
   useEffect(() => {
     if (!trunkInstRef.current || !crownInstRef.current) return;
@@ -119,229 +227,468 @@ export function HotelReturnEnvironment({
     crownInstRef.current.count = MAX_PINES;
     const dummy = new THREE.Object3D();
     for (let i = 0; i < MAX_PINES; i += 1) {
-      const [x, y, z, s] = pinePositions[i];
-      dummy.position.set(x, y + 0.92 * s, z);
-      dummy.rotation.set(0, (i * 1.1) % (Math.PI * 2), 0);
+      const [x, y, z, s] = pineTransforms[i];
+      dummy.position.set(x, y + 1.0 * s, z);
       dummy.scale.set(s, s, s);
       dummy.updateMatrix();
       trunkInstRef.current.setMatrixAt(i, dummy.matrix);
-
-      dummy.position.set(x, y + 2.55 * s, z);
+      dummy.position.set(x, y + 2.65 * s, z);
+      dummy.scale.set(s * 1.1, s * 1.25, s * 1.1);
       dummy.updateMatrix();
       crownInstRef.current.setMatrixAt(i, dummy.matrix);
     }
     trunkInstRef.current.instanceMatrix.needsUpdate = true;
     crownInstRef.current.instanceMatrix.needsUpdate = true;
-  }, [pinePositions]);
+  }, [pineTransforms]);
 
   useFrame((_, rawDelta) => {
-    if (paused || reducedMotion || (typeof document !== 'undefined' && document.hidden)) return;
-    animPhaseRef.current += Math.min(rawDelta, 0.05);
-    const t = animPhaseRef.current;
+    if (paused || reducedMotion) return;
+    const delta = Math.min(rawDelta, 0.05);
+    phaseRef.current += delta;
 
-    for (let i = 0; i < 3; i += 1) {
-      const torso = origTorsoRefs[i].current;
-      if (torso) {
-        torso.position.y = 0.8 + Math.sin(t * 2.0 + i * 1.4) * 0.008;
-      }
-      const arm = origRightArmRefs[i].current;
-      if (arm) {
-        arm.rotation.x = farewellDone ? 0.55 + Math.sin(t * 4.2 + i) * 0.14 : 0.18 + Math.sin(t * 1.4 + i) * 0.06;
-        arm.rotation.z = farewellDone ? 0.45 : 0.1;
-      }
-    }
+    // Natural staggered conversation idle on Srishti's Rishikesh friends (no synchronized robotics)
+    friendGroupRefs.current.forEach((grp, idx) => {
+      if (!grp) return;
+      const sway = Math.sin(phaseRef.current * 1.15 + idx * 1.7);
+      grp.rotation.y = ORIGIN_FRIEND_SLOTS[idx].rotY + sway * 0.07;
+      grp.position.y = Math.abs(Math.sin(phaseRef.current * 1.9 + idx * 1.3)) * 0.015;
+    });
+
+    lanternLightsRef.current.forEach((bulb, idx) => {
+      if (!bulb) return;
+      const mat = bulb.material as THREE.MeshStandardMaterial;
+      mat.emissiveIntensity = 0.85 + Math.sin(phaseRef.current * 2.2 + idx * 0.9) * 0.18;
+    });
   });
 
   return (
-    <group>
-      {/* Early-evening dusk gradient lighting */}
-      <color attach="background" args={['#b88874']} />
-      <fog attach="fog" args={['#b58672', 36, 130]} />
+    <>
+      {/* Warm Rishikesh dusk horizon */}
+      <color attach="background" args={['#dc9e74']} />
+      <fog attach="fog" args={['#d8a17d', 42, 185]} />
 
-      <hemisphereLight args={['#ffd6ad', '#3b4252', 0.88]} />
+      <hemisphereLight args={['#ffd7b0', '#48545c', 0.94]} />
       <directionalLight
-        position={[-22, 16, 14]}
-        intensity={1.45}
-        color="#ffbc7d"
+        position={[-34, 24, -46]}
+        intensity={1.55}
+        color="#ffbe7e"
         castShadow={shadowsEnabled}
-        shadow-mapSize={[1024, 1024]}
-        shadow-camera-left={-18}
-        shadow-camera-right={18}
-        shadow-camera-top={18}
-        shadow-camera-bottom={-18}
+        shadow-mapSize-width={qualityProfile === 'high' ? 1024 : 512}
+        shadow-mapSize-height={qualityProfile === 'high' ? 1024 : 512}
+        shadow-camera-near={5}
+        shadow-camera-far={110}
+        shadow-camera-left={-28}
+        shadow-camera-right={28}
+        shadow-camera-top={28}
+        shadow-camera-bottom={-28}
       />
+      <pointLight position={[0, 2.55, 0.5]} intensity={1.7} color="#fbbf24" distance={14} />
+      <pointLight position={[0, TERRACE_Y + 2.25, -3.2]} intensity={1.45} color="#fde68a" distance={15} />
 
-      {/* Courtyard Sandstone Forecourt & Deep Foundation Plinth */}
-      <mesh position={[0, -2.5, 0]} receiveShadow={shadowsEnabled}>
-        <boxGeometry args={[17.0, 4.8, 15.2]} />
-        <meshStandardMaterial color="#5e5449" roughness={0.95} />
-      </mesh>
-      <mesh position={[0, -0.05, 0]} receiveShadow={shadowsEnabled}>
-        <boxGeometry args={[16.8, 0.12, 15.0]} />
-        <meshStandardMaterial color="#968978" roughness={0.9} />
-      </mesh>
-
-      {/* Evening street passing outer edge of courtyard */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.004, 6.2]} receiveShadow={shadowsEnabled}>
-        <planeGeometry args={[160, 4.8]} />
-        <meshStandardMaterial color="#333b49" roughness={0.92} />
-      </mesh>
-
-      {/* Surrounding hills & silhouettes */}
+      {/* Sculpted Rishikesh Town Basin Connected to Hills & Himalayan Horizon */}
       <ConnectedHillTerrain
-        width={145}
-        depth={125}
+        width={170}
+        depth={160}
         centerX={0}
-        centerZ={-12}
-        segX={60}
-        segZ={54}
-        heightFn={sampleHotelTerrainY}
+        centerZ={-20}
+        segX={72}
+        segZ={68}
+        heightFn={sampleTownBasinY}
+        colorFn={sampleTownTerrainColor}
+        geometry={terrainGeometry}
         receiveShadow={shadowsEnabled}
       />
       <DistantHimalayanRidges ridges={HOTEL_RIDGES} />
 
-      {/* Shared Two-Story Rishikesh Hotel Facade (`z = -5.6`: Ground Floor & First Floor Balcony) */}
-      <group position={[0, 0, -5.6]}>
-        {/* Main Building Block */}
-        <mesh position={[0, 2.75, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
-          <boxGeometry args={[13.6, 5.5, 3.2]} />
-          <meshStandardMaterial color="#e8decb" roughness={0.86} />
-        </mesh>
-        {/* Warm Terracotta Roof Eaves */}
-        <mesh position={[0, 5.65, 0.2]} castShadow={shadowsEnabled}>
-          <boxGeometry args={[14.2, 0.34, 3.8]} />
-          <meshStandardMaterial color="#9a3412" roughness={0.82} />
-        </mesh>
-        {/* Ground Floor Lobby Veranda Arch & Warm Lit Interior Glow */}
-        <mesh position={[-1.4, 1.35, 1.62]}>
-          <boxGeometry args={[3.4, 2.45, 0.08]} />
-          <meshStandardMaterial color="#78350f" roughness={0.85} />
-        </mesh>
-        <mesh position={[-1.4, 1.35, 1.67]}>
-          <planeGeometry args={[2.6, 2.15]} />
-          <meshBasicMaterial color="#fde68a" />
-        </mesh>
-        {/* Ground floor veranda beam & pillars */}
-        <mesh position={[0, 2.65, 2.15]} castShadow={shadowsEnabled}>
-          <boxGeometry args={[13.4, 0.24, 1.3]} />
-          <meshStandardMaterial color="#8c5e42" roughness={0.86} />
-        </mesh>
-        {[-5.6, -2.8, 0.4, 3.6, 5.8].map((px) => (
-          <mesh key={px} position={[px, 1.32, 2.6]} castShadow={shadowsEnabled}>
-            <boxGeometry args={[0.32, 2.64, 0.32]} />
-            <meshStandardMaterial color="#d4c4ab" roughness={0.86} />
-          </mesh>
-        ))}
+      {/* Foothill pine cluster behind the town neighborhood */}
+      <instancedMesh ref={trunkInstRef} args={[undefined, undefined, MAX_PINES]} castShadow={shadowsEnabled}>
+        <cylinderGeometry args={[0.13, 0.19, 2.0, 7]} />
+        <meshStandardMaterial color="#583c2b" roughness={0.95} />
+      </instancedMesh>
+      <instancedMesh ref={crownInstRef} args={[undefined, undefined, MAX_PINES]} castShadow={shadowsEnabled}>
+        <coneGeometry args={[1.05, 2.45, 7]} />
+        <meshStandardMaterial color="#2a4e32" roughness={0.9} flatShading />
+      </instancedMesh>
 
-        {/* Exterior Stairs Rising Along Right Wing Toward 1st Floor Balcony (Srishti's Floor) */}
-        {Array.from({ length: 8 }, (_, idx) => (
-          <mesh
-            key={idx}
-            position={[4.6 + idx * 0.34, 0.2 + idx * 0.34, 2.25]}
-            castShadow={shadowsEnabled}
-          >
-            <boxGeometry args={[0.42, 0.22, 0.95]} />
-            <meshStandardMaterial color="#9e8f7b" roughness={0.9} />
-          </mesh>
-        ))}
-        {/* First-floor balcony windows & railing */}
-        <mesh position={[0, 3.35, 2.72]}>
-          <boxGeometry args={[13.2, 0.08, 0.08]} />
-          <meshStandardMaterial color="#785233" roughness={0.86} />
+      {/* 1. RISHIKESH MAIN ROAD (`z = 7.4..12.6`) + SIDEWALK */}
+      <mesh position={[0, -0.005, 10.1]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow={shadowsEnabled}>
+        <planeGeometry args={[92, 5.4]} />
+        <meshStandardMaterial
+          color="#5c6674"
+          map={asphaltTex ?? undefined}
+          roughness={0.9}
+        />
+      </mesh>
+      {[-28, -20, -12, -4, 4, 12, 20, 28].map((rx) => (
+        <mesh key={rx} position={[rx, 0.006, 10.1]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[3.4, 0.12]} />
+          <meshStandardMaterial color="#e2e8f0" roughness={0.85} />
         </mesh>
-        {[-4.2, -1.4, 1.6, 4.2].map((wx) => (
-          <mesh key={wx} position={[wx, 4.15, 1.62]}>
-            <planeGeometry args={[1.45, 1.1]} />
-            <meshBasicMaterial color={wx > 0 ? '#fef08a' : '#94a3b8'} />
-          </mesh>
-        ))}
+      ))}
+      {/* Main-road shuttered chai/kirana shop LEFT of interior lane turn */}
+      <group position={[-6.2, 0, 5.65]}>
+        <mesh position={[0, 1.85, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+          <boxGeometry args={[4.4, 3.7, 3.6]} />
+          <meshStandardMaterial color="#e4dac8" roughness={0.88} />
+        </mesh>
+        {/* Sky-blue rolled shop shutter facing main road */}
+        <mesh position={[0, 1.32, 1.82]}>
+          <boxGeometry args={[2.75, 2.15, 0.08]} />
+          <meshStandardMaterial color="#2563eb" roughness={0.62} metalness={0.28} />
+        </mesh>
+        {/* Warm orange shopfront sun awning + crate stack */}
+        <mesh position={[0, 2.62, 2.25]} rotation={[0.25, 0, 0]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[3.4, 0.08, 1.05]} />
+          <meshStandardMaterial color="#c2410c" roughness={0.82} />
+        </mesh>
+        <mesh position={[1.65, 0.35, 2.05]}>
+          <boxGeometry args={[0.62, 0.7, 0.55]} />
+          <meshStandardMaterial color="#ca8a04" roughness={0.85} />
+        </mesh>
+      </group>
+      {/* Main-road general provision store RIGHT of interior lane turn */}
+      <group position={[6.4, 0, 5.75]}>
+        <mesh position={[0, 2.05, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+          <boxGeometry args={[4.6, 4.1, 3.6]} />
+          <meshStandardMaterial color="#d8e3da" roughness={0.88} />
+        </mesh>
+        <mesh position={[0, 1.35, 1.82]}>
+          <boxGeometry args={[2.9, 2.2, 0.08]} />
+          <meshStandardMaterial color="#0f766e" roughness={0.68} />
+        </mesh>
+        <mesh position={[0, 2.75, 2.22]} rotation={[0.22, 0, 0]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[3.5, 0.08, 0.95]} />
+          <meshStandardMaterial color="#475569" roughness={0.82} />
+        </mesh>
+      </group>
+      {/* Street utility pole beside main road */}
+      <group position={[-3.35, 0, 7.25]}>
+        <mesh position={[0, 2.8, 0]} castShadow={shadowsEnabled}>
+          <cylinderGeometry args={[0.07, 0.09, 5.6, 8]} />
+          <meshStandardMaterial color="#64748b" roughness={0.75} metalness={0.35} />
+        </mesh>
+        <mesh position={[0, 4.95, 0]}>
+          <boxGeometry args={[0.95, 0.08, 0.08]} />
+          <meshStandardMaterial color="#475569" roughness={0.7} />
+        </mesh>
+      </group>
 
-        {/* Warm Hotel Lanterns Lighting Evening Courtyard (1 key fill light + emissive globes) */}
-        <pointLight position={[0.4, 2.35, 2.95]} intensity={2.1} color="#fbbf24" distance={14} />
-        {[-3.2, 0.4, 3.8].map((lx) => (
-          <group key={lx} position={[lx, 2.42, 2.7]}>
+      {/* 2. NARROW RESIDENTIAL INTERIOR LANE (`x = -2.4..2.4, z = 2.6..7.5`) + YARD (`z = -0.5..3.9`) */}
+      <mesh position={[0, -0.01, 5.3]} receiveShadow={shadowsEnabled}>
+        <boxGeometry args={[4.85, 0.06, 4.8]} />
+        <meshStandardMaterial color="#878d96" map={courtyardTex ?? undefined} roughness={0.94} />
+      </mesh>
+      <mesh position={[0, -0.005, 1.55]} receiveShadow={shadowsEnabled}>
+        <boxGeometry args={[10.8, 0.08, 4.4]} />
+        <meshStandardMaterial color="#9c9487" map={courtyardTex ?? undefined} roughness={0.92} />
+      </mesh>
+      {/* Low painted boundary compound walls enclosing narrow interior lane */}
+      {[-2.55, 2.55].map((wx) => (
+        <mesh key={wx} position={[wx, 0.62, 5.55]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+          <boxGeometry args={[0.24, 1.24, 3.9]} />
+          <meshStandardMaterial color="#dfd3be" roughness={0.9} />
+        </mesh>
+      ))}
+      {[-5.35, 5.35].map((wx) => (
+        <mesh key={wx} position={[wx, 0.72, 1.35]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+          <boxGeometry args={[0.26, 1.44, 5.4]} />
+          <meshStandardMaterial color="#dad0be" roughness={0.9} />
+        </mesh>
+      ))}
+
+      {/* 3. MODEST 2-STOREY HOUSE / GUESTHOUSE STAY (Ground Floor + 1st Floor + Rooftop Terrace) */}
+      <group position={[0, 0, -3.25]}>
+        {/* House main two-storey plastered concrete mass (`x: -4.65..4.65, z: -5.9..-0.55`) */}
+        <mesh position={[0, 2.32, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+          <boxGeometry args={[9.3, 4.65, 5.25]} />
+          <meshStandardMaterial color="#eadbc4" roughness={0.86} />
+        </mesh>
+        {/* Subtle horizontal slab concrete cornice trim between ground and first floors */}
+        <mesh position={[0, 2.38, 0.06]}>
+          <boxGeometry args={[9.55, 0.16, 5.45]} />
+          <meshStandardMaterial color="#c4b59f" roughness={0.88} />
+        </mesh>
+
+        {/* Ground Floor Wooden Front Doorway (`Boys Ground Floor`) & Porch Apron */}
+        <mesh position={[-0.45, 1.05, 2.65]}>
+          <boxGeometry args={[1.18, 2.1, 0.1]} />
+          <meshStandardMaterial color="#6d4327" roughness={0.82} />
+        </mesh>
+        <mesh position={[-0.45, 0.06, 2.95]} receiveShadow={shadowsEnabled}>
+          <boxGeometry args={[2.4, 0.12, 0.85]} />
+          <meshStandardMaterial color="#b0a493" roughness={0.92} />
+        </mesh>
+
+        {/* Ground & 1st Floor Window Grilles with Soft Interior Glow */}
+        {[
+          [-2.8, 1.22],
+          [1.65, 1.22],
+          [-2.8, 3.45],
+          [-0.45, 3.45],
+          [1.85, 3.45],
+        ].map(([wx, wy], idx) => (
+          <group key={`win-${idx}`} position={[wx, wy, 2.64]}>
             <mesh>
-              <sphereGeometry args={[0.11, 10, 10]} />
-              <meshBasicMaterial color="#fde047" />
+              <boxGeometry args={[1.12, 0.94, 0.07]} />
+              <meshStandardMaterial
+                color="#fef3c7"
+                emissive="#f59e0b"
+                emissiveIntensity={0.34}
+                roughness={0.45}
+              />
+            </mesh>
+            <mesh position={[0, 0, 0.045]}>
+              <boxGeometry args={[1.18, 0.06, 0.03]} />
+              <meshStandardMaterial color="#334155" roughness={0.6} />
             </mesh>
           </group>
         ))}
-      </group>
 
-      {/* Srishti's Original Friends Waiting Together Near First-Floor Stairs w/ Day Luggage (`x = 2.75, z = -1.9`) */}
-      <group position={[2.85, 0, -1.9]}>
-        {[
-          { x: -0.25, z: -0.15, yaw: -0.4, shirt: '#1d4ed8', pants: '#1e293b', idx: 0 },
-          { x: 0.42, z: 0.25, yaw: -0.75, shirt: '#b45309', pants: '#334155', idx: 1 },
-          { x: 0.85, z: -0.3, yaw: -0.5, shirt: '#0f766e', pants: '#1f2937', idx: 2 },
-        ].map((f) => (
-          <StylizedPlaceholderCharacter
-            key={f.idx}
-            characterVariant="traveler"
-            torsoRef={origTorsoRefs[f.idx]}
-            rightArmRef={origRightArmRefs[f.idx]}
-            position={[f.x, 0, f.z]}
-            rotationY={f.yaw}
-            jacketColor={f.shirt}
-            pantsColor={f.pants}
-            scale={0.97}
-            castShadow={shadowsEnabled}
-          />
+        {/* First-Floor Cantilevered Balcony (`Srishti's 1st-Floor Stay`) & Iron Railing */}
+        <mesh position={[-0.95, 2.42, 3.05]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[5.8, 0.14, 0.85]} />
+          <meshStandardMaterial color="#cdc0ad" roughness={0.88} />
+        </mesh>
+        <mesh position={[-0.95, 3.16, 3.44]}>
+          <boxGeometry args={[5.75, 0.05, 0.05]} />
+          <meshStandardMaterial color="#334155" metalness={0.5} roughness={0.5} />
+        </mesh>
+        {[-3.6, -2.5, -1.4, -0.3, 0.8, 1.85].map((rx) => (
+          <mesh key={rx} position={[rx, 2.8, 3.44]}>
+            <cylinderGeometry args={[0.02, 0.02, 0.72, 6]} />
+            <meshStandardMaterial color="#475569" roughness={0.5} />
+          </mesh>
         ))}
-        {/* Small travel day-bags neatly beside waiting group */}
-        <mesh position={[0.15, 0.22, 0.58]} castShadow={shadowsEnabled}>
-          <boxGeometry args={[0.38, 0.44, 0.26]} />
-          <meshStandardMaterial color="#475569" roughness={0.85} />
+        {/* Casual travel towel draped gently on 1st floor rail */}
+        <mesh position={[-2.9, 3.0, 3.46]}>
+          <boxGeometry args={[0.56, 0.36, 0.07]} />
+          <meshStandardMaterial color="#e11d48" roughness={0.88} />
         </mesh>
-        <mesh position={[0.62, 0.2, 0.48]} castShadow={shadowsEnabled}>
-          <boxGeometry args={[0.34, 0.4, 0.24]} />
-          <meshStandardMaterial color="#7f1d1d" roughness={0.85} />
+
+        {/* 4. OPEN ROOFTOP TERRACE (`y = TERRACE_Y = 4.65`) */}
+        <mesh position={[0, TERRACE_Y - 0.04, 0]} receiveShadow={shadowsEnabled}>
+          <boxGeometry args={[9.5, 0.14, 5.45]} />
+          <meshStandardMaterial
+            color="#d2c6b4"
+            map={courtyardTex ?? undefined}
+            roughness={0.92}
+          />
+        </mesh>
+        {/* Terrace Concrete Parapet Walls (West, North Overlook, Front-Left, leaving stair opening on East) */}
+        <mesh position={[-4.65, TERRACE_Y + 0.44, 0]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[0.2, 0.88, 5.45]} />
+          <meshStandardMaterial color="#ded3c1" roughness={0.88} />
+        </mesh>
+        <mesh position={[4.65, TERRACE_Y + 0.44, -0.9]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[0.2, 0.88, 3.65]} />
+          <meshStandardMaterial color="#ded3c1" roughness={0.88} />
+        </mesh>
+        <mesh position={[0, TERRACE_Y + 0.44, -2.65]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[9.5, 0.88, 0.2]} />
+          <meshStandardMaterial color="#ded3c1" roughness={0.88} />
+        </mesh>
+        <mesh position={[-1.0, TERRACE_Y + 0.44, 2.65]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[7.4, 0.88, 0.2]} />
+          <meshStandardMaterial color="#ded3c1" roughness={0.88} />
+        </mesh>
+
+        {/* Terrace Details: Black Roof Water Tank, Potted Plants, Seating & String Fairy Bulbs */}
+        <group position={[-3.75, TERRACE_Y, -1.75]}>
+          <mesh position={[0, 0.14, 0]}>
+            <boxGeometry args={[1.15, 0.28, 1.15]} />
+            <meshStandardMaterial color="#8c8376" roughness={0.94} />
+          </mesh>
+          <mesh position={[0, 0.82, 0]} castShadow={shadowsEnabled}>
+            <cylinderGeometry args={[0.48, 0.48, 1.1, 14]} />
+            <meshStandardMaterial color="#18181b" roughness={0.55} />
+          </mesh>
+        </group>
+        {/* Patio chairs + side chai table overlooking north mountains */}
+        <group position={[1.15, TERRACE_Y, -0.9]}>
+          <mesh position={[0, 0.34, 0]} castShadow={shadowsEnabled}>
+            <cylinderGeometry args={[0.38, 0.34, 0.06, 12]} />
+            <meshStandardMaterial color="#e2e8f0" roughness={0.5} />
+          </mesh>
+          <mesh position={[0, 0.17, 0]}>
+            <cylinderGeometry args={[0.04, 0.06, 0.34, 8]} />
+            <meshStandardMaterial color="#64748b" />
+          </mesh>
+        </group>
+        {[
+          [-3.85, 2.05],
+          [-2.05, 2.05],
+          [0.05, -2.1],
+          [2.15, -2.1],
+        ].map(([px, pz], idx) => (
+          <group key={`pot-${idx}`} position={[px, TERRACE_Y, pz]}>
+            <mesh position={[0, 0.18, 0]}>
+              <cylinderGeometry args={[0.16, 0.12, 0.36, 9]} />
+              <meshStandardMaterial color="#b45309" roughness={0.86} />
+            </mesh>
+            <mesh position={[0, 0.42, 0]}>
+              <dodecahedronGeometry args={[0.22, 0]} />
+              <meshStandardMaterial color="#2f5e36" roughness={0.92} flatShading />
+            </mesh>
+          </group>
+        ))}
+        {/* Overhead terrace fairy string light line */}
+        {[-3.4, -1.7, 0, 1.7, 3.4].map((lx, idx) => (
+          <mesh
+            key={`bulb-${idx}`}
+            ref={(el) => {
+              lanternLightsRef.current[idx] = el;
+            }}
+            position={[lx, TERRACE_Y + 2.15, 0.25]}
+          >
+            <sphereGeometry args={[0.065, 8, 8]} />
+            <meshStandardMaterial
+              color="#fef08a"
+              emissive="#fbbf24"
+              emissiveIntensity={0.9}
+            />
+          </mesh>
+        ))}
+      </group>
+
+      {/* EXTERIOR MASONRY STAIRCASE FROM YARD (`y=0, z=+1.5`) UP TO TERRACE (`y=TERRACE_Y, z=-1.75`) */}
+      <group position={[3.42, 0, 0]}>
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((step) => {
+          const frac = step / 11;
+          const sy = THREE.MathUtils.lerp(0.19, TERRACE_Y - 0.18, frac);
+          const sz = THREE.MathUtils.lerp(1.32, -1.42, frac);
+          return (
+            <mesh
+              key={`stair-${step}`}
+              position={[0, sy, sz]}
+              castShadow={shadowsEnabled}
+              receiveShadow={shadowsEnabled}
+            >
+              <boxGeometry args={[1.18, 0.38, 0.32]} />
+              <meshStandardMaterial color={step % 2 === 0 ? '#c9bca8' : '#bfb19d'} roughness={0.9} />
+            </mesh>
+          );
+        })}
+        {/* Painted outer steel staircase handrail */}
+        <mesh position={[0.56, TERRACE_Y * 0.56, -0.05]} rotation={[0.92, 0, 0]}>
+          <cylinderGeometry args={[0.028, 0.028, 5.2, 8]} />
+          <meshStandardMaterial color="#475569" roughness={0.5} metalness={0.45} />
         </mesh>
       </group>
 
-      {/* Parked Scooters in Hotel Forecourt (`z = 3.5`) */}
-      <group position={[1.35, 0, 3.55]} rotation={[0, -Math.PI / 2, 0]}>
-        <PrototypeScooter variant="lead" hideRiders castShadow={shadowsEnabled} />
+      {/* 5. SURROUNDING NEIGHBORHOOD HOUSES & ROOFTOP WATER TANKS FOR TERRACE HORIZON */}
+      {[
+        { pos: [-11.5, 0, -4.5] as const, w: 6.4, h: 5.2, d: 6.2, col: '#dfd5c6' },
+        { pos: [11.8, 0, -5.0] as const, w: 6.8, h: 4.4, d: 5.8, col: '#d4ddd8' },
+        { pos: [-10.2, 0, -14.2] as const, w: 7.4, h: 5.6, d: 6.4, col: '#e2d2be' },
+        { pos: [1.5, 0, -15.8] as const, w: 6.6, h: 4.2, d: 5.6, col: '#dce0e6' },
+        { pos: [12.4, 0, -14.6] as const, w: 7.2, h: 5.0, d: 6.2, col: '#dfd5c4' },
+      ].map((n, idx) => (
+        <group key={`neigh-${idx}`} position={n.pos}>
+          <mesh position={[0, n.h * 0.5, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+            <boxGeometry args={[n.w, n.h, n.d]} />
+            <meshStandardMaterial color={n.col} roughness={0.88} />
+          </mesh>
+          <mesh position={[0, n.h + 0.3, 0]}>
+            <boxGeometry args={[n.w + 0.2, 0.6, n.d + 0.2]} />
+            <meshStandardMaterial color="#b8ac99" roughness={0.9} />
+          </mesh>
+          <mesh position={[n.w * 0.28, n.h + 0.72, -n.d * 0.22]}>
+            <cylinderGeometry args={[0.42, 0.42, 0.85, 10]} />
+            <meshStandardMaterial color={idx % 2 === 0 ? '#18181b' : '#1d4ed8'} roughness={0.6} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Parked Hero Scooters Beside House Entry Yard */}
+      <group position={[-4.05, 0, 2.2]} rotation={[0, 0.38, 0]}>
+        <PrototypeScooter
+          variant="lead"
+          castShadow={shadowsEnabled}
+          hideRiders
+        />
       </group>
-      <group position={[-1.2, 0, 3.55]} rotation={[0, -Math.PI / 2, 0]}>
-        <PrototypeScooter variant="companion" hideRiders castShadow={shadowsEnabled} />
+      <group position={[-2.92, 0, 2.35]} rotation={[0, 0.28, 0]}>
+        <PrototypeScooter
+          variant="companion"
+          castShadow={shadowsEnabled}
+          hideRiders
+        />
       </group>
 
-      {/* Perimeter Trees */}
-      <instancedMesh
-        ref={trunkInstRef}
-        args={[undefined, undefined, MAX_PINES]}
-        castShadow={shadowsEnabled}
-      >
-        <cylinderGeometry args={[0.14, 0.22, 2.2, 7]} />
-        <meshStandardMaterial color="#5c4033" roughness={0.94} />
-      </instancedMesh>
-      <instancedMesh
-        ref={crownInstRef}
-        args={[undefined, undefined, MAX_PINES]}
-        castShadow={shadowsEnabled}
-      >
-        <coneGeometry args={[1.35, 3.5, 7]} />
-        <meshStandardMaterial color="#275036" roughness={0.88} />
-      </instancedMesh>
+      {/* Srishti's Original Rishikesh Friends in a Natural Circle (NO linear queue!) */}
+      {ORIGIN_FRIEND_SLOTS.map((f, idx) => (
+        <group
+          key={`orig-friend-${idx}`}
+          ref={(el) => {
+            friendGroupRefs.current[idx] = el;
+          }}
+          position={[f.x, 0, f.z]}
+          rotation={[0, f.rotY, 0]}
+        >
+          <mesh position={[-0.08, 0.4, 0]} castShadow={shadowsEnabled}>
+            <cylinderGeometry args={[0.068, 0.06, 0.78, 8]} />
+            <meshStandardMaterial color={f.trousers} roughness={0.88} />
+          </mesh>
+          <mesh position={[0.08, 0.4, 0]} castShadow={shadowsEnabled}>
+            <cylinderGeometry args={[0.068, 0.06, 0.78, 8]} />
+            <meshStandardMaterial color={f.trousers} roughness={0.88} />
+          </mesh>
+          <mesh position={[0, 1.03, 0]} castShadow={shadowsEnabled}>
+            <cylinderGeometry args={[0.17, 0.145, 0.54, 10]} />
+            <meshStandardMaterial color={f.shirt} roughness={0.82} />
+          </mesh>
+          <mesh position={[0, 1.44, 0]} castShadow={shadowsEnabled}>
+            <sphereGeometry args={[0.12, 12, 10]} />
+            <meshStandardMaterial color="#d29c76" roughness={0.76} />
+          </mesh>
+          <mesh position={[0, 1.49, 0.02]}>
+            <sphereGeometry args={[0.125, 10, 8]} />
+            <meshStandardMaterial color={f.hair} roughness={0.88} />
+          </mesh>
+        </group>
+      ))}
 
-      <HotspotBeaconSparkle
-        position={[2.15, 0, -0.85]}
-        visible={!farewellDone}
-        color="#f59e0b"
-        height={0.95}
-        paused={paused}
-        reducedMotion={reducedMotion}
-      />
-      <HotspotBeaconSparkle
-        position={[-0.35, 0, 0.45]}
-        visible={!capturedPolaroid}
-        color="#38bdf8"
-        height={0.9}
-        paused={paused}
-        reducedMotion={reducedMotion}
-      />
-    </group>
+      {/* Subtle Hotspot Beacons on Active Level */}
+      {!onTerrace && (
+        <>
+          <HotspotBeaconSparkle
+            position={[HOTEL_HOTSPOTS[0].x, 0.04, HOTEL_HOTSPOTS[0].z]}
+            color="#38bdf8"
+            paused={paused}
+            reducedMotion={reducedMotion}
+          />
+          {!farewellDone && (
+            <HotspotBeaconSparkle
+              position={[HOTEL_HOTSPOTS[1].x, 0.04, HOTEL_HOTSPOTS[1].z]}
+              color="#fbbf24"
+              paused={paused}
+              reducedMotion={reducedMotion}
+            />
+          )}
+          <HotspotBeaconSparkle
+            position={[HOTEL_HOTSPOTS[2].x, 0.04, HOTEL_HOTSPOTS[2].z]}
+            color={capturedPolaroid ? '#34d399' : '#60a5fa'}
+            paused={paused}
+            reducedMotion={reducedMotion}
+          />
+        </>
+      )}
+      {onTerrace && (
+        <>
+          <HotspotBeaconSparkle
+            position={[TERRACE_HOTSPOTS[0].x, TERRACE_Y + 0.04, TERRACE_HOTSPOTS[0].z]}
+            color="#38bdf8"
+            paused={paused}
+            reducedMotion={reducedMotion}
+          />
+          <HotspotBeaconSparkle
+            position={[TERRACE_HOTSPOTS[1].x, TERRACE_Y + 0.04, TERRACE_HOTSPOTS[1].z]}
+            color={capturedPolaroid ? '#34d399' : '#fbbf24'}
+            paused={paused}
+            reducedMotion={reducedMotion}
+          />
+        </>
+      )}
+    </>
   );
 }
-

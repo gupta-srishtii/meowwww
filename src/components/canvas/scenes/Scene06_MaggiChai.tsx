@@ -80,22 +80,22 @@ const DHABA_COMPANION_INIT: Record<FriendCompanionId, { x: number; z: number; ya
 const DHABA_COMPANION_CONFIGS: readonly CompanionAgentConfig[] = [
   {
     id: 'srishti',
-    followAngleOffset: -0.58,
-    followDistance: 1.55,
+    followAngleOffset: -1.32,
+    followDistance: 1.08,
     idlePose: 'chat_nod',
     gesturePhase: 0.0,
   },
   {
     id: 'friend_black_tee',
-    followAngleOffset: 0.58,
-    followDistance: 1.65,
+    followAngleOffset: 0.72,
+    followDistance: 1.82,
     idlePose: 'look_around',
     gesturePhase: 1.8,
   },
   {
     id: 'friend_plaid',
-    followAngleOffset: -1.1,
-    followDistance: 1.9,
+    followAngleOffset: -0.42,
+    followDistance: 2.18,
     idlePose: 'chat_nod',
     gesturePhase: 3.4,
   },

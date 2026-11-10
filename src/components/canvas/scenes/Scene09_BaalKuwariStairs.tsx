@@ -50,10 +50,18 @@ export interface Scene09BaalKuwariStairsProps {
   onSceneReady: (token: number, sceneId: SceneId) => void;
 }
 
-const ASCENT_DURATION_SEC = 21.5;
+const ASCENT_DURATION_SEC = 44.0;
 const ASCENT_REDUCED_SEC = 3.2;
-const DESCENT_DURATION_SEC = 11.4;
+const DESCENT_DURATION_SEC = 24.0;
 const DESCENT_REDUCED_SEC = 2.2;
+
+const HELP1_FADE_IN_T = 4.0;
+const HELP1_FADE_OUT_T = 10.7;
+const BREATHER_START_T = 20.4;
+const BREATHER_END_T = 23.0;
+const HELP2_FADE_IN_T = 25.2;
+const HELP2_FADE_OUT_T = 32.1;
+const SUMMIT_CREST_T = 42.0;
 
 // Derive exact stair landmarks from STAIR_SEGMENTS
 const SEG_FLIGHT_1 = STAIR_SEGMENTS[1];
@@ -107,29 +115,29 @@ function sampleStairSFromKeyframes(
 
 const ASCENT_SRISHTI_KEYFRAMES: readonly { t: number; s: number }[] = [
   { t: 0.0, s: -0.9 },
-  { t: 2.0, s: HAND_HELP_1_START_S }, // Approach steep Flight 1
-  { t: 2.6, s: HAND_HELP_1_START_S + 0.15 }, // Pause slightly as Ishaan reaches hand down
-  { t: 5.2, s: HAND_HELP_1_END_S }, // Climb steadily hand-in-hand (Help #1)
-  { t: 7.4, s: SEG_FLIGHT_1.sEnd + 2.2 }, // Reach Landing 100
-  { t: 9.8, s: HALFWAY_S }, // Reach Landing 200 (Valley Overlook)
-  { t: 10.6, s: HALFWAY_S + 0.25 }, // Brief breath-catcher overlooking pines
-  { t: 11.7, s: HAND_HELP_2_START_S }, // Start steep Flight 3 rocky pitch
-  { t: 12.2, s: HAND_HELP_2_START_S + 0.15 }, // Pause as Ishaan extends hand (Help #2)
-  { t: 15.0, s: HAND_HELP_2_END_S }, // Climb Flight 3 connected hand-in-hand
-  { t: 17.5, s: SEG_FLIGHT_3.sEnd + 2.8 }, // Crest Landing 300
-  { t: 20.6, s: SUMMIT_S }, // Reach Baal Kuwari Summit Gate (Step 400)
+  { t: 4.2, s: HAND_HELP_1_START_S }, // Approach steep Flight 1
+  { t: 5.8, s: HAND_HELP_1_START_S + 0.15 }, // Pause slightly as Ishaan reaches hand down
+  { t: 11.4, s: HAND_HELP_1_END_S }, // Climb steadily hand-in-hand (Help #1)
+  { t: 15.6, s: SEG_FLIGHT_1.sEnd + 2.2 }, // Reach Landing 100
+  { t: 20.4, s: HALFWAY_S }, // Reach Landing 200 (Valley Overlook)
+  { t: 23.0, s: HALFWAY_S + 0.25 }, // Brief breath-catcher overlooking pines + laughs
+  { t: 25.4, s: HAND_HELP_2_START_S }, // Start steep Flight 3 rocky pitch
+  { t: 26.8, s: HAND_HELP_2_START_S + 0.15 }, // Pause as Ishaan extends hand (Help #2)
+  { t: 32.8, s: HAND_HELP_2_END_S }, // Climb Flight 3 connected hand-in-hand
+  { t: 37.8, s: SEG_FLIGHT_3.sEnd + 2.8 }, // Crest Landing 300
+  { t: 42.4, s: SUMMIT_S }, // Reach Baal Kuwari Summit Gate (Step 400)
   { t: ASCENT_DURATION_SEC, s: SUMMIT_S },
 ];
 
 const DESCENT_BASE_KEYFRAMES: readonly { t: number; s: number }[] = [
   { t: 0.0, s: SUMMIT_S - 0.6 },
-  { t: 1.8, s: STAIR_SEGMENTS[7].sStart + 1.5 }, // Light downhill jog Flight 4
-  { t: 2.4, s: STAIR_SEGMENTS[6].sStart + 0.8 }, // Slow smoothly around Landing 300
-  { t: 4.6, s: STAIR_SEGMENTS[5].sStart + 1.2 }, // Playful trot down Flight 3
-  { t: 5.3, s: STAIR_SEGMENTS[4].sStart + 0.8 }, // Brief curve + laugh at Landing 200
-  { t: 7.6, s: STAIR_SEGMENTS[3].sStart + 1.2 }, // Jog smoothly down Flight 2
-  { t: 8.3, s: STAIR_SEGMENTS[2].sStart + 0.8 }, // Turn at Landing 100
-  { t: 10.6, s: 0.2 }, // Jog cheerfully down Flight 1
+  { t: 3.8, s: STAIR_SEGMENTS[7].sStart + 1.5 }, // Light downhill jog Flight 4
+  { t: 5.2, s: STAIR_SEGMENTS[6].sStart + 0.8 }, // Slow smoothly around Landing 300
+  { t: 9.8, s: STAIR_SEGMENTS[5].sStart + 1.2 }, // Playful trot down Flight 3
+  { t: 11.4, s: STAIR_SEGMENTS[4].sStart + 0.8 }, // Brief curve + laugh at Landing 200
+  { t: 16.0, s: STAIR_SEGMENTS[3].sStart + 1.2 }, // Jog smoothly down Flight 2
+  { t: 17.6, s: STAIR_SEGMENTS[2].sStart + 0.8 }, // Turn at Landing 100
+  { t: 22.4, s: 0.2 }, // Jog cheerfully down Flight 1
   { t: DESCENT_DURATION_SEC, s: -1.1 }, // Bottom stone landing
 ];
 
@@ -406,18 +414,22 @@ export function Scene09_BaalKuwariStairs({
 
       // Compute exact Hand-Help #1 (Flight 1) and Hand-Help #2 (Flight 3) blend weights
       const help1Weight =
-        smoothStep01((mappedTime - 1.9) / 0.55) * (1 - smoothStep01((mappedTime - 5.15) / 0.65));
+        smoothStep01((mappedTime - HELP1_FADE_IN_T) / 0.85) *
+        (1 - smoothStep01((mappedTime - HELP1_FADE_OUT_T) / 0.95));
       const help2Weight =
-        smoothStep01((mappedTime - 11.6) / 0.55) * (1 - smoothStep01((mappedTime - 14.95) / 0.65));
+        smoothStep01((mappedTime - HELP2_FADE_IN_T) / 0.85) *
+        (1 - smoothStep01((mappedTime - HELP2_FADE_OUT_T) / 0.95));
       activeHandWeight = Math.max(help1Weight, help2Weight);
 
       // Keep Ishaan ahead of Srishti (`+0.36m` along flight during clasp so shoulders align, `+0.72m` normally)
       const ishaanLead = THREE.MathUtils.lerp(0.68, 0.36, activeHandWeight);
       ishaanCurrentS = THREE.MathUtils.clamp(srishtiS + ishaanLead, STAIR_MIN_S, STAIR_MAX_S);
       ishaanSpeed =
-        activeHandWeight > 0.05 && mappedTime < 2.6
+        activeHandWeight > 0.05 && mappedTime < HELP1_FADE_IN_T + 1.8
           ? 0.25
-          : activeHandWeight > 0.05 && mappedTime > 11.6 && mappedTime < 12.2
+          : activeHandWeight > 0.05 &&
+              mappedTime > HELP2_FADE_IN_T &&
+              mappedTime < HELP2_FADE_IN_T + 1.6
             ? 0.25
             : srishtiSpeed;
 
@@ -442,28 +454,28 @@ export function Scene09_BaalKuwariStairs({
       ishaanTargetYaw =
         activeHandWeight > 0.02
           ? ptI.yaw + 0.96 * activeHandWeight
-          : ptI.yaw + Math.sin(mappedTime * 0.9) * 0.14;
+          : ptI.yaw + Math.sin(mappedTime * 0.45) * 0.14;
       srishtiTargetYaw = ptS.yaw - 0.34 * activeHandWeight;
 
-      ishaanClimbing = isOnStairFlightAtS(ishaanCurrentS) && ishaanSpeed > 0.3;
-      srishtiClimbing = isOnStairFlightAtS(srishtiS) && srishtiSpeed > 0.3;
+      ishaanClimbing = isOnStairFlightAtS(ishaanCurrentS) && ishaanSpeed > 0.25;
+      srishtiClimbing = isOnStairFlightAtS(srishtiS) && srishtiSpeed > 0.25;
 
-      if (mappedTime >= 9.8 && mappedTime <= 10.65) {
+      if (mappedTime >= BREATHER_START_T && mappedTime <= BREATHER_END_T) {
         ishaanPose = 'chat_nod';
         srishtiPose = 'chat_nod';
-      } else if (mappedTime >= 20.6) {
+      } else if (mappedTime >= SUMMIT_CREST_T) {
         ishaanPose = 'chat_nod';
         srishtiPose = 'chat_nod';
       }
 
       // Manish & Yash climb happily trailing behind the pair
-      manishS = THREE.MathUtils.clamp(srishtiS - 1.35 + Math.sin(mappedTime * 0.7) * 0.15, STAIR_MIN_S, STAIR_MAX_S);
-      yashS = THREE.MathUtils.clamp(srishtiS - 2.05 + Math.cos(mappedTime * 0.65) * 0.15, STAIR_MIN_S, STAIR_MAX_S);
+      manishS = THREE.MathUtils.clamp(srishtiS - 1.35 + Math.sin(mappedTime * 0.35) * 0.15, STAIR_MIN_S, STAIR_MAX_S);
+      yashS = THREE.MathUtils.clamp(srishtiS - 2.05 + Math.cos(mappedTime * 0.32) * 0.15, STAIR_MIN_S, STAIR_MAX_S);
       manishLat = 0.56;
       yashLat = -0.52;
 
       if (help1Weight > 0.25) {
-        phaseLabel = 'Steep pitch #1 · Ishaan helps Srishti up the steps';
+        phaseLabel = 'Steep pitch #1 · Ishaan helps Shree up the steps';
         camYawShift = 0.78;
         camDist = 4.15;
         camHeightOffset = 1.65;
@@ -472,18 +484,19 @@ export function Scene09_BaalKuwariStairs({
         camYawShift = 0.82;
         camDist = 4.05;
         camHeightOffset = 1.68;
-      } else if (mappedTime >= 9.6 && mappedTime <= 10.8) {
-        phaseLabel = 'Halfway (~200 steps) · Quick breather above the pines';
-        camYawShift = -0.45;
+      } else if (mappedTime >= BREATHER_START_T - 0.3 && mappedTime <= BREATHER_END_T + 0.2) {
+        phaseLabel = 'Halfway (~200 steps) · Catching breath & laughing over the pines';
+        camYawShift = -0.48;
         camDist = 5.6;
         camHeightOffset = 2.1;
-      } else if (mappedTime >= 20.2) {
+      } else if (mappedTime >= SUMMIT_CREST_T - 0.5) {
         phaseLabel = 'All 400 steps climbed · Baal Kuwari Temple gate ahead!';
         camYawShift = 0.24;
         camDist = 5.8;
         camHeightOffset = 2.2;
       } else {
         phaseLabel = 'Climbing the ~400 winding Baal Kuwari stone steps together';
+        camYawShift = 0.34 + Math.sin(mappedTime * 0.24) * 0.22;
       }
 
       if (!sim.halfwayNotified && computeStepCountFromS(ishaanCurrentS) >= 200) {
@@ -498,9 +511,9 @@ export function Scene09_BaalKuwariStairs({
       const srishtiS = THREE.MathUtils.clamp(ishaanCurrentS + 0.72, STAIR_MIN_S, STAIR_MAX_S);
       srishtiSpeed = ishaanSpeed;
 
-      const onFlightDown = isOnStairFlightAtS(ishaanCurrentS) && ishaanSpeed > 5.2;
+      const onFlightDown = isOnStairFlightAtS(ishaanCurrentS) && ishaanSpeed > 2.15;
       ishaanDownhillJog = onFlightDown && !reducedMotion;
-      srishtiDownhillJog = isOnStairFlightAtS(srishtiS) && srishtiSpeed > 5.2 && !reducedMotion;
+      srishtiDownhillJog = isOnStairFlightAtS(srishtiS) && srishtiSpeed > 2.15 && !reducedMotion;
 
       const ptI = sampleStairTransformAtS(ishaanCurrentS);
       const ptS = sampleStairTransformAtS(srishtiS);

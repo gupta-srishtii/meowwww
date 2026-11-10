@@ -71,22 +71,22 @@ const NEELKANTH_COMPANION_INIT: Record<FriendCompanionId, { x: number; z: number
 const NEELKANTH_COMPANION_CONFIGS: readonly CompanionAgentConfig[] = [
   {
     id: 'srishti',
-    followAngleOffset: -0.42,
-    followDistance: 1.45,
+    followAngleOffset: -1.32,
+    followDistance: 1.08,
     idlePose: 'chat_nod',
     gesturePhase: 0.2,
   },
   {
     id: 'friend_black_tee',
-    followAngleOffset: 0.42,
-    followDistance: 1.55,
+    followAngleOffset: 0.68,
+    followDistance: 1.82,
     idlePose: 'look_around',
     gesturePhase: 1.9,
   },
   {
     id: 'friend_plaid',
-    followAngleOffset: 0.05,
-    followDistance: 1.95,
+    followAngleOffset: -0.4,
+    followDistance: 2.15,
     idlePose: 'chat_nod',
     gesturePhase: 3.3,
   },

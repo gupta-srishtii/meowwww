@@ -42,7 +42,7 @@ import {
   type DevFailureMode,
 } from '@/store/progressStore';
 
-export const FADE_DURATION_MS = 380;
+export const FADE_DURATION_MS = 260;
 
 export interface RequestTransitionOptions {
   simulateFailureMode?: DevFailureMode;
@@ -215,7 +215,9 @@ export function useSceneTransitionController(): SceneManagerController {
         if (token !== transitionTokenRef.current) return;
 
         const nextStore = useProgressStore.getState();
-        nextStore.setMountainRoadSegment('to_baalkuwari');
+        nextStore.setMountainRoadSegment(
+          nextSubStage === 'driving_to_stairs' ? 'to_baalkuwari_stairs' : 'to_baalkuwari'
+        );
         if (options?.resumeDistance !== undefined) {
           nextStore.setRoadResumeDistance(options.resumeDistance);
         }
@@ -411,6 +413,22 @@ export function SceneStage({
   const roadResumeDistance = useProgressStore((s) => s.roadResumeDistance);
   const downgradeQualityProfile = useProgressStore((s) => s.downgradeQualityProfile);
   const isPaused = useProgressStore(selectIsSimulationPaused);
+
+  // Warm upcoming scene textures/GLTF preloads silently during gameplay so switches feel instant.
+  useEffect(() => {
+    const nextMap: Partial<Record<SceneId, readonly SceneId[]>> = {
+      5: [6, 7],
+      6: [5, 7],
+      7: [8],
+      8: [9],
+      9: [10, 11],
+      10: [9, 11],
+      11: [12],
+    };
+    const targets = nextMap[committedSceneId];
+    if (!targets) return;
+    targets.forEach((id) => assetManager.preloadScene(id));
+  }, [committedSceneId]);
 
   // Outgoing committed scene remains mounted behind curtain while fading out, loading, or on load failure.
   const mountedSceneId: SceneId =

@@ -13,7 +13,7 @@ export type ChapterKey =
   | 'neelkanth_temple'
   | 'baal_kuwari_road'
   | 'baal_kuwari_maggi'
-  | 'baal_kuwari_footpath'
+  | 'baal_kuwari_stairs_ride'
   | 'baal_kuwari_stairs'
   | 'baal_kuwari_temple'
   | 'evening_return'
@@ -98,12 +98,13 @@ export const PHASE2_STORY_CHAPTERS: readonly StoryChapterItem[] = [
     polaroidIds: [],
   },
   {
-    key: 'baal_kuwari_footpath',
+    key: 'baal_kuwari_stairs_ride',
     rank: 7,
-    title: 'Forest Path to the Stairs',
-    subtitle: 'Pedon ke beech pagdandi se chalte hue seedhiyon ke gate tak pahunchna',
+    title: 'Mountain Ride to Staircase Gate',
+    subtitle: 'Maggi break ke baad dobara scooty chalaake ~400 seedhiyon ke gate tak',
     targetSceneId: 8,
-    targetBaalSubStage: 'forest_footpath',
+    targetSegment: 'to_baalkuwari_stairs',
+    targetBaalSubStage: 'driving_to_stairs',
     polaroidIds: [],
   },
   {
@@ -134,8 +135,8 @@ export const PHASE2_STORY_CHAPTERS: readonly StoryChapterItem[] = [
   {
     key: 'hotel_farewell',
     rank: 11,
-    title: 'Hotel Return & Gentle Farewell',
-    subtitle: 'Hotel courtyard mein safe wapsi — Srishti apne group se mili, aur agla safar Bhai Dooj',
+    title: 'Rishikesh Stay, Terrace & Farewell',
+    subtitle: 'Main road ke andar gali wali stay aur terrace view — Srishti apne group se mili',
     targetSceneId: 12,
     polaroidIds: ['scene12_hotel_farewell'],
   },
@@ -162,7 +163,10 @@ export function inferChapterRank(
     rank = 9;
   } else if (sceneId === 9 || polaroids.includes('scene09_stairs_landing')) {
     rank = 8;
-  } else if (sceneId === 8 && baalKuwariSubStage === 'forest_footpath') {
+  } else if (
+    (sceneId === 8 && baalKuwariSubStage === 'driving_to_stairs') ||
+    (sceneId === 5 && segment === 'to_baalkuwari_stairs')
+  ) {
     rank = 7;
   } else if (sceneId === 8 && baalKuwariSubStage === 'maggi_stop') {
     rank = 6;
@@ -195,12 +199,13 @@ export function getActiveChapterKey(
   if (sceneId === 10) return 'baal_kuwari_temple';
   if (sceneId === 9) return 'baal_kuwari_stairs';
   if (sceneId === 8) {
-    if (baalKuwariSubStage === 'forest_footpath') return 'baal_kuwari_footpath';
+    if (baalKuwariSubStage === 'driving_to_stairs') return 'baal_kuwari_stairs_ride';
     return baalKuwariSubStage === 'maggi_stop' ? 'baal_kuwari_maggi' : 'baal_kuwari_road';
   }
   if (sceneId === 7) return 'neelkanth_temple';
   if (sceneId === 6) return 'maggi_chai_stop';
   if (segment === 'to_neelkanth') return 'neelkanth_road';
+  if (segment === 'to_baalkuwari_stairs') return 'baal_kuwari_stairs_ride';
   if (segment === 'to_baalkuwari') return 'baal_kuwari_road';
   if (segment === 'to_hotel_return') return 'evening_return';
   if (subStage === 'viewpoint_walk') return 'scenic_viewpoint';

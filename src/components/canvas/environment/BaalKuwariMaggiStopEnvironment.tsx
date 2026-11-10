@@ -50,7 +50,7 @@ export const BAAL_KUWARI_MAGGI_OBSTACLES: readonly WalkObstacle[] = [
   { kind: 'circle', x: BAAL_KUWARI_MAGGI_SEAT_SLOTS.ishaan.x, z: BAAL_KUWARI_MAGGI_SEAT_SLOTS.ishaan.z, radius: 0.28 },
   { kind: 'circle', x: BAAL_KUWARI_MAGGI_SEAT_SLOTS.friend_plaid.x, z: BAAL_KUWARI_MAGGI_SEAT_SLOTS.friend_plaid.z, radius: 0.28 },
   { kind: 'circle', x: BAAL_KUWARI_MAGGI_SEAT_SLOTS.friend_black_tee.x, z: BAAL_KUWARI_MAGGI_SEAT_SLOTS.friend_black_tee.z, radius: 0.28 },
-  // Natural flanking trailhead boulders guarding north forest footpath opening (`x in [-1.1, 1.1]`)
+  // Natural flanking pine-slope boulders at rear of clearing
   { kind: 'circle', x: -1.85, z: -4.05, radius: 0.65 },
   { kind: 'circle', x: 1.95, z: -4.0, radius: 0.68 },
   // Rustic timber resting log on east bank
@@ -70,19 +70,19 @@ export const BAAL_KUWARI_MAGGI_HOTSPOTS: readonly WalkHotspot[] = [
     actionType: 'interact',
   },
   {
-    id: 'begin_footpath',
-    label: 'Walk Forest Path Toward Baal Kuwari',
-    x: 0.0,
-    z: -3.65,
+    id: 'ride_to_stairs',
+    label: 'Ride Scooters Toward Baal Kuwari Stairs',
+    x: 0.25,
+    z: 2.25,
     radius: 1.85,
     actionType: 'interact',
   },
   {
     id: 'back_to_road',
     label: 'Replay Off-Road Mountain Ride',
-    x: 0.2,
-    z: 2.2,
-    radius: 1.45,
+    x: 0.25,
+    z: 2.25,
+    radius: 1.55,
     actionType: 'interact',
   },
 ];
@@ -401,28 +401,16 @@ export function BaalKuwariMaggiStopEnvironment({
         </mesh>
       </group>
 
-      {/* Forest Footpath Entry & Timber Signpost (Opening North Around Pines — No Staircase!) */}
+      {/* Hillside pine-ridge boulders & rustic roadside wooden directional marker */}
       <group position={[0, 0, -4.2]}>
         <mesh position={[-1.45, 0.88, 0.15]} castShadow={shadowsEnabled}>
           <cylinderGeometry args={[0.055, 0.07, 1.85, 7]} />
           <meshStandardMaterial color="#5c4033" roughness={0.92} />
         </mesh>
         <mesh position={[-1.25, 1.52, 0.18]} rotation={[0, 0.2, 0.03]} castShadow={shadowsEnabled}>
-          <boxGeometry args={[1.1, 0.24, 0.06]} />
+          <boxGeometry args={[1.15, 0.24, 0.06]} />
           <meshStandardMaterial color="#b45309" roughness={0.82} />
         </mesh>
-        {/* Flat stepping stones marking beginning of woodland footpath */}
-        {[
-          [-0.25, 0.2],
-          [0.2, -0.35],
-          [-0.1, -0.95],
-          [0.35, -1.55],
-        ].map(([sx, sz], idx) => (
-          <mesh key={`step-stone-${idx}`} position={[sx, 0.03, sz]} rotation={[0, idx * 0.6, 0]} receiveShadow={shadowsEnabled}>
-            <cylinderGeometry args={[0.32, 0.36, 0.07, 8]} />
-            <meshStandardMaterial color="#83796a" roughness={0.95} />
-          </mesh>
-        ))}
       </group>
 
       {/* Authentic Mountain Maggi & Chai Tapri Stall (`x = -3.65, z = -2.45`) */}
