@@ -13,31 +13,43 @@ export interface HimalayanRidgeSpec {
 export interface DistantHimalayanRidgesProps {
   ridges?: readonly HimalayanRidgeSpec[];
   centerZ?: number;
+  baseY?: number;
 }
 
-const _foothillGreen = new THREE.Color('#395645');
-const _midSlopeSage = new THREE.Color('#4d6b5e');
-const _ridgeSlateBlue = new THREE.Color('#64839d');
-const _highMistBlue = new THREE.Color('#84a2ba');
+const _foothillGreen = new THREE.Color('#2f4f38');
+const _midSlopeSage = new THREE.Color('#446652');
+const _ridgeSlateBlue = new THREE.Color('#63839e');
+const _highMistBlue = new THREE.Color('#9db7cc');
+
+function ridgedNoise(x: number, z: number): number {
+  const a = 1 - Math.abs(Math.sin(x * 0.014 + z * 0.01));
+  const b = 1 - Math.abs(Math.cos(x * 0.025 - z * 0.018 + 0.9));
+  const c = 1 - Math.abs(Math.sin(x * 0.052 + z * 0.044 + 1.7));
+  return a * 0.56 + b * 0.3 + c * 0.14;
+}
 
 /**
- * Generates a continuous multi-band Himalayan Shivalik massif ring with smooth elevation ridges
- * replacing isolated stretched sphere blocks, seamless against terrain skirts and distant horizon fog.
+ * Generates a continuous sculpted Shivalik mountain massif with sharp ridgelines,
+ * valley saddles, and hazy atmospheric elevation color grading.
  */
 function buildContinuousMountainRangeGeometry(
   ridges?: readonly HimalayanRidgeSpec[],
-  centerZ = -190
+  centerZ = -190,
+  baseY = -20.5
 ): THREE.BufferGeometry {
-  const segX = 96;
-  const segZ = 72;
-  const width = 920;
-  const depth = 920;
+  const segX = 112;
+  const segZ = 92;
+  const width = 1080;
+  const depth = 1080;
   const geom = new THREE.PlaneGeometry(width, depth, segX, segZ);
   geom.rotateX(-Math.PI / 2);
 
   const pos = geom.attributes.position as THREE.BufferAttribute;
   const colors = new Float32Array(pos.count * 3);
   const tmpColor = new THREE.Color();
+  const clearCenterZ = centerZ === -190 ? -180 : 0;
+  const clearInner = centerZ === -190 ? 72 : 48;
+  const clearOuter = centerZ === -190 ? 210 : 145;
 
   for (let i = 0; i < pos.count; i += 1) {
     const lx = pos.getX(i);
@@ -45,49 +57,57 @@ function buildContinuousMountainRangeGeometry(
     const wx = lx;
     const wz = lz + centerZ;
 
-    // Normalized radial distance from foreground play corridor
-    const distFromCenter = Math.hypot(lx * 0.95, (wz + 190) * 0.72);
-    const innerClear = THREE.MathUtils.smoothstep(distFromCenter, 55, 195);
-    const farRise = THREE.MathUtils.smoothstep(distFromCenter, 110, 420);
+    // Normalized radial distance outside the road/overlook corridor
+    const distFromCenter = Math.hypot(lx * 0.92, (wz - clearCenterZ) * 0.72);
+    const innerClear = THREE.MathUtils.smoothstep(distFromCenter, clearInner, clearOuter);
+    const farRise = THREE.MathUtils.smoothstep(
+      distFromCenter,
+      clearInner + 45,
+      clearOuter + 210
+    );
 
-    // Multi-frequency continuous Shivalik ridgelines + valley saddles
-    const ridgeA = Math.sin(wx * 0.015 + wz * 0.011) * 0.5 + 0.5;
-    const ridgeB = Math.cos(wx * 0.024 - wz * 0.019 + 1.1) * 0.5 + 0.5;
-    const ridgeC = Math.sin(wx * 0.045 + wz * 0.038) * 0.5 + 0.5;
+    const crestShape = ridgedNoise(wx, wz);
+    const broadSwell = Math.sin(wx * 0.0085 - wz * 0.006) * 0.5 + 0.5;
+    const secondaryRange = ridgedNoise(wx * 0.65 + 42, wz * 0.65 - 19);
     const directionalBias =
-      Math.max(0, (-wz - 120) / 360) * 32.0 + Math.abs(wx) * 0.065;
+      Math.max(0, (-wz - 95) / 340) * 44.0 + Math.abs(wx) * 0.08;
 
     let ridgeBoost = 0;
     if (ridges && ridges.length > 0) {
       for (let r = 0; r < ridges.length; r += 1) {
         const spec = ridges[r];
-        const rx = Math.max(24, spec.scale[0]);
-        const rz = Math.max(24, spec.scale[2]);
+        const rx = Math.max(26, spec.scale[0]);
+        const rz = Math.max(26, spec.scale[2]);
         const d2 = ((wx - spec.position[0]) / rx) ** 2 + ((wz - spec.position[2]) / rz) ** 2;
-        if (d2 < 3.2) {
-          ridgeBoost = Math.max(ridgeBoost, Math.exp(-d2 * 1.45) * spec.scale[1] * 1.05);
+        if (d2 < 3.4) {
+          const spurRidge = 0.78 + ridgedNoise(wx * 1.4, wz * 1.4) * 0.45;
+          ridgeBoost = Math.max(
+            ridgeBoost,
+            Math.exp(-d2 * 1.25) * spec.scale[1] * spurRidge * 1.25
+          );
         }
       }
     }
 
-    const baseElevation = -20.5;
     const h =
-      baseElevation +
-      innerClear * (16.0 + ridgeA * 24.0 + ridgeB * 14.0) +
-      farRise * (28.0 + ridgeC * 18.0 + directionalBias) +
-      ridgeBoost * innerClear;
+      baseY +
+      innerClear * (14.0 + crestShape * 36.0 + broadSwell * 16.0) +
+      farRise * (24.0 + secondaryRange * 34.0 + directionalBias) +
+      ridgeBoost * smoothStepLocal(distFromCenter, clearInner * 0.6, clearOuter * 0.65);
 
     pos.setXYZ(i, wx, h, wz);
 
-    // Atmospheric elevation & depth tinting (forest foothill green -> hazy slate blue crests)
-    const heightNorm = THREE.MathUtils.clamp((h + 18) / 76, 0, 1);
-    if (heightNorm < 0.35) {
-      tmpColor.copy(_foothillGreen).lerp(_midSlopeSage, heightNorm / 0.35);
-    } else if (heightNorm < 0.72) {
-      tmpColor.copy(_midSlopeSage).lerp(_ridgeSlateBlue, (heightNorm - 0.35) / 0.37);
+    // Distance & elevation-based hazy Shivalik aerial perspective
+    const heightNorm = THREE.MathUtils.clamp((h + 18) / 102, 0, 1);
+    const valleyDepthShade = Math.sin(wx * 0.03 + wz * 0.025) * 0.04;
+    if (heightNorm < 0.34) {
+      tmpColor.copy(_foothillGreen).lerp(_midSlopeSage, heightNorm / 0.34);
+    } else if (heightNorm < 0.7) {
+      tmpColor.copy(_midSlopeSage).lerp(_ridgeSlateBlue, (heightNorm - 0.34) / 0.36);
     } else {
-      tmpColor.copy(_ridgeSlateBlue).lerp(_highMistBlue, (heightNorm - 0.72) / 0.28);
+      tmpColor.copy(_ridgeSlateBlue).lerp(_highMistBlue, (heightNorm - 0.7) / 0.3);
     }
+    tmpColor.offsetHSL(0, 0, valleyDepthShade);
     colors[i * 3] = tmpColor.r;
     colors[i * 3 + 1] = tmpColor.g;
     colors[i * 3 + 2] = tmpColor.b;
@@ -98,16 +118,22 @@ function buildContinuousMountainRangeGeometry(
   return geom;
 }
 
+function smoothStepLocal(val: number, edge0: number, edge1: number): number {
+  const t = THREE.MathUtils.clamp((val - edge0) / Math.max(1e-4, edge1 - edge0), 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
 /**
  * Continuous multi-layered Himalayan foothill & distant peak mesh replacing floating spheres.
  */
 export function DistantHimalayanRidges({
   ridges,
   centerZ = -190,
+  baseY = -20.5,
 }: DistantHimalayanRidgesProps) {
   const geometry = useMemo(
-    () => buildContinuousMountainRangeGeometry(ridges, centerZ),
-    [ridges, centerZ]
+    () => buildContinuousMountainRangeGeometry(ridges, centerZ, baseY),
+    [ridges, centerZ, baseY]
   );
 
   useEffect(() => {

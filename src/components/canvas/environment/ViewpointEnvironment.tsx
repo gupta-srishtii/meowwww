@@ -1,13 +1,16 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
   buildConnectedHillGeometry,
   ConnectedHillTerrain,
 } from '@/components/canvas/environment/ConnectedHillTerrain';
-import { createTerrainMeshSampler } from '@/lib/terrainMeshSampler';
+import {
+  createTerrainMeshSampler,
+  sampleTerrainFootprint,
+} from '@/lib/terrainMeshSampler';
 import type { WalkBounds, WalkHotspot, WalkObstacle } from '@/hooks/useWalkController';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
@@ -39,7 +42,7 @@ export const VIEWPOINT_OBSTACLES: readonly WalkObstacle[] = [
 export const VIEWPOINT_HOTSPOTS: readonly WalkHotspot[] = [
   {
     id: 'viewpoint_solo',
-    label: 'Take Solo Overlook Photo',
+    label: 'Take Shree & Ishaan Photo',
     x: -2.55,
     z: -3.6,
     radius: 1.65,
@@ -73,12 +76,12 @@ export interface ViewpointEnvironmentProps {
 const MAX_PINE_COUNT = 52;
 
 const VIEWPOINT_RIDGES: readonly HimalayanRidgeSpec[] = [
-  { position: [-48, -10, -56], scale: [38, 22, 32], rotationY: 0.25, color: '#6b8ba4' },
-  { position: [6, -9, -68], scale: [46, 26, 36], rotationY: -0.15, color: '#587892' },
-  { position: [52, -10, -54], scale: [40, 22, 32], rotationY: -0.3, color: '#63829b' },
-  { position: [-72, -12, -32], scale: [34, 18, 28], rotationY: 0.4, color: '#56748d' },
-  { position: [-34, -4, 24], scale: [26, 12, 24], rotationY: 0.12, color: '#3b6944' },
-  { position: [32, -3, 26], scale: [28, 13, 26], rotationY: -0.18, color: '#345f3d' },
+  { position: [-68, -16, -96], scale: [46, 30, 38], rotationY: 0.25, color: '#6b8ba4' },
+  { position: [8, -15, -112], scale: [56, 34, 42], rotationY: -0.15, color: '#587892' },
+  { position: [74, -16, -94], scale: [48, 30, 38], rotationY: -0.3, color: '#63829b' },
+  { position: [-96, -18, -58], scale: [42, 26, 34], rotationY: 0.4, color: '#56748d' },
+  { position: [-42, -5, 34], scale: [32, 16, 28], rotationY: 0.12, color: '#3b6944' },
+  { position: [44, -4, 36], scale: [34, 17, 30], rotationY: -0.18, color: '#345f3d' },
 ];
 
 const PRAYER_FLAG_COLORS = ['#ef4444', '#f59e0b', '#f8fafc', '#22c55e', '#3b82f6'];
@@ -90,33 +93,75 @@ function smoothStep01(t: number): number {
 
 /**
  * Contoured Rishikesh overlook cliffside terrain: rises behind the road (z > 8),
- * stays tucked beneath the highway & viewpoint retaining terrace, and plunges
- * organically into the river gorge toward the Himalayan ridges (-3.5m floor).
+ * stays tucked beneath the highway & viewpoint retaining terrace, plunges into a
+ * sandy-shingle river canyon (`z ~ -46`), and climbs opposite forested foothills.
  */
 function sampleViewpointTerrainY(x: number, z: number): number {
   const inTerraceFootprint = Math.abs(x) <= 14.3 && z >= -8.8 && z <= 7.8;
   const onHighwayCorridor = z >= 1.9 && z <= 7.9;
 
   const noise =
-    Math.sin(x * 0.11 + z * 0.08) * 0.65 +
-    Math.cos(x * 0.07 - z * 0.13) * 0.48 +
-    Math.sin(x * 0.24 + z * 0.2) * 0.18;
+    Math.sin(x * 0.095 + z * 0.075) * 0.85 +
+    Math.cos(x * 0.058 - z * 0.11) * 0.62 +
+    (1 - Math.abs(Math.sin(x * 0.032 - z * 0.025)) - 0.5) * 2.4;
 
   // Valley drop forward of cliff (`z < -5.8`) vs mountain slope rising uphill behind road (`z > 7.8`)
-  const valleyDropT = smoothStep01((-6.0 - z) / 11.0);
+  const valleyDropT = smoothStep01((-5.8 - z) / 26.0);
   const rearClimbT = smoothStep01((z - 8.2) / 14.0);
-  const flankSpurRise = smoothStep01((Math.abs(x) - 15.5) / 10.0) * smoothStep01((z + 8) / 14.0) * 1.8;
+  const flankSpurRise =
+    smoothStep01((Math.abs(x) - 15.5) / 11.0) * smoothStep01((z + 10) / 16.0) * 2.1;
 
-  let rawY = -0.32 - valleyDropT * 3.15 + rearClimbT * (2.2 + Math.max(0, z - 8.2) * 0.22) + flankSpurRise + noise * smoothStep01(Math.abs(z - 4.5) / 7.5) * 0.65;
+  let rawY =
+    -0.32 -
+    Math.pow(valleyDropT, 0.82) * 11.8 +
+    rearClimbT * (2.2 + Math.max(0, z - 8.2) * 0.25) +
+    flankSpurRise +
+    noise * smoothStep01(Math.abs(z - 4.5) / 7.5) * 0.72;
 
-  // Keep broad riverbed trough cleanly sunken around z = -26 so gorge river never clips
-  const riverBandT = 1 - smoothStep01(Math.abs(z + 26.5) / 9.0);
-  rawY = THREE.MathUtils.lerp(rawY, -3.65, riverBandT * 0.88);
+  // Gently sloped canyon riverbed along z ~ -44 so straight water plane rests cleanly inside sandy banks
+  const riverZ = -44;
+  const distToRiver = z - riverZ;
+  const riverBandT = 1 - smoothStep01(Math.abs(distToRiver) / 11.5);
+  rawY = THREE.MathUtils.lerp(rawY, -13.4, riverBandT * 0.92);
+
+  // Opposite Shivalik foothills rising beyond river (`z < riverZ - 9`)
+  if (distToRiver < -9) {
+    const oppClimb = -distToRiver - 9;
+    const oppY = -12.6 + Math.pow(oppClimb, 0.86) * 0.48 + noise * 0.9;
+    rawY = THREE.MathUtils.lerp(rawY, oppY, smoothStep01(oppClimb / 9.0));
+  }
 
   if (inTerraceFootprint || onHighwayCorridor) {
     return Math.min(rawY, -0.26);
   }
   return rawY;
+}
+
+const _vpSand = new THREE.Color('#978c78');
+const _vpRock = new THREE.Color('#646d63');
+const _vpGrass = new THREE.Color('#476b3b');
+const _vpDeep = new THREE.Color('#345632');
+
+function sampleViewpointTerrainColor(
+  worldX: number,
+  worldZ: number,
+  height: number,
+  targetColor: THREE.Color
+): void {
+  const riverDist = Math.abs(worldZ - -44);
+  if (riverDist < 12.5) {
+    targetColor.copy(_vpSand).lerp(_vpRock, Math.min(1, riverDist / 12.5) * 0.85);
+    return;
+  }
+  if (height < -7.5) {
+    const t = Math.min(1, (-height - 7.5) / 5.5);
+    targetColor.copy(_vpGrass).lerp(_vpRock, t * 0.45);
+  } else if (height > 1.2) {
+    targetColor.copy(_vpGrass).lerp(_vpDeep, Math.min(1, (height - 1.2) / 6.0));
+  } else {
+    targetColor.copy(_vpRock).lerp(_vpGrass, smoothStep01((Math.abs(worldX) - 12) / 10));
+  }
+  targetColor.offsetHSL(0, 0, Math.sin(worldX * 0.14 + worldZ * 0.12) * 0.025);
 }
 
 const VIEWPOINT_SLOPE_BOULDERS: readonly [number, number, number][] = [
@@ -151,13 +196,14 @@ export function ViewpointEnvironment({
   const terrainGeometry = useMemo(
     () =>
       buildConnectedHillGeometry({
-        width: 165,
-        depth: 120,
+        width: 240,
+        depth: 185,
         centerX: 0,
-        centerZ: -14,
-        segX: 72,
-        segZ: 56,
+        centerZ: -34,
+        segX: 92,
+        segZ: 74,
         heightFn: sampleViewpointTerrainY,
+        colorFn: sampleViewpointTerrainColor,
       }),
     []
   );
@@ -169,7 +215,7 @@ export function ViewpointEnvironment({
   }, [terrainGeometry]);
 
   const terrainSampler = useMemo(
-    () => createTerrainMeshSampler([terrainGeometry], 3.5),
+    () => createTerrainMeshSampler([terrainGeometry], 4.0),
     [terrainGeometry]
   );
 
@@ -182,21 +228,21 @@ export function ViewpointEnvironment({
       let z: number;
       if (band === 0) {
         // Upper hillside woodland behind highway
-        x = sideSign * (5 + ((i * 6.4) % 44));
-        z = 10.2 + ((i * 4.7) % 24);
+        x = sideSign * (5 + ((i * 6.4) % 48));
+        z = 10.4 + ((i * 4.7) % 28);
       } else if (band === 1) {
         // Flanking cliffside spurs outside the overlook terrace
-        x = sideSign * (15.6 + (i % 7) * 4.8);
-        z = -12 + ((i * 5.2) % 26);
+        x = sideSign * (15.8 + (i % 7) * 5.2);
+        z = -14 + ((i * 5.2) % 28);
       } else {
-        // Gorge banks above river channel (`z ~ -16..-10.2` or beyond `-36`)
-        x = sideSign * (8 + ((i * 7.1) % 38));
-        z = i % 4 === 0 ? -36 - (i % 8) * 1.4 : -10.4 - (i % 5) * 1.3;
+        // Gorge flanks & opposite bank foothills (strictly outside river channel z ~ -44)
+        x = sideSign * (8 + ((i * 7.1) % 48));
+        z = i % 3 === 0 ? -64 - (i % 7) * 2.2 : -11.5 - (i % 6) * 2.1;
       }
       const scale = 0.78 + ((i * 19) % 10) * 0.055;
-      // Ground directly against actual rendered terrain mesh triangles with slight natural root seat
-      const surfaceY = terrainSampler.trySampleY(x, z) ?? sampleViewpointTerrainY(x, z);
-      const y = surfaceY - 0.12 * scale;
+      const footprint = sampleTerrainFootprint(terrainSampler, x, z, 0.42 * scale);
+      const minSurfaceY = footprint ? footprint.minY : sampleViewpointTerrainY(x, z);
+      const y = minSurfaceY - 0.14 * scale;
       list.push({
         x,
         y,
@@ -253,11 +299,23 @@ export function ViewpointEnvironment({
     }
   });
 
+  const { scene } = useThree();
+  useEffect(() => {
+    const prevBg = scene.background;
+    const prevFog = scene.fog;
+    scene.background = new THREE.Color('#b8d8ee');
+    scene.fog = new THREE.Fog('#cfe4f5', 48, 245);
+    return () => {
+      scene.background = prevBg;
+      scene.fog = prevFog;
+    };
+  }, [scene]);
+
   return (
-    <group>
-      {/* Crisp morning-afternoon Rishikesh overlook sky & valley depth */}
+    <>
       <color attach="background" args={['#b8d8ee']} />
-      <fog attach="fog" args={['#cfe4f5', 34, 165]} />
+      <fog attach="fog" args={['#cfe4f5', 48, 245]} />
+      <group>
 
       <ambientLight intensity={0.72} color="#fff7ed" />
       <hemisphereLight args={['#e0f2fe', '#3a5743', 0.92]} />
@@ -323,18 +381,21 @@ export function ViewpointEnvironment({
 
       {/* Contoured surrounding hillside slopes plunging into the Rishikesh valley gorge */}
       <ConnectedHillTerrain
-        width={165}
-        depth={120}
+        width={240}
+        depth={185}
         centerX={0}
-        centerZ={-14}
-        segX={72}
-        segZ={56}
+        centerZ={-34}
+        segX={92}
+        segZ={74}
         heightFn={sampleViewpointTerrainY}
+        colorFn={sampleViewpointTerrainColor}
         geometry={terrainGeometry}
         receiveShadow={shadowsEnabled}
       />
       {VIEWPOINT_SLOPE_BOULDERS.map(([bx, bz, bs], idx) => {
-        const by = (terrainSampler.trySampleY(bx, bz) ?? sampleViewpointTerrainY(bx, bz)) - bs * 0.16;
+        const footprint = sampleTerrainFootprint(terrainSampler, bx, bz, bs * 0.7);
+        const minSurfaceY = footprint ? footprint.minY : sampleViewpointTerrainY(bx, bz);
+        const by = minSurfaceY - bs * 0.06;
         return (
           <mesh
             key={`vp-rock-${idx}`}
@@ -350,14 +411,14 @@ export function ViewpointEnvironment({
         );
       })}
 
-      {/* Faint distant valley river winding far below through the gorge */}
-      <mesh rotation={[-Math.PI / 2, 0, 0.08]} position={[-6, -3.22, -26.5]}>
-        <planeGeometry args={[150, 5.2]} />
-        <meshStandardMaterial color="#628aa6" roughness={0.45} metalness={0.1} />
+      {/* Valley river winding deep in the rocky gorge below the overlook */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-4, -12.35, -44]}>
+        <planeGeometry args={[230, 12.5]} />
+        <meshStandardMaterial color="#4e85a1" roughness={0.28} metalness={0.14} />
       </mesh>
 
       {/* Smooth layered Himalayan mountain ridges */}
-      <DistantHimalayanRidges ridges={VIEWPOINT_RIDGES} />
+      <DistantHimalayanRidges ridges={VIEWPOINT_RIDGES} centerZ={-70} baseY={-22} />
 
       {/* Rocky retaining kerb along cliff edge */}
       {Array.from({ length: 13 }, (_, idx) => {
@@ -453,7 +514,7 @@ export function ViewpointEnvironment({
           ref={(el) => {
             shrubRefs.current[idx] = el;
           }}
-          position={[sx, 0, sz]}
+          position={[sx, -0.02, sz]}
         >
           <mesh position={[0, 0.24, 0]} castShadow={shadowsEnabled}>
             <dodecahedronGeometry args={[0.36, 0]} />
@@ -505,7 +566,8 @@ export function ViewpointEnvironment({
         paused={paused}
         reducedMotion={reducedMotion}
       />
-    </group>
+      </group>
+    </>
   );
 }
 

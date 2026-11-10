@@ -15,16 +15,16 @@ export interface PolaroidMemorySpec {
 export const POLAROID_MEMORY_SPECS: Record<string, PolaroidMemorySpec> = {
   scene05_viewpoint_solo: {
     id: 'scene05_viewpoint_solo',
-    title: 'Mountain Gorge Viewpoint',
-    caption: 'First cliffside stop overlooking the winding Rishikesh valley',
-    locationTag: 'Rishikesh Highway',
+    title: 'Shree & Ishaan — Mountain View',
+    caption: 'Standing together by the cliff rail as Ishaan points out the Rishikesh peaks',
+    locationTag: 'Rishikesh Overlook',
     gradientClass: 'from-amber-200 via-sky-200 to-emerald-100',
-    matchedFilename: 'view point.jpg',
+    matchedFilename: 'me and ishaan explaing mountains.jpg',
   },
   scene05_viewpoint_group: {
     id: 'scene05_viewpoint_group',
     title: 'All Four Together',
-    caption: 'Ishaan, Srishti, Manish & Yash — our first mountain group frame',
+    caption: 'Ishaan, Shree, Manish & Yash — our first mountain group frame',
     locationTag: 'Cliff Overlook',
     gradientClass: 'from-sky-200 via-amber-100 to-teal-200',
     matchedFilename: 'all four togethere.jpg',
@@ -32,18 +32,10 @@ export const POLAROID_MEMORY_SPECS: Record<string, PolaroidMemorySpec> = {
   scene06_dhaba: {
     id: 'scene06_dhaba',
     title: 'Maggi & Chai Tapri',
-    caption: 'Hot Maggi & kulhad chai along the road after your classic late morning',
+    caption: 'After sleeping through morning like Kumbhkaran, hot Maggi & kulhad chai tasted even better',
     locationTag: 'Roadside Stall',
     gradientClass: 'from-amber-200 via-orange-100 to-teal-100',
     matchedFilename: 'maggi and tea.jpg',
-  },
-  scene07_neelkanth: {
-    id: 'scene07_neelkanth',
-    title: 'Neelkanth Mahadev Temple',
-    caption: 'Temple bells, diya warmth, and darshan together in the hills',
-    locationTag: 'Neelkanth Courtyard',
-    gradientClass: 'from-orange-200 via-amber-100 to-sky-100',
-    matchedFilename: null, // Only `food in neelkanth.jpg` exists; courtyard file left unassigned.
   },
   scene09_stairs_landing: {
     id: 'scene09_stairs_landing',
@@ -60,14 +52,6 @@ export const POLAROID_MEMORY_SPECS: Record<string, PolaroidMemorySpec> = {
     locationTag: 'Baal Kuwari Shrine',
     gradientClass: 'from-sky-200 via-amber-100 to-emerald-200',
     matchedFilename: 'baalkumari.jpg',
-  },
-  scene12_hotel_farewell: {
-    id: 'scene12_hotel_farewell',
-    title: 'Safe Back at the Hotel',
-    caption: 'Back before dark so I could catch my bus cleanly — until Bhai Dooj!',
-    locationTag: 'Rishikesh Hotel',
-    gradientClass: 'from-amber-200 via-rose-100 to-indigo-200',
-    matchedFilename: null, // No hotel/farewell photo filename confirmed in local folder.
   },
 };
 

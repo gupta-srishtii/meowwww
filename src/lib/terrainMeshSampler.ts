@@ -148,3 +148,43 @@ export function createTerrainMeshSampler(
     },
   };
 }
+
+export interface TerrainFootprintSample {
+  centerY: number;
+  minY: number;
+  maxY: number;
+}
+
+/**
+ * Samples center plus 4 perimeter points at `radius` so trees, bushes, and boulders placed on
+ * steep mountain slopes sit anchored at their lowest downhill edge without hovering.
+ */
+export function sampleTerrainFootprint(
+  sampler: TerrainMeshSampler,
+  worldX: number,
+  worldZ: number,
+  radius: number
+): TerrainFootprintSample | null {
+  const centerY = sampler.trySampleY(worldX, worldZ);
+  if (centerY === null) return null;
+
+  if (radius <= 0.02) {
+    return { centerY, minY: centerY, maxY: centerY };
+  }
+
+  const n = sampler.trySampleY(worldX, worldZ - radius);
+  const s = sampler.trySampleY(worldX, worldZ + radius);
+  const e = sampler.trySampleY(worldX + radius, worldZ);
+  const w = sampler.trySampleY(worldX - radius, worldZ);
+
+  if (n === null || s === null || e === null || w === null) {
+    return null;
+  }
+
+  return {
+    centerY,
+    minY: Math.min(centerY, n, s, e, w),
+    maxY: Math.max(centerY, n, s, e, w),
+  };
+}
+

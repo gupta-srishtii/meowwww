@@ -58,7 +58,7 @@ export function ViewpointHUD({
               capturedSolo ? 'bg-emerald-950/80 text-emerald-300' : 'bg-slate-800/80 text-slate-300'
             }`}
           >
-            {capturedSolo ? '✓ Solo Photo' : '○ Solo Spot'}
+            {capturedSolo ? '✓ Shree & Ishaan' : '○ Shree & Ishaan Spot'}
           </span>
           <span
             className={`rounded-md px-2 py-0.5 font-medium ${
@@ -67,7 +67,7 @@ export function ViewpointHUD({
                 : 'bg-slate-800/80 text-slate-300'
             }`}
           >
-            {capturedGroup ? '✓ Group Photo' : '○ 4-Friend Spot'}
+            {capturedGroup ? '✓ All Four' : '○ All Four Spot'}
           </span>
           {readyToContinue && (
             <button
@@ -96,10 +96,14 @@ export function ViewpointHUD({
           }
           caption={
             polaroidToastKind === 'solo'
-              ? 'Valley Gorge · Mountain Viewpoint'
+              ? 'Pointing Out Mountains · Cliff Overlook'
               : 'All Four Friends · Overlook Rail'
           }
-          title={polaroidToastKind === 'solo' ? 'Mountain Overlook' : 'Hum Chaar Saath Mein'}
+          title={
+            polaroidToastKind === 'solo'
+              ? 'Shree & Ishaan — Mountain View'
+              : 'All Four Together'
+          }
           gradientClass="from-sky-200 via-emerald-100 to-amber-100"
           onDismiss={onDismissPolaroidToast}
         />

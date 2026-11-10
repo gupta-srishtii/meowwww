@@ -3,7 +3,6 @@
 import {
   ContextualActionPill,
   MinimalTopBar,
-  PolaroidToastCard,
 } from '@/components/ui/MinimalHudChrome';
 import type { WalkHotspot } from '@/hooks/useWalkController';
 
@@ -16,13 +15,10 @@ export interface NeelkanthHUDProps {
   rangBell: boolean;
   litDiya: boolean;
   hadDarshan: boolean;
-  capturedPolaroid: boolean;
   polaroidCount: number;
   nearbyHotspot: WalkHotspot | null;
   hasActiveNarration: boolean;
   activeDarshanPan: boolean;
-  polaroidToastVisible: boolean;
-  onDismissPolaroidToast: () => void;
   onTriggerHotspot: () => void;
 }
 
@@ -39,8 +35,6 @@ export function NeelkanthHUD({
   nearbyHotspot,
   hasActiveNarration,
   activeDarshanPan,
-  polaroidToastVisible,
-  onDismissPolaroidToast,
   onTriggerHotspot,
 }: NeelkanthHUDProps) {
   return (
@@ -95,16 +89,6 @@ export function NeelkanthHUD({
             </p>
           </div>
         </div>
-      )}
-
-      {polaroidToastVisible && (
-        <PolaroidToastCard
-          polaroidId="scene07_neelkanth"
-          caption="Neelkanth Temple · Darshan ke Baad"
-          title="Neelkanth Mahadev"
-          gradientClass="from-amber-100 via-orange-100 to-sky-200"
-          onDismiss={onDismissPolaroidToast}
-        />
       )}
 
       <ContextualActionPill

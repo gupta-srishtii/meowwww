@@ -34,6 +34,7 @@ import { useDrivingInput } from '@/hooks/useDrivingInput';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useWalkInput, type WalkHotspot } from '@/hooks/useWalkController';
 import { ambientAudio } from '@/lib/ambientAudio';
+import { POLAROID_MEMORY_SPECS } from '@/lib/privateMemoryLoader';
 import {
   LEAD_START_DISTANCE,
   VIEWPOINT_RESUME_DISTANCE,
@@ -172,9 +173,7 @@ export default function Experience() {
   const [litDiya, setLitDiya] = useState(false);
   const [hadDarshan, setHadDarshan] = useState(false);
   const [activeDarshanPan, setActiveDarshanPan] = useState(false);
-  const [neelkanthToastVisible, setNeelkanthToastVisible] = useState(false);
   const neelkanthDarshanTimerRef = useRef<number | null>(null);
-  const neelkanthToastTimerRef = useRef<number | null>(null);
 
   // Scene 8/9/10 (Baal Kuwari Route, Pre-Climb Maggi, ~400 Stairs & Temple) UI state
   const [ateTrailheadMaggi, setAteTrailheadMaggi] = useState(false);
@@ -202,9 +201,7 @@ export default function Experience() {
   // Scene 12 (Rishikesh Hotel Return & Reunion) state
   const [hotelFarewellDone, setHotelFarewellDone] = useState(false);
   const [hotelSummaryOpen, setHotelSummaryOpen] = useState(false);
-  const [hotelToastVisible, setHotelToastVisible] = useState(false);
   const hotelSummaryTimerRef = useRef<number | null>(null);
-  const hotelToastTimerRef = useRef<number | null>(null);
 
   const [chaptersOpen, setChaptersOpen] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
@@ -282,12 +279,11 @@ export default function Experience() {
     isBaalKuwariMaggiActive ||
     isBaalKuwariTempleActive ||
     isHotelReturnWalkActive;
+  const validPolaroidCount = collectedPolaroids.filter((id) => id in POLAROID_MEMORY_SPECS).length;
   const capturedDhabaPolaroid = collectedPolaroids.includes('scene06_dhaba');
-  const capturedNeelkanthPolaroid = collectedPolaroids.includes('scene07_neelkanth');
   const capturedViewpointSolo = collectedPolaroids.includes('scene05_viewpoint_solo');
   const capturedViewpointGroup = collectedPolaroids.includes('scene05_viewpoint_group');
   const capturedBaalKuwariPolaroid = collectedPolaroids.includes('scene10_baalkuwari');
-  const capturedHotelPolaroid = collectedPolaroids.includes('scene12_hotel_farewell');
 
   // Preserve the initial GL antialias creation flag to avoid remounting the WebGL context.
   const [initialAntialias] = useState<boolean>(
@@ -365,7 +361,7 @@ export default function Experience() {
       setViewpointPhotoMoment(kind);
       setViewpointPhotoLabel(
         kind === 'solo'
-          ? 'Neeche ghaati ka nazara dekh kar ek second rukna...'
+          ? 'Shree & Ishaan — rail ke paas ghaati aur pahadiyan dekhte hue!'
           : 'Sab log rail ke paas saath mein khade hokar photo ke liye!'
       );
 
@@ -411,7 +407,7 @@ export default function Experience() {
     setSippedChai(true);
     showTimedCaption(
       'Maggi & Chai Stop',
-      'Late uthne ("Kumbhkaran"!) ke baad bhi garma-garam Maggi aur chai saath mein mil gayi — ab aage Neelkanth chalein?',
+      'Late start ke baad bhi garma-garam Maggi aur chai saath mein mil gayi — ab aage Neelkanth chalein?',
       3600
     );
   }, [showTimedCaption]);
@@ -462,30 +458,6 @@ export default function Experience() {
     showTimedCaption,
   ]);
 
-  const handleCaptureNeelkanthPolaroid = useCallback(() => {
-    if (useProgressStore.getState().committedSceneId !== 7) return;
-    if (useProgressStore.getState().activeNarration !== null || activeDarshanPan) return;
-
-    ambientAudio.playShutterClick();
-    const isNew = capturePolaroidAndSave('scene07_neelkanth');
-    setNeelkanthToastVisible(true);
-    if (neelkanthToastTimerRef.current !== null) {
-      window.clearTimeout(neelkanthToastTimerRef.current);
-    }
-    neelkanthToastTimerRef.current = window.setTimeout(() => {
-      neelkanthToastTimerRef.current = null;
-      setNeelkanthToastVisible(false);
-    }, 4500);
-
-    if (isNew) {
-      showTimedCaption(
-        'Neelkanth Yaad',
-        'Neelkanth Mandir ke courtyard ki Polaroid Yaadein mein save ho gayi!',
-        2800
-      );
-    }
-  }, [activeDarshanPan, capturePolaroidAndSave, showTimedCaption]);
-
   const handleNeelkanthInteract = useCallback(() => {
     if (useProgressStore.getState().activeNarration !== null || activeDarshanPan) return;
     if (!nearbyHotspot) return;
@@ -527,17 +499,12 @@ export default function Experience() {
           setHadDarshan(true);
           showTimedCaption(
             'Neelkanth Darshan',
-            'Kumbhkaran ki neend ke baad der se hi sahi, par hum sabne Mahadev ke darshan saath mein kiye!',
+            'Der se hi sahi, par hum sabne Mahadev ke darshan saath mein kiye!',
             3600
           );
         },
         reducedMotion ? 320 : 2350
       );
-      return;
-    }
-
-    if (nearbyHotspot.id === 'polaroid') {
-      handleCaptureNeelkanthPolaroid();
       return;
     }
 
@@ -547,7 +514,6 @@ export default function Experience() {
     }
   }, [
     activeDarshanPan,
-    handleCaptureNeelkanthPolaroid,
     nearbyHotspot,
     reducedMotion,
     showTimedCaption,
@@ -593,30 +559,6 @@ export default function Experience() {
     },
     [capturePolaroidAndSave, showTimedCaption]
   );
-
-  const handleCaptureHotelPolaroid = useCallback(() => {
-    if (useProgressStore.getState().committedSceneId !== 12) return;
-    if (useProgressStore.getState().activeNarration !== null) return;
-
-    ambientAudio.playShutterClick();
-    const isNew = capturePolaroidAndSave('scene12_hotel_farewell');
-    setHotelToastVisible(true);
-    if (hotelToastTimerRef.current !== null) {
-      window.clearTimeout(hotelToastTimerRef.current);
-    }
-    hotelToastTimerRef.current = window.setTimeout(() => {
-      hotelToastTimerRef.current = null;
-      setHotelToastVisible(false);
-    }, 4500);
-
-    if (isNew) {
-      showTimedCaption(
-        'Rishikesh Stay & Terrace',
-        'Rishikesh stay aur terrace shaam ki aakhri Polaroid save kar li!',
-        3000
-      );
-    }
-  }, [capturePolaroidAndSave, showTimedCaption]);
 
   const handleWalkInteract = useCallback(() => {
     if (isViewpointWalkActive) {
@@ -708,8 +650,6 @@ export default function Experience() {
           },
           reducedMotion ? 320 : 2100
         );
-      } else if (nearbyHotspot.id === 'hotel_polaroid') {
-        handleCaptureHotelPolaroid();
       }
       return;
     }
@@ -721,7 +661,6 @@ export default function Experience() {
   }, [
     ateTrailheadMaggi,
     handleCaptureBaalKuwariPolaroid,
-    handleCaptureHotelPolaroid,
     handleDhabaInteract,
     handleNeelkanthInteract,
     handleResumeRidingFromViewpoint,
@@ -758,26 +697,14 @@ export default function Experience() {
       handleCaptureBaalKuwariPolaroid('summit');
       return;
     }
-    if (isHotelReturnWalkActive) {
-      handleCaptureHotelPolaroid();
-      return;
-    }
-    if (isNeelkanthWalkActive) {
-      handleCaptureNeelkanthPolaroid();
-      return;
-    }
     if (isDhabaWalkActive) {
       handleCaptureDhabaPolaroid();
     }
   }, [
     handleCaptureBaalKuwariPolaroid,
     handleCaptureDhabaPolaroid,
-    handleCaptureHotelPolaroid,
-    handleCaptureNeelkanthPolaroid,
     isBaalKuwariTempleActive,
     isDhabaWalkActive,
-    isHotelReturnWalkActive,
-    isNeelkanthWalkActive,
     isViewpointWalkActive,
     nearbyHotspot,
     triggerViewpointPhoto,
@@ -1087,7 +1014,6 @@ export default function Experience() {
       if (chapter.targetSceneId === 12) {
         setHotelFarewellDone(false);
         setHotelSummaryOpen(false);
-        setHotelToastVisible(false);
       }
 
       sceneController.requestSceneTransition(chapter.targetSceneId, {
@@ -1171,17 +1097,11 @@ export default function Experience() {
       if (neelkanthDarshanTimerRef.current !== null) {
         window.clearTimeout(neelkanthDarshanTimerRef.current);
       }
-      if (neelkanthToastTimerRef.current !== null) {
-        window.clearTimeout(neelkanthToastTimerRef.current);
-      }
       if (baalKuwariToastTimerRef.current !== null) {
         window.clearTimeout(baalKuwariToastTimerRef.current);
       }
       if (hotelSummaryTimerRef.current !== null) {
         window.clearTimeout(hotelSummaryTimerRef.current);
-      }
-      if (hotelToastTimerRef.current !== null) {
-        window.clearTimeout(hotelToastTimerRef.current);
       }
       if (captionTimerRef.current !== null) {
         window.clearTimeout(captionTimerRef.current);
@@ -1262,7 +1182,6 @@ export default function Experience() {
     setTrafficWarningVisible(false);
     setNearbyHotspot(null);
     setPolaroidToastVisible(false);
-    setNeelkanthToastVisible(false);
     setActiveDarshanPan(false);
     setFoodCinematicActive(false);
     setFoodCinematicPlayedThisVisit(false);
@@ -1279,7 +1198,6 @@ export default function Experience() {
     setSummitArrivalCinematicActive(committedSceneId === 10);
     setHotelFarewellDone(false);
     setHotelSummaryOpen(false);
-    setHotelToastVisible(false);
     if (captionTimerRef.current !== null) {
       window.clearTimeout(captionTimerRef.current);
       captionTimerRef.current = null;
@@ -1530,7 +1448,6 @@ export default function Experience() {
           litDiya={litDiya}
           hadDarshan={hadDarshan}
           activeDarshanPan={activeDarshanPan}
-          capturedNeelkanthPolaroid={capturedNeelkanthPolaroid}
           ateTrailheadMaggi={ateTrailheadMaggi}
           trailheadEatingActive={trailheadEatingActive}
           onTrailheadMaggiComplete={handleTrailheadMaggiComplete}
@@ -1545,7 +1462,6 @@ export default function Experience() {
           baalKuwariBellNonce={baalKuwariBellNonce}
           capturedBaalKuwariPolaroid={capturedBaalKuwariPolaroid}
           hotelFarewellDone={hotelFarewellDone}
-          capturedHotelPolaroid={capturedHotelPolaroid}
           onNearbyHotspotChange={setNearbyHotspot}
           onArrivedChange={setArrived}
           onInViewpointZoneChange={setInViewpointZone}
@@ -1570,7 +1486,7 @@ export default function Experience() {
                   ? 'to_hotel_return'
                   : mountainRoadSegment
             }
-            polaroidCount={collectedPolaroids.length}
+            polaroidCount={validPolaroidCount}
             audioMuted={audioMuted}
             onToggleAudioMute={toggleAudio}
             onOpenChapters={handleOpenChapters}
@@ -1609,7 +1525,7 @@ export default function Experience() {
             onPause={handleOpenPause}
             capturedSolo={capturedViewpointSolo}
             capturedGroup={capturedViewpointGroup}
-            polaroidCount={collectedPolaroids.length}
+            polaroidCount={validPolaroidCount}
             nearbyHotspot={nearbyHotspot}
             activePhotoLabel={viewpointPhotoLabel}
             polaroidToastKind={viewpointToastKind}
@@ -1643,7 +1559,7 @@ export default function Experience() {
             ateMaggi={ateMaggi}
             sippedChai={sippedChai}
             capturedDhabaPolaroid={capturedDhabaPolaroid}
-            polaroidCount={collectedPolaroids.length}
+            polaroidCount={validPolaroidCount}
             nearbyHotspot={nearbyHotspot}
             hasActiveNarration={activeNarration !== null}
             foodCinematicActive={foodCinematicActive}
@@ -1679,13 +1595,10 @@ export default function Experience() {
             rangBell={rangBell}
             litDiya={litDiya}
             hadDarshan={hadDarshan}
-            capturedPolaroid={capturedNeelkanthPolaroid}
-            polaroidCount={collectedPolaroids.length}
+            polaroidCount={validPolaroidCount}
             nearbyHotspot={nearbyHotspot}
             hasActiveNarration={activeNarration !== null}
             activeDarshanPan={activeDarshanPan}
-            polaroidToastVisible={neelkanthToastVisible}
-            onDismissPolaroidToast={() => setNeelkanthToastVisible(false)}
             onTriggerHotspot={handleWalkInteract}
           />
           <MobileWalkControls
@@ -1722,7 +1635,7 @@ export default function Experience() {
             touchControlsVisible={touchControlsVisible}
             onOpenChapters={handleOpenChapters}
             onPause={handleOpenPause}
-            polaroidCount={collectedPolaroids.length}
+            polaroidCount={validPolaroidCount}
             nearbyHotspot={nearbyHotspot}
             hasActiveNarration={activeNarration !== null}
             ateMaggi={ateTrailheadMaggi}
@@ -1782,12 +1695,9 @@ export default function Experience() {
             farewellDone={hotelFarewellDone}
             tripSummaryOpen={hotelSummaryOpen}
             onDismissTripSummary={() => setHotelSummaryOpen(false)}
-            capturedPolaroid={capturedHotelPolaroid}
-            polaroidCount={collectedPolaroids.length}
+            polaroidCount={validPolaroidCount}
             nearbyHotspot={nearbyHotspot}
             hasActiveNarration={activeNarration !== null}
-            polaroidToastVisible={hotelToastVisible}
-            onDismissPolaroidToast={() => setHotelToastVisible(false)}
             onTriggerHotspot={handleWalkInteract}
           />
           <MobileWalkControls

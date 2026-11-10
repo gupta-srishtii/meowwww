@@ -166,8 +166,8 @@ export const SCENE_REGISTRY: Record<SceneId, SceneDefinition> = {
   },
   3: {
     id: 3,
-    slug: 'kumbhkaran-awakens',
-    title: 'Kumbhkaran Awakens',
+    slug: 'late-morning-departure',
+    title: 'Late Morning Departure',
     type: 'GAMEPLAY',
     act: 'Act 1',
     estDuration: '90–120s',

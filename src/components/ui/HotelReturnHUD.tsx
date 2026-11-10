@@ -3,7 +3,6 @@
 import {
   ContextualActionPill,
   MinimalTopBar,
-  PolaroidToastCard,
 } from '@/components/ui/MinimalHudChrome';
 import type { WalkHotspot } from '@/hooks/useWalkController';
 
@@ -16,12 +15,9 @@ export interface HotelReturnHUDProps {
   farewellDone: boolean;
   tripSummaryOpen: boolean;
   onDismissTripSummary: () => void;
-  capturedPolaroid: boolean;
   polaroidCount: number;
   nearbyHotspot: WalkHotspot | null;
   hasActiveNarration: boolean;
-  polaroidToastVisible: boolean;
-  onDismissPolaroidToast: () => void;
   onTriggerHotspot: () => void;
 }
 
@@ -37,12 +33,9 @@ export function HotelReturnHUD({
   farewellDone,
   tripSummaryOpen,
   onDismissTripSummary,
-  capturedPolaroid,
   polaroidCount,
   nearbyHotspot,
   hasActiveNarration,
-  polaroidToastVisible,
-  onDismissPolaroidToast,
   onTriggerHotspot,
 }: HotelReturnHUDProps) {
   return (
@@ -68,25 +61,8 @@ export function HotelReturnHUD({
           >
             {farewellDone ? '✓ Rejoined Group & Farewell' : '○ Rejoin Friends'}
           </span>
-          <span
-            className={`rounded-md px-2 py-0.5 font-medium ${
-              capturedPolaroid ? 'bg-sky-950/80 text-sky-300' : 'bg-slate-800/80 text-slate-300'
-            }`}
-          >
-            {capturedPolaroid ? '✓ Terrace / Stay Photo' : '○ Evening Photo'}
-          </span>
         </div>
       </MinimalTopBar>
-
-      {polaroidToastVisible && (
-        <PolaroidToastCard
-          polaroidId="scene12_hotel_farewell"
-          caption="Rishikesh Stay & Terrace · Evening Wapsi"
-          title="Rishikesh Evening"
-          gradientClass="from-amber-200 via-orange-100 to-slate-300"
-          onDismiss={onDismissPolaroidToast}
-        />
-      )}
 
       {tripSummaryOpen && (
         <div className="pointer-events-auto fixed inset-0 z-30 flex items-center justify-center bg-slate-950/65 px-4 backdrop-blur-sm">

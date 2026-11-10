@@ -81,14 +81,6 @@ export const NEELKANTH_HOTSPOTS: readonly WalkHotspot[] = [
     actionType: 'interact',
   },
   {
-    id: 'polaroid',
-    label: 'Take Temple Courtyard Photo',
-    x: -3.55,
-    z: 1.9,
-    radius: 1.65,
-    actionType: 'photo',
-  },
-  {
     id: 'scooters',
     label: 'Ride Scooters',
     x: 0.25,
@@ -105,7 +97,6 @@ export interface NeelkanthEnvironmentProps {
   bellSwingImpulseNonce: number;
   litDiya: boolean;
   hadDarshan: boolean;
-  capturedPolaroid: boolean;
 }
 
 const MAX_FOREST_PINES = 64;
@@ -176,7 +167,6 @@ export function NeelkanthEnvironment({
   bellSwingImpulseNonce,
   litDiya,
   hadDarshan,
-  capturedPolaroid,
 }: NeelkanthEnvironmentProps) {
   const shadowsEnabled = QUALITY_PRESETS[qualityProfile].shadows;
   const reducedMotion = useReducedMotion();
@@ -860,14 +850,6 @@ export function NeelkanthEnvironment({
         visible={!hadDarshan}
         color="#fde047"
         height={1.0}
-        paused={paused}
-        reducedMotion={reducedMotion}
-      />
-      <HotspotBeaconSparkle
-        position={[-3.55, 0, 1.9]}
-        visible={!capturedPolaroid}
-        color="#38bdf8"
-        height={0.95}
         paused={paused}
         reducedMotion={reducedMotion}
       />

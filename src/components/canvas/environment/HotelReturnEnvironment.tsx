@@ -73,14 +73,6 @@ export const HOTEL_HOTSPOTS: readonly WalkHotspot[] = [
     radius: 1.95,
     actionType: 'interact',
   },
-  {
-    id: 'hotel_polaroid',
-    label: 'Capture Rishikesh Stay Polaroid',
-    x: -2.15,
-    z: 2.05,
-    radius: 1.75,
-    actionType: 'photo',
-  },
 ];
 
 export const TERRACE_HOTSPOTS: readonly WalkHotspot[] = [
@@ -91,14 +83,6 @@ export const TERRACE_HOTSPOTS: readonly WalkHotspot[] = [
     z: -1.45,
     radius: 1.6,
     actionType: 'interact',
-  },
-  {
-    id: 'hotel_polaroid',
-    label: 'Capture Rooftop Terrace Sunset Polaroid',
-    x: -0.65,
-    z: -4.45,
-    radius: 2.15,
-    actionType: 'photo',
   },
 ];
 
@@ -148,7 +132,6 @@ export interface HotelReturnEnvironmentProps {
   qualityProfile: QualityProfile;
   paused: boolean;
   farewellDone: boolean;
-  capturedPolaroid: boolean;
   onTerrace: boolean;
 }
 
@@ -160,7 +143,6 @@ export function HotelReturnEnvironment({
   qualityProfile,
   paused,
   farewellDone,
-  capturedPolaroid,
   onTerrace,
 }: HotelReturnEnvironmentProps) {
   const shadowsEnabled = QUALITY_PRESETS[qualityProfile].shadows;
@@ -665,29 +647,15 @@ export function HotelReturnEnvironment({
               reducedMotion={reducedMotion}
             />
           )}
-          <HotspotBeaconSparkle
-            position={[HOTEL_HOTSPOTS[2].x, 0.04, HOTEL_HOTSPOTS[2].z]}
-            color={capturedPolaroid ? '#34d399' : '#60a5fa'}
-            paused={paused}
-            reducedMotion={reducedMotion}
-          />
         </>
       )}
       {onTerrace && (
-        <>
-          <HotspotBeaconSparkle
-            position={[TERRACE_HOTSPOTS[0].x, TERRACE_Y + 0.04, TERRACE_HOTSPOTS[0].z]}
-            color="#38bdf8"
-            paused={paused}
-            reducedMotion={reducedMotion}
-          />
-          <HotspotBeaconSparkle
-            position={[TERRACE_HOTSPOTS[1].x, TERRACE_Y + 0.04, TERRACE_HOTSPOTS[1].z]}
-            color={capturedPolaroid ? '#34d399' : '#fbbf24'}
-            paused={paused}
-            reducedMotion={reducedMotion}
-          />
-        </>
+        <HotspotBeaconSparkle
+          position={[TERRACE_HOTSPOTS[0].x, TERRACE_Y + 0.04, TERRACE_HOTSPOTS[0].z]}
+          color="#38bdf8"
+          paused={paused}
+          reducedMotion={reducedMotion}
+        />
       )}
     </>
   );

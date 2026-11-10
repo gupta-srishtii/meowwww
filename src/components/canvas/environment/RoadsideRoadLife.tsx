@@ -384,6 +384,7 @@ function BermWalkerInstance({
     if (!st.initialized) {
       st.prevX = pt.x;
       st.prevZ = pt.z;
+      group.position.set(pt.x, pt.y, pt.z);
       st.initialized = true;
     }
 
@@ -392,7 +393,6 @@ function BermWalkerInstance({
     st.prevZ = pt.z;
     st.stridePhase += stepDist * 3.15;
 
-    group.position.y = pt.y;
     animateCharacterRig({
       refs: {
         group,
@@ -407,6 +407,7 @@ function BermWalkerInstance({
       },
       posX: pt.x,
       posZ: pt.z,
+      groundY: pt.y,
       facingYaw,
       strideRatio: paused || reducedMotion ? 0 : 0.72,
       stridePhase: st.stridePhase,
@@ -416,8 +417,6 @@ function BermWalkerInstance({
       idlePose: 'look_around',
       reducedMotion,
     });
-    group.position.y =
-      pt.y + (paused || reducedMotion ? 0 : Math.abs(Math.sin(st.stridePhase)) * 0.02);
   });
 
   return (

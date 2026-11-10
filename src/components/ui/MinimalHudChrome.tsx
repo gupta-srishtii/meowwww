@@ -115,6 +115,7 @@ export function PolaroidToastCard({
             <img
               src={resolvedUrl}
               alt={title}
+              style={{ imageOrientation: 'from-image' }}
               className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
             />
           ) : (

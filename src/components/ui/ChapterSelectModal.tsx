@@ -54,6 +54,7 @@ export function ChapterSelectModal({
   );
   const allPolaroidIds = Object.keys(POLAROID_MEMORY_SPECS);
   const totalPolaroidsCount = allPolaroidIds.length;
+  const validCollectedCount = collectedPolaroids.filter((id) => id in POLAROID_MEMORY_SPECS).length;
   const previewMem = previewPolaroidId ? getResolvedPolaroidMemory(previewPolaroidId) : null;
 
   const handleFolderSelected = (files: FileList | null) => {
@@ -83,7 +84,7 @@ export function ChapterSelectModal({
               Memories &amp; Chapters
             </h2>
             <p className="mt-0.5 text-xs text-slate-400">
-              {collectedPolaroids.length} of {totalPolaroidsCount} trip Polaroids collected
+              {validCollectedCount} of {totalPolaroidsCount} trip Polaroids collected
             </p>
           </div>
 
@@ -119,7 +120,7 @@ export function ChapterSelectModal({
                 : 'bg-slate-800/80 text-slate-300 hover:text-white'
             }`}
           >
-            Polaroids ({collectedPolaroids.length}/{totalPolaroidsCount})
+            Polaroids ({validCollectedCount}/{totalPolaroidsCount})
           </button>
         </div>
 
@@ -256,6 +257,7 @@ export function ChapterSelectModal({
                         <img
                           src={mem.resolvedUrl}
                           alt={mem.title}
+                          style={{ imageOrientation: 'from-image' }}
                           className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                         />
                       ) : unlocked ? (
@@ -307,6 +309,7 @@ export function ChapterSelectModal({
                   <img
                     src={previewMem.resolvedUrl}
                     alt={previewMem.title}
+                    style={{ imageOrientation: 'from-image' }}
                     className="h-full w-full object-cover transition-transform duration-500 ease-out hover:scale-105"
                   />
                 ) : (

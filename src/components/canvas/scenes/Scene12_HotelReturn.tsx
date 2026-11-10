@@ -45,7 +45,6 @@ export interface Scene12HotelReturnProps {
   transitionToken: number;
   simulateMountFailure?: boolean;
   farewellDone: boolean;
-  capturedPolaroid: boolean;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onSceneReady: (token: number, sceneId: SceneId) => void;
 }
@@ -109,7 +108,6 @@ export function Scene12_HotelReturn({
   transitionToken,
   simulateMountFailure = false,
   farewellDone,
-  capturedPolaroid,
   onNearbyHotspotChange,
   onSceneReady,
 }: Scene12HotelReturnProps) {
@@ -465,7 +463,6 @@ export function Scene12_HotelReturn({
         qualityProfile={qualityProfile}
         paused={paused}
         farewellDone={farewellDone}
-        capturedPolaroid={capturedPolaroid}
         onTerrace={onTerraceState}
       />
 

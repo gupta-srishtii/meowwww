@@ -56,7 +56,7 @@ export const PHASE2_STORY_CHAPTERS: readonly StoryChapterItem[] = [
     key: 'maggi_chai_stop',
     rank: 2,
     title: 'Maggi & Chai Tapri',
-    subtitle: 'Day 2 ke late uthne ("Kumbhkaran" moment!) ke baad raaste pe garam Maggi aur chai',
+    subtitle: 'Day 2 ke late uthne ke baad raaste pe garam Maggi aur chai',
     targetSceneId: 6,
     polaroidIds: ['scene06_dhaba'],
   },
@@ -76,7 +76,7 @@ export const PHASE2_STORY_CHAPTERS: readonly StoryChapterItem[] = [
     title: 'Neelkanth Mahadev Temple',
     subtitle: 'Mandir ke gate se andar — diya, ghanti, aur sabke saath Neelkanth darshan',
     targetSceneId: 7,
-    polaroidIds: ['scene07_neelkanth'],
+    polaroidIds: [],
   },
   {
     key: 'baal_kuwari_road',
@@ -138,7 +138,7 @@ export const PHASE2_STORY_CHAPTERS: readonly StoryChapterItem[] = [
     title: 'Rishikesh Stay, Terrace & Farewell',
     subtitle: 'Main road ke andar gali wali stay aur terrace view — Srishti apne group se mili',
     targetSceneId: 12,
-    polaroidIds: ['scene12_hotel_farewell'],
+    polaroidIds: [],
   },
 ];
 
@@ -155,7 +155,7 @@ export function inferChapterRank(
   baalKuwariSubStage: BaalKuwariSubStage = 'driving'
 ): number {
   let rank = 0;
-  if (sceneId === 12 || polaroids.includes('scene12_hotel_farewell')) {
+  if (sceneId === 12) {
     rank = 11;
   } else if (sceneId === 11 || (sceneId === 5 && segment === 'to_hotel_return')) {
     rank = 10;
@@ -172,7 +172,7 @@ export function inferChapterRank(
     rank = 6;
   } else if (sceneId === 8 || (sceneId === 5 && segment === 'to_baalkuwari')) {
     rank = 5;
-  } else if (sceneId === 7 || polaroids.includes('scene07_neelkanth')) {
+  } else if (sceneId === 7) {
     rank = 4;
   } else if (sceneId === 5 && segment === 'to_neelkanth') {
     rank = 3;

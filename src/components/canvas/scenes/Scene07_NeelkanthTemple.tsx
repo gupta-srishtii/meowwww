@@ -48,7 +48,6 @@ export interface Scene07NeelkanthTempleProps {
   litDiya: boolean;
   hadDarshan: boolean;
   activeDarshanPan: boolean;
-  capturedPolaroid: boolean;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onSceneReady: (token: number, sceneId: SceneId) => void;
 }
@@ -132,7 +131,6 @@ export function Scene07_NeelkanthTemple({
   litDiya,
   hadDarshan,
   activeDarshanPan,
-  capturedPolaroid,
   onNearbyHotspotChange,
   onSceneReady,
 }: Scene07NeelkanthTempleProps) {
@@ -407,7 +405,6 @@ export function Scene07_NeelkanthTemple({
         bellSwingImpulseNonce={bellSwingImpulseNonce}
         litDiya={litDiya}
         hadDarshan={hadDarshan}
-        capturedPolaroid={capturedPolaroid}
       />
 
       {/* Playable Ishaan avatar entering vibrant market passage toward colorful temple gate */}

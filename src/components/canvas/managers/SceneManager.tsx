@@ -328,7 +328,6 @@ export interface SceneStageProps {
   litDiya: boolean;
   hadDarshan: boolean;
   activeDarshanPan: boolean;
-  capturedNeelkanthPolaroid: boolean;
   ateTrailheadMaggi: boolean;
   trailheadEatingActive: boolean;
   onTrailheadMaggiComplete: () => void;
@@ -343,7 +342,6 @@ export interface SceneStageProps {
   baalKuwariBellNonce: number;
   capturedBaalKuwariPolaroid: boolean;
   hotelFarewellDone: boolean;
-  capturedHotelPolaroid: boolean;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onArrivedChange: (arrived: boolean) => void;
   onInViewpointZoneChange: (inZone: boolean) => void;
@@ -375,7 +373,6 @@ export function SceneStage({
   litDiya,
   hadDarshan,
   activeDarshanPan,
-  capturedNeelkanthPolaroid,
   ateTrailheadMaggi,
   trailheadEatingActive,
   onTrailheadMaggiComplete,
@@ -390,7 +387,6 @@ export function SceneStage({
   baalKuwariBellNonce,
   capturedBaalKuwariPolaroid,
   hotelFarewellDone,
-  capturedHotelPolaroid,
   onNearbyHotspotChange,
   onArrivedChange,
   onInViewpointZoneChange,
@@ -525,7 +521,6 @@ export function SceneStage({
               litDiya={litDiya}
               hadDarshan={hadDarshan}
               activeDarshanPan={activeDarshanPan}
-              capturedPolaroid={capturedNeelkanthPolaroid}
               onNearbyHotspotChange={onNearbyHotspotChange}
               onSceneReady={controller.onMountedSceneReady}
             />
@@ -602,7 +597,6 @@ export function SceneStage({
               transitionToken={transitionToken}
               simulateMountFailure={simulateMountFailure}
               farewellDone={hotelFarewellDone}
-              capturedPolaroid={capturedHotelPolaroid}
               onNearbyHotspotChange={onNearbyHotspotChange}
               onSceneReady={controller.onMountedSceneReady}
             />

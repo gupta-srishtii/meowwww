@@ -51,96 +51,80 @@ function getConversationalBubble(
     if (sceneId === 5 && roadSubStage === 'viewpoint_walk') {
       return {
         srishti: [
-          'Bhai, neeche ghaati dekh — ek photo toh banti hai!',
-          'Ishaan, idhar rail ke paas aao, view kamaal hai.',
+          'Neeche ghaati dekh, kitna pyaara view hai!',
         ],
         ishaan: [
-          'Haan Shree, ruk — abhi click karte hain.',
-          'Sach mein kaafi sundar valley lag rahi hai.',
+          'Woh rahi nadi — chalo ek photo lete hain.',
         ],
       };
     }
     if (sceneId === 6) {
       return {
         srishti: [
-          'Kumbhkaran Bhai, aakhir garam Maggi mil hi gayi!',
-          'Ishaan, pahadon mein kulhad chai ki baat hi alag hai.',
+          'Pahadon mein garam Maggi aur kulhad chai!',
         ],
         ishaan: [
-          'Subah late ho gaye par chai sahi mein best hai!',
-          'Shree, garam Maggi aur thandi hawa — perfect combo.',
+          'Late start sahi tha, par chai best hai.',
         ],
       };
     }
     if (sceneId === 7) {
       return {
         srishti: [
-          'Bhai, mandap mein aao — saath diya jalate hain.',
-          'Ishaan, yahan mandir ke andar kitni shaanti hai.',
+          'Mandir ke andar kitni shaanti lag rahi hai.',
         ],
         ishaan: [
-          'Chalo Shree, darshan karke phir Baal Kuwari nikalte hain.',
-          'Har Har Mahadev — dil khush ho gaya.',
+          'Har Har Mahadev — darshan saath mein ho gaye.',
         ],
       };
     }
     if (sceneId === 8 && baalSubStage === 'maggi_stop') {
       return {
         srishti: [
-          'Seedhiyon se pehle Maggi break zaroori tha, Bhai!',
-          'Chalo Ishaan, ab dobara scooties pe gate tak chalte hain.',
+          'Chhoti si Maggi break ke baad seedhiyan!',
         ],
         ishaan: [
-          'Bilkul Shree — ab bas gate ke baad ~400 steps.',
-          'Chalo sab, scooty start karte hain.',
+          'Chalo sab, ab wapas scooty pe gate tak.',
         ],
       };
     }
     if (sceneId === 9 && stairDirection === 'descent') {
       return {
         srishti: [
-          'Dhyan se Bhai, jaldi chalo wapsi bhi karni hai!',
-          'Ishaan, dekhte hain pehle neeche kaun aata hai!',
+          'Dhyan se Bhai, jaldi neeche chalte hain!',
         ],
         ishaan: [
-          'Sambhal ke Shree, bhaagte hue bhi safe chalna!',
-          'Haha, step sambhal ke chalo!',
+          'Sambhal ke Shree, safe speed rakho!',
         ],
       };
     }
     if (sceneId === 9) {
       return {
         srishti: [
-          'Haath do Bhai, yeh waala pitch kaafi steep hai!',
-          'Ishaan, bas thoda aur — upar pahunchne wale hain!',
+          'Yeh waala step steep hai, haath do!',
         ],
         ishaan: [
-          'Main hoon na Shree, aaram se haath pakad ke chalo.',
-          'Bas ek aur mod, phir seedha mandir gate.',
+          'Bas thoda aur Shree, main pakad ke hoon.',
         ],
       };
     }
     if (sceneId === 10) {
       return {
         srishti: [
-          '~400 seedhiyon ke baad upar aana bilkul worth tha, Bhai!',
-          'Ishaan, chaaro taraf ki pahadiyan dekh!',
+          '400 seedhiyon ke baad upar aana worth tha!',
         ],
         ishaan: [
-          'Sach mein Shree — itna shaant lag raha hai yahan.',
-          'Chalo pehle ghanti bajate hain.',
+          'Chaaro taraf ki pahadiyan dekh, Shree.',
         ],
       };
     }
     // Scene 12: Rishikesh Stay, Lane & Terrace
     return {
       srishti: [
-        'Terrace se shaam aur chhaton ka nazara dekho, Bhai!',
-        'Ishaan, yeh Rishikesh trip hamesha sabse khas rahega.',
+        'Terrace se shaam aur chhaton ka nazara dekh!',
       ],
       ishaan: [
         'Shaam se pehle safely pahunch gaye, Shree.',
-        'Hamesha yaad rahega yeh safar.',
       ],
     };
   })();
@@ -188,7 +172,7 @@ export function CharacterHeadOverlay({
     if (!enabled || (variant !== 'srishti' && variant !== 'ishaan')) return;
     const id = window.setInterval(() => {
       setBubbleTick((prev) => prev + 1);
-    }, 5200);
+    }, 7000);
     return () => window.clearInterval(id);
   }, [enabled, variant]);
 
@@ -196,11 +180,11 @@ export function CharacterHeadOverlay({
     return null;
   }
 
-  // Alternate speakers cleanly: Shree speaks on ticks 1, 5, 9...; Ishaan replies on 3, 7...; quiet rest in between
-  const cyclePos = bubbleTick % 6;
+  // Rare, quiet cadence: mostly silent, at most one short bubble every ~21s–28s
+  const cyclePos = bubbleTick % 7;
   const showBubbleNow =
-    (variant === 'srishti' && cyclePos === 1) ||
-    (variant === 'ishaan' && cyclePos === 3);
+    (variant === 'srishti' && cyclePos === 2) ||
+    (variant === 'ishaan' && cyclePos === 5);
 
   const speech = showBubbleNow
     ? getConversationalBubble(
@@ -209,7 +193,7 @@ export function CharacterHeadOverlay({
         roadSubStage,
         baalSubStage,
         stairDirection,
-        Math.floor(bubbleTick / 6)
+        Math.floor(bubbleTick / 7)
       )
     : null;
 
@@ -221,14 +205,14 @@ export function CharacterHeadOverlay({
       zIndexRange={[10, 0]}
       style={{ pointerEvents: 'none', userSelect: 'none' }}
     >
-      <div className="flex flex-col items-center gap-1 whitespace-nowrap">
+      <div className="flex w-[224px] flex-col items-center gap-1.5">
         {speech && (
-          <div className="max-w-[178px] whitespace-normal rounded-xl border border-amber-200/70 bg-slate-950/90 px-2.5 py-1 text-center text-[10px] leading-snug font-medium text-amber-50 shadow-lg backdrop-blur-sm">
+          <div className="min-w-[168px] max-w-[224px] rounded-xl border border-amber-200/70 bg-slate-950/92 px-3 py-1.5 text-center text-[10px] leading-snug font-medium whitespace-normal break-words text-amber-50 shadow-lg backdrop-blur-sm transition-opacity duration-200">
             {speech}
           </div>
         )}
         <span
-          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-semibold tracking-wide shadow ${badge.chipClass}`}
+          className={`inline-flex w-max items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-semibold tracking-wide whitespace-nowrap shadow ${badge.chipClass}`}
         >
           <span
             className="h-1.5 w-1.5 rounded-full border border-white/40"
@@ -240,3 +224,4 @@ export function CharacterHeadOverlay({
     </Html>
   );
 }
+

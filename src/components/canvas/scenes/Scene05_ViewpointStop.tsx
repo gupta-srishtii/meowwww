@@ -163,8 +163,8 @@ export function Scene05_ViewpointStop({
       sim.posZ = THREE.MathUtils.damp(sim.posZ, -4.15, 8, delta);
       sim.velX = 0;
       sim.velZ = 0;
-      sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, 0.08, 8, delta);
-      idlePose = 'hands_behind_back';
+      sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, -0.22, 8, delta);
+      idlePose = 'default';
     } else if (activePhotoMoment === 'group') {
       sim.posX = THREE.MathUtils.damp(sim.posX, -0.1, 8, delta);
       sim.posZ = THREE.MathUtils.damp(sim.posZ, -4.08, 8, delta);
@@ -211,8 +211,25 @@ export function Scene05_ViewpointStop({
       reducedMotion,
     });
 
+    // 1b. Raise Ishaan's right arm gently toward mountain valley during Shree & Ishaan overlook moment
+    if (activePhotoMoment === 'solo' && rightArmRef.current) {
+      rightArmRef.current.rotation.x = THREE.MathUtils.damp(
+        rightArmRef.current.rotation.x,
+        -1.08 + (reducedMotion ? 0 : Math.sin(t * 1.4) * 0.04),
+        8,
+        delta
+      );
+      rightArmRef.current.rotation.z = THREE.MathUtils.damp(
+        rightArmRef.current.rotation.z,
+        -0.16,
+        8,
+        delta
+      );
+    }
+
     // 2. Companions (Srishti, Manish & Yash) at overlook rail
     const isGroupPose = activePhotoMoment === 'group';
+    const isCoupleOverlookPose = activePhotoMoment === 'solo';
     const animateOverlookFriend = (
       group: THREE.Group | null,
       torso: THREE.Group | null,
@@ -258,6 +275,23 @@ export function Scene05_ViewpointStop({
       }
     };
 
+    if (srishtiGroupRef.current) {
+      const targetSrishtiX = isCoupleOverlookPose ? -1.9 : SRISHTI_POS[0];
+      const targetSrishtiZ = isCoupleOverlookPose ? -4.18 : SRISHTI_POS[2];
+      srishtiGroupRef.current.position.x = THREE.MathUtils.damp(
+        srishtiGroupRef.current.position.x,
+        targetSrishtiX,
+        8,
+        delta
+      );
+      srishtiGroupRef.current.position.z = THREE.MathUtils.damp(
+        srishtiGroupRef.current.position.z,
+        targetSrishtiZ,
+        8,
+        delta
+      );
+    }
+
     animateOverlookFriend(
       srishtiGroupRef.current,
       srishtiTorsoRef.current,
@@ -265,12 +299,20 @@ export function Scene05_ViewpointStop({
       srishtiArmRef.current,
       srishtiForearmRef.current,
       0.78,
-      -0.18,
+      isCoupleOverlookPose ? 0.18 : -0.18,
       Math.PI - 0.04,
       0.2,
       -0.05,
       0.32
     );
+    if (isCoupleOverlookPose && srishtiHeadRef.current) {
+      srishtiHeadRef.current.rotation.y = THREE.MathUtils.damp(
+        srishtiHeadRef.current.rotation.y,
+        0.22,
+        6,
+        delta
+      );
+    }
     if (srishtiHairRef.current) {
       srishtiHairRef.current.rotation.x = 0.14;
       srishtiHairRef.current.rotation.z = reducedMotion ? 0 : Math.sin(t * 1.4) * 0.015;
@@ -307,8 +349,8 @@ export function Scene05_ViewpointStop({
     );
 
     if (activePhotoMoment === 'solo') {
-      scratch.desiredCamPos.set(-1.15, 1.52, -2.05);
-      scratch.desiredLookAt.set(-2.65, 1.18, -5.8);
+      scratch.desiredCamPos.set(-1.05, 1.54, -1.78);
+      scratch.desiredLookAt.set(-2.3, 1.22, -6.5);
     } else if (activePhotoMoment === 'group') {
       scratch.desiredCamPos.set(0.95, 1.48, -1.05);
       scratch.desiredLookAt.set(1.02, 1.16, -4.18);
