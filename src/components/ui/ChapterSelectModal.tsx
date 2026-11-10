@@ -6,10 +6,16 @@ import {
   getActiveChapterKey,
   type StoryChapterItem,
 } from '@/lib/chapters';
+import { BHAI_DOOJ_SPECIAL_TRACK_SPEC } from '@/lib/finaleContent';
 import {
   POLAROID_MEMORY_SPECS,
+  clearLocalFinaleSong,
+  getPrivateMediaSessionState,
   getResolvedPolaroidMemory,
+  pickPrivateMediaDirectory,
+  registerLocalFinaleSong,
   registerLocalPhotoFolder,
+  supportsNativeDirectoryPicker,
   usePolaroidMemoryRevision,
 } from '@/lib/privateMemoryLoader';
 import { useProgressStore } from '@/store/progressStore';
@@ -44,6 +50,7 @@ export function ChapterSelectModal({
   const [previewPolaroidId, setPreviewPolaroidId] = useState<string | null>(null);
   const [localLinkStatus, setLocalLinkStatus] = useState<string | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
+  const songInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -62,6 +69,7 @@ export function ChapterSelectModal({
   const allPolaroidIds = Object.keys(POLAROID_MEMORY_SPECS);
   const totalPolaroidsCount = allPolaroidIds.length;
   const validCollectedCount = collectedPolaroids.filter((id) => id in POLAROID_MEMORY_SPECS).length;
+  const mediaSession = getPrivateMediaSessionState();
   const previewMem = previewPolaroidId ? getResolvedPolaroidMemory(previewPolaroidId) : null;
 
   const handleFolderSelected = (files: FileList | null) => {
@@ -69,8 +77,35 @@ export function ChapterSelectModal({
     const matched = registerLocalPhotoFolder(files);
     setLocalLinkStatus(
       matched > 0
-        ? `Linked ${matched} photo${matched === 1 ? '' : 's'} privately in this browser`
+        ? `Linked ${matched}/${totalPolaroidsCount} trip photos privately for this browser session`
         : 'No matching trip filenames found in that folder'
+    );
+  };
+
+  const handlePickDirectoryClick = async () => {
+    if (supportsNativeDirectoryPicker()) {
+      const res = await pickPrivateMediaDirectory();
+      if (res.status === 'picked') {
+        setLocalLinkStatus(
+          res.matchedPhotos > 0
+            ? `Linked ${res.matchedPhotos}/${totalPolaroidsCount} trip photos privately for this browser session`
+            : 'No matching trip filenames found in that folder'
+        );
+        return;
+      }
+      if (res.status === 'cancelled') return;
+    }
+    folderInputRef.current?.click();
+  };
+
+  const handleSongSelected = (files: FileList | null) => {
+    const file = files?.[0] ?? null;
+    if (!file) return;
+    const url = registerLocalFinaleSong(file);
+    setLocalLinkStatus(
+      url
+        ? `Attached finale song "${file.name}" privately in browser memory`
+        : 'Please select an audio file (.mp3, .wav, .m4a, .ogg)'
     );
   };
 
@@ -191,35 +226,80 @@ export function ChapterSelectModal({
           </ul>
         ) : (
           <div className="mt-3 space-y-3">
-            {/* Client-Only Local Folder Linker (Zero HTTP Exposure) */}
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-950/75 px-3 py-2.5">
-              <div>
-                <p className="text-[11px] font-medium text-slate-200">
-                  Local Trip Photos (Browser-Only Preview)
-                </p>
-                <p className="text-[10px] text-slate-400">
-                  {localLinkStatus ??
-                    'Stylized Polaroids load by default. Optionally link your own local Photos folder — stays only on this device.'}
-                </p>
+            {/* Client-Only Local Media Linker (Zero HTTP Exposure) */}
+            <div className="space-y-2 rounded-xl border border-slate-800 bg-slate-950/75 px-3 py-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-medium text-slate-200">
+                    Local Trip Photos ({mediaSession.matchedPhotoCount}/{totalPolaroidsCount} linked)
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-slate-400">
+                    {localLinkStatus ??
+                      (mediaSession.hasLinkedPhotos
+                        ? `Linked from ${mediaSession.folderLabel ?? 'local folder'} (device-only, never uploaded).`
+                        : 'Stylized Polaroids load by default. Link your local Photos folder once per browser session (browsers clear file links after refresh).')}
+                  </p>
+                </div>
+                <input
+                  ref={folderInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  {...({
+                    webkitdirectory: '',
+                    directory: '',
+                  } as InputHTMLAttributes<HTMLInputElement>)}
+                  onChange={(e) => handleFolderSelected(e.target.files)}
+                />
+                <button
+                  type="button"
+                  onClick={() => void handlePickDirectoryClick()}
+                  className="shrink-0 rounded-lg border border-amber-300/50 bg-amber-950/50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-200 transition hover:bg-amber-900/60"
+                >
+                  {mediaSession.hasLinkedPhotos ? 'Re-link Photos Folder' : 'Link Local Folder'}
+                </button>
               </div>
-              <input
-                ref={folderInputRef}
-                type="file"
-                multiple
-                className="hidden"
-                {...({
-                  webkitdirectory: '',
-                  directory: '',
-                } as InputHTMLAttributes<HTMLInputElement>)}
-                onChange={(e) => handleFolderSelected(e.target.files)}
-              />
-              <button
-                type="button"
-                onClick={() => folderInputRef.current?.click()}
-                className="shrink-0 rounded-lg border border-amber-300/50 bg-amber-950/50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-200 transition hover:bg-amber-900/60"
-              >
-                Link Local Folder
-              </button>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/80 pt-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-medium text-slate-200">
+                    Bhai Dooj Finale Song · {BHAI_DOOJ_SPECIAL_TRACK_SPEC.confirmedTraditionalTitle}
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-slate-400">
+                    {mediaSession.finaleSongName
+                      ? `Attached: ${mediaSession.finaleSongName} (fades in smoothly during Tilak ceremony).`
+                      : `Warm instrumental plays by default. Attach your "${BHAI_DOOJ_SPECIAL_TRACK_SPEC.requestedName}" local audio file if desired.`}
+                  </p>
+                </div>
+                <input
+                  ref={songInputRef}
+                  type="file"
+                  accept="audio/*,.mp3,.wav,.m4a,.ogg,.aac,.flac,.webm"
+                  className="hidden"
+                  onChange={(e) => handleSongSelected(e.target.files)}
+                />
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {mediaSession.finaleSongName && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        clearLocalFinaleSong();
+                        setLocalLinkStatus('Switched back to warm procedural Bhai Dooj theme');
+                      }}
+                      className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] font-medium text-slate-300 hover:bg-slate-800"
+                    >
+                      Clear
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => songInputRef.current?.click()}
+                    className="rounded-lg border border-sky-400/50 bg-sky-950/50 px-2.5 py-1.5 text-[11px] font-semibold text-sky-200 transition hover:bg-sky-900/60"
+                  >
+                    {mediaSession.finaleSongName ? 'Change Song' : 'Attach Audio File'}
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div className="grid max-h-[45vh] grid-cols-2 gap-2.5 overflow-y-auto pr-1 sm:grid-cols-3">
@@ -294,14 +374,18 @@ export function ChapterSelectModal({
               onClick={(e) => e.stopPropagation()}
             >
               <div
-                className={`flex h-56 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br px-4 text-center ${previewMem.gradientClass}`}
+                className={`flex h-64 items-center justify-center overflow-hidden rounded-xl px-4 text-center ${
+                  previewMem.resolvedUrl
+                    ? 'bg-[#efe7d6] p-2'
+                    : `bg-gradient-to-br ${previewMem.gradientClass}`
+                }`}
               >
                 {previewMem.resolvedUrl ? (
                   <img
                     src={previewMem.resolvedUrl}
                     alt={previewMem.title}
                     style={{ imageOrientation: 'from-image' }}
-                    className="h-full w-full object-cover transition-transform duration-500 ease-out hover:scale-105"
+                    className="max-h-full max-w-full rounded object-contain transition-transform duration-500 ease-out hover:scale-[1.02]"
                   />
                 ) : (
                   <div className="space-y-1.5">

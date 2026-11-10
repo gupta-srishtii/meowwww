@@ -118,14 +118,16 @@ export function PolaroidToastCard({
         )}
         <div className="group pointer-events-auto relative w-64 rotate-[1.4deg] rounded-xl border border-amber-200/85 bg-[#faf6ed] p-3 pb-3.5 text-slate-900 shadow-[0_18px_40px_rgba(2,6,23,0.48)] transition-transform duration-500 ease-out hover:rotate-0 sm:w-72">
           <div
-            className={`relative flex h-36 items-center justify-center overflow-hidden rounded-lg border border-amber-900/10 bg-gradient-to-br px-3 text-center sm:h-40 ${gradientClass}`}
+            className={`relative flex h-44 items-center justify-center overflow-hidden rounded-lg border border-amber-900/10 bg-[#efe7d6] px-2 py-1 text-center sm:h-48 ${
+              resolvedUrl ? '' : `bg-gradient-to-br ${gradientClass} px-3`
+            }`}
           >
             {resolvedUrl ? (
               <img
                 src={resolvedUrl}
                 alt={title}
                 style={{ imageOrientation: 'from-image' }}
-                className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                className="max-h-full max-w-full rounded object-contain transition-transform duration-500 ease-out group-hover:scale-[1.03]"
               />
             ) : (
               <span className="text-xs font-medium text-slate-800 transition-transform duration-500 ease-out group-hover:scale-[1.03]">

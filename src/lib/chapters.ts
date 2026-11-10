@@ -60,7 +60,7 @@ export const PHASE2_STORY_CHAPTERS: readonly StoryChapterItem[] = [
     title: 'Day 2 Morning · Bun Maska & Chai',
     subtitle: 'Gali ke bahar road par garam bun maska aur chai saath mein',
     targetSceneId: 3,
-    polaroidIds: [],
+    polaroidIds: ['scene03_tea_stop'],
   },
   {
     key: 'scooter_departure',
@@ -118,7 +118,7 @@ export const PHASE2_STORY_CHAPTERS: readonly StoryChapterItem[] = [
     title: 'Neelkanth Mahadev Temple',
     subtitle: 'Mandir ke gate se andar — diya, ghanti, aur sabke saath Neelkanth darshan',
     targetSceneId: 7,
-    polaroidIds: [],
+    polaroidIds: ['scene07_neelkanth_food'],
   },
   {
     key: 'baal_kuwari_road',
@@ -233,7 +233,7 @@ export function inferChapterRank(
     rank = 10;
   } else if (sceneId === 8 || (sceneId === 5 && segment === 'to_baalkuwari')) {
     rank = 9;
-  } else if (sceneId === 7) {
+  } else if (sceneId === 7 || polaroids.includes('scene07_neelkanth_food')) {
     rank = 8;
   } else if (sceneId === 5 && segment === 'to_neelkanth') {
     rank = 7;
@@ -250,7 +250,7 @@ export function inferChapterRank(
     rank = 4;
   } else if (sceneId === 4) {
     rank = 3;
-  } else if (sceneId === 3) {
+  } else if (sceneId === 3 || polaroids.includes('scene03_tea_stop')) {
     rank = 2;
   } else if (sceneId === 2) {
     rank = 1;

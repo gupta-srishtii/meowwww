@@ -8,18 +8,38 @@ export interface PolaroidMemorySpec {
   caption: string;
   locationTag: string;
   gradientClass: string;
-  /** High-confidence filename in user's local `personal-photos/` folder; `null` when uncertain/unassigned. */
+  /** Primary high-confidence filename in user's local `personal-photos/` folder; `null` when uncertain/unassigned. */
   matchedFilename: string | null;
+  /** Optional alternate local filename aliases that map to this exact confirmed moment. */
+  altFilenames?: readonly string[];
 }
 
+export const FINALE_SONG_AUDIO_EXTENSIONS = [
+  '.mp3',
+  '.wav',
+  '.m4a',
+  '.ogg',
+  '.aac',
+  '.flac',
+  '.webm',
+] as const;
+
 export const POLAROID_MEMORY_SPECS: Record<string, PolaroidMemorySpec> = {
+  scene03_tea_stop: {
+    id: 'scene03_tea_stop',
+    title: 'Morning Bun Maska & Kulhad Chai',
+    caption: 'Four steaming kulhads and fresh morning buns outside on the Rishikesh road before starting our ride',
+    locationTag: 'Rishikesh Main Road · Day 2',
+    gradientClass: 'from-amber-200 via-orange-100 to-amber-50',
+    matchedFilename: 'tea stop.jpg',
+  },
   scene05_viewpoint_shree: {
     id: 'scene05_viewpoint_shree',
     title: 'Shree — Overlook Solo',
     caption: 'Looking out across the winding Rishikesh gorge and river sandbar',
     locationTag: 'Rishikesh Overlook',
     gradientClass: 'from-sky-200 via-emerald-100 to-amber-100',
-    matchedFilename: 'randomview point.jpg',
+    matchedFilename: 'randomview point srishti.jpg',
   },
   scene05_viewpoint_solo: {
     id: 'scene05_viewpoint_solo',
@@ -28,6 +48,7 @@ export const POLAROID_MEMORY_SPECS: Record<string, PolaroidMemorySpec> = {
     locationTag: 'Rishikesh Overlook',
     gradientClass: 'from-amber-200 via-sky-200 to-emerald-100',
     matchedFilename: 'me and ishaan explaing mountains.jpg',
+    altFilenames: ['ishaan and srishti.jpg'],
   },
   scene05_viewpoint_group: {
     id: 'scene05_viewpoint_group',
@@ -45,6 +66,14 @@ export const POLAROID_MEMORY_SPECS: Record<string, PolaroidMemorySpec> = {
     gradientClass: 'from-amber-200 via-orange-100 to-teal-100',
     matchedFilename: 'maggi and tea.jpg',
   },
+  scene07_neelkanth_food: {
+    id: 'scene07_neelkanth_food',
+    title: 'Meal Outside Neelkanth',
+    caption: 'Hot chhole bhature in steel thalis outside the Neelkanth market after temple darshan',
+    locationTag: 'Outside Neelkanth Bazaar',
+    gradientClass: 'from-orange-200 via-amber-100 to-yellow-100',
+    matchedFilename: 'food in neelkanth.jpg',
+  },
   scene09_stairs_landing: {
     id: 'scene09_stairs_landing',
     title: 'Baal Kuwari: ~400 Steps',
@@ -52,6 +81,7 @@ export const POLAROID_MEMORY_SPECS: Record<string, PolaroidMemorySpec> = {
     locationTag: 'Hillside Stairway',
     gradientClass: 'from-emerald-200 via-amber-100 to-sky-200',
     matchedFilename: 'baalkumari stairs.jpg',
+    altFilenames: ['staies of baakumari.jpg', 'baalkumari.jpg'],
   },
   scene10_baalkuwari: {
     id: 'scene10_baalkuwari',
@@ -59,7 +89,7 @@ export const POLAROID_MEMORY_SPECS: Record<string, PolaroidMemorySpec> = {
     caption: 'Top of the hill after 400 steps — breeze, bells, and wide valley views',
     locationTag: 'Baal Kuwari Shrine',
     gradientClass: 'from-sky-200 via-amber-100 to-emerald-200',
-    matchedFilename: 'baalkumari.jpg',
+    matchedFilename: 'baalkumari vieew.jpg',
   },
   scene10_baalkuwari_book: {
     id: 'scene10_baalkuwari_book',
@@ -75,7 +105,19 @@ export interface ResolvedPolaroidMemory extends PolaroidMemorySpec {
   resolvedUrl: string | null;
 }
 
+export interface PrivateMediaSessionState {
+  hasLinkedPhotos: boolean;
+  matchedPhotoCount: number;
+  totalPhotoCount: number;
+  folderLabel: string | null;
+  finaleSongName: string | null;
+  finaleSongUrl: string | null;
+}
+
 const localObjectUrls = new Map<string, string>();
+let linkedFolderLabel: string | null = null;
+let finaleSongName: string | null = null;
+let finaleSongUrl: string | null = null;
 const memoryListeners = new Set<() => void>();
 let memoryRevision = 0;
 
@@ -84,22 +126,59 @@ function notifyMemoryListeners(): void {
   memoryListeners.forEach((fn) => fn());
 }
 
+function getAllTargetFilenames(): Set<string> {
+  const names = new Set<string>();
+  for (const spec of Object.values(POLAROID_MEMORY_SPECS)) {
+    if (spec.matchedFilename) names.add(spec.matchedFilename.toLowerCase());
+    if (spec.altFilenames) {
+      for (const alt of spec.altFilenames) {
+        names.add(alt.toLowerCase());
+      }
+    }
+  }
+  return names;
+}
+
+function isAudioFilename(name: string): boolean {
+  const lower = name.toLowerCase();
+  return FINALE_SONG_AUDIO_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
+
+function isLikelyBhaiDoojTrack(name: string): boolean {
+  const lower = name.toLowerCase();
+  return (
+    isAudioFilename(lower) &&
+    (lower.includes('bhai') ||
+      lower.includes('ladki') ||
+      lower.includes('limdi') ||
+      lower.includes('beni') ||
+      lower.includes('dooj'))
+  );
+}
+
 /**
  * Registers user-selected local image files strictly in browser memory via `URL.createObjectURL`.
  * No files are copied into `public/`, bundled at build time, or uploaded over HTTP.
+ * Automatically picks up a matching local Bhai Dooj audio file if present inside the selected folder.
  */
-export function registerLocalPhotoFolder(files: FileList | readonly File[]): number {
-  const targetNames = new Set(
-    Object.values(POLAROID_MEMORY_SPECS)
-      .map((s) => s.matchedFilename?.toLowerCase() ?? null)
-      .filter((n): n is string => Boolean(n))
-  );
+export function registerLocalPhotoFolder(
+  files: FileList | readonly File[],
+  folderLabel?: string | null
+): number {
+  const targetNames = getAllTargetFilenames();
 
-  let matchedCount = 0;
+  let matchedFiles = 0;
+  let autoDetectedAudio: File | null = null;
+
   for (let i = 0; i < files.length; i += 1) {
     const file = files[i];
     if (!file) continue;
     const key = file.name.toLowerCase();
+
+    if (!autoDetectedAudio && isLikelyBhaiDoojTrack(key)) {
+      autoDetectedAudio = file;
+    }
+
     if (!targetNames.has(key)) continue;
 
     const prev = localObjectUrls.get(key);
@@ -107,23 +186,125 @@ export function registerLocalPhotoFolder(files: FileList | readonly File[]): num
       URL.revokeObjectURL(prev);
     }
     localObjectUrls.set(key, URL.createObjectURL(file));
-    matchedCount += 1;
+    matchedFiles += 1;
   }
 
-  if (matchedCount > 0) {
+  if (matchedFiles > 0) {
+    linkedFolderLabel = folderLabel?.trim() || 'Local Trip Folder';
+  }
+
+  if (autoDetectedAudio) {
+    if (finaleSongUrl) {
+      URL.revokeObjectURL(finaleSongUrl);
+    }
+    finaleSongName = autoDetectedAudio.name;
+    finaleSongUrl = URL.createObjectURL(autoDetectedAudio);
+  }
+
+  if (matchedFiles > 0 || autoDetectedAudio) {
     notifyMemoryListeners();
   }
-  return matchedCount;
+  return Object.keys(POLAROID_MEMORY_SPECS).filter(
+    (id) => getResolvedPolaroidMemory(id).resolvedUrl !== null
+  ).length;
+}
+
+export function registerLocalFinaleSong(file: File | null): string | null {
+  if (!file || !isAudioFilename(file.name)) return null;
+  if (finaleSongUrl) {
+    URL.revokeObjectURL(finaleSongUrl);
+  }
+  finaleSongName = file.name;
+  finaleSongUrl = URL.createObjectURL(file);
+  notifyMemoryListeners();
+  return finaleSongUrl;
+}
+
+export function clearLocalFinaleSong(): void {
+  if (finaleSongUrl) {
+    URL.revokeObjectURL(finaleSongUrl);
+  }
+  finaleSongName = null;
+  finaleSongUrl = null;
+  notifyMemoryListeners();
+}
+
+export function supportsNativeDirectoryPicker(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof (window as unknown as { showDirectoryPicker?: unknown }).showDirectoryPicker === 'function'
+  );
+}
+
+/**
+ * Opens the browser File System Access directory picker when available so a user can grant
+ * one-step folder access (including nested subfolders like `Photos-1-001/`) for this session.
+ */
+export async function pickPrivateMediaDirectory(): Promise<{
+  status: 'picked' | 'cancelled' | 'unsupported';
+  matchedPhotos: number;
+}> {
+  if (!supportsNativeDirectoryPicker()) {
+    return { status: 'unsupported', matchedPhotos: 0 };
+  }
+
+  type DirectoryHandleLike = {
+    name?: string;
+    values: () => AsyncIterable<
+      | { kind: 'file'; name: string; getFile: () => Promise<File> }
+      | (DirectoryHandleLike & { kind: 'directory'; name: string })
+    >;
+  };
+
+  try {
+    const picker = (
+      window as unknown as {
+        showDirectoryPicker: (opts?: { mode?: string }) => Promise<DirectoryHandleLike>;
+      }
+    ).showDirectoryPicker;
+    const rootHandle = await picker({ mode: 'read' });
+    const collected: File[] = [];
+    const targetNames = getAllTargetFilenames();
+
+    const walkDirectory = async (dir: DirectoryHandleLike, depth: number): Promise<void> => {
+      if (depth > 3) return;
+      for await (const entry of dir.values()) {
+        if (entry.kind === 'file') {
+          const lower = entry.name.toLowerCase();
+          if (targetNames.has(lower) || isLikelyBhaiDoojTrack(lower)) {
+            collected.push(await entry.getFile());
+          }
+        } else if (entry.kind === 'directory') {
+          await walkDirectory(entry, depth + 1);
+        }
+      }
+    };
+
+    await walkDirectory(rootHandle, 0);
+    const matchedPhotos = registerLocalPhotoFolder(collected, rootHandle.name ?? null);
+    return { status: 'picked', matchedPhotos };
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      return { status: 'cancelled', matchedPhotos: 0 };
+    }
+    return { status: 'unsupported', matchedPhotos: 0 };
+  }
 }
 
 export function clearLocalPhotoUrls(): void {
   localObjectUrls.forEach((url) => URL.revokeObjectURL(url));
   localObjectUrls.clear();
+  linkedFolderLabel = null;
+  if (finaleSongUrl) {
+    URL.revokeObjectURL(finaleSongUrl);
+  }
+  finaleSongName = null;
+  finaleSongUrl = null;
   notifyMemoryListeners();
 }
 
 export function getResolvedPolaroidMemory(polaroidId: string): ResolvedPolaroidMemory {
-  const base = POLAROID_MEMORY_SPECS[polaroidId] ?? {
+  const base: PolaroidMemorySpec = POLAROID_MEMORY_SPECS[polaroidId] ?? {
     id: polaroidId,
     title: 'Trip Memory',
     caption: 'Saved along the Rishikesh scooters ride',
@@ -131,9 +312,36 @@ export function getResolvedPolaroidMemory(polaroidId: string): ResolvedPolaroidM
     gradientClass: 'from-amber-200 via-teal-100 to-sky-200',
     matchedFilename: null,
   };
-  const key = base.matchedFilename?.toLowerCase() ?? null;
-  const resolvedUrl = key ? (localObjectUrls.get(key) ?? null) : null;
+
+  let resolvedUrl: string | null = null;
+  if (base.matchedFilename) {
+    resolvedUrl = localObjectUrls.get(base.matchedFilename.toLowerCase()) ?? null;
+  }
+  if (!resolvedUrl && base.altFilenames) {
+    for (const alt of base.altFilenames) {
+      const candidate = localObjectUrls.get(alt.toLowerCase());
+      if (candidate) {
+        resolvedUrl = candidate;
+        break;
+      }
+    }
+  }
   return { ...base, resolvedUrl };
+}
+
+export function getPrivateMediaSessionState(): PrivateMediaSessionState {
+  const specs = Object.values(POLAROID_MEMORY_SPECS);
+  const matchedPhotoCount = specs.filter(
+    (s) => getResolvedPolaroidMemory(s.id).resolvedUrl !== null
+  ).length;
+  return {
+    hasLinkedPhotos: matchedPhotoCount > 0,
+    matchedPhotoCount,
+    totalPhotoCount: specs.length,
+    folderLabel: linkedFolderLabel,
+    finaleSongName,
+    finaleSongUrl,
+  };
 }
 
 export function usePolaroidMemoryRevision(): number {

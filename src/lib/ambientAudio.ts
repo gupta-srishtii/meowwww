@@ -1,10 +1,15 @@
 /**
- * Lightweight, procedural Web Audio ambient controller for mountain breeze,
- * roadside kettle simmer, and Polaroid shutter click feedback.
- * Zero external audio assets required; respects user gesture unlock, pause, and mute state.
+ * Clean multi-channel Web Audio + optional local Bhai Dooj track controller:
+ * - Channel 1: Environmental ambience (mountain breeze, roadside kettle simmer, courtyard calm)
+ * - Channel 2: Procedural soothing musical motifs tailored per story chapter (no overlapping tracks)
+ * - Channel 3: User-supplied local Bhai Dooj audio (`URL.createObjectURL`, e.g., "Bhai Ni Beni Ladki")
+ *   with smooth tilak fade-in, celebration hold, letter underscore fade-down, and procedural fallback
+ * - Channel 4: Independently scalable SFX bus (temple bells, diyas, shutter click, traffic, chants)
  */
 
 export type AmbientAudioMode =
+  | 'kitaabi'
+  | 'travel'
   | 'road'
   | 'viewpoint'
   | 'dhaba'
@@ -15,23 +20,142 @@ export type AmbientAudioMode =
   | 'bhai_dooj'
   | 'off';
 
+export type FinaleMusicPhase =
+  | 'inactive'
+  | 'kitaabi_callback'
+  | 'arrival'
+  | 'applying_tilak'
+  | 'sweet_offer'
+  | 'eating_together'
+  | 'creator_letter'
+  | 'ending';
+
 interface AmbientState {
   muted: boolean;
   paused: boolean;
   mode: AmbientAudioMode;
+  musicVolume?: number;
+  sfxVolume?: number;
+}
+
+interface MusicMotifSpec {
+  notes: readonly number[];
+  intervalMs: number;
+  durationSec: number;
+  peak: number;
+  wave: OscillatorType;
+  droneHz?: number;
+}
+
+const MUSIC_MOTIFS: Partial<Record<AmbientAudioMode, MusicMotifSpec>> = {
+  kitaabi: {
+    notes: [261.63, 329.63, 392.0, 493.88, 349.23, 440.0],
+    intervalMs: 2100,
+    durationSec: 2.6,
+    peak: 0.022,
+    wave: 'sine',
+  },
+  travel: {
+    notes: [293.66, 440.0, 369.99, 493.88],
+    intervalMs: 1850,
+    durationSec: 2.2,
+    peak: 0.02,
+    wave: 'triangle',
+  },
+  road: {
+    notes: [392.0, 493.88, 587.33, 440.0, 523.25],
+    intervalMs: 1750,
+    durationSec: 2.1,
+    peak: 0.017,
+    wave: 'sine',
+  },
+  viewpoint: {
+    notes: [392.0, 587.33, 659.25, 493.88],
+    intervalMs: 2150,
+    durationSec: 2.5,
+    peak: 0.019,
+    wave: 'sine',
+  },
+  dhaba: {
+    notes: [349.23, 440.0, 523.25, 392.0],
+    intervalMs: 1950,
+    durationSec: 2.3,
+    peak: 0.019,
+    wave: 'triangle',
+  },
+  neelkanth: {
+    notes: [293.66, 440.0, 587.33, 493.88, 369.99],
+    intervalMs: 2300,
+    durationSec: 2.8,
+    peak: 0.018,
+    wave: 'sine',
+    droneHz: 146.83,
+  },
+  baalkuwari_stairs: {
+    notes: [329.63, 415.3, 493.88, 659.25],
+    intervalMs: 1750,
+    durationSec: 2.0,
+    peak: 0.017,
+    wave: 'triangle',
+  },
+  baalkuwari_temple: {
+    notes: [440.0, 554.37, 659.25, 880.0],
+    intervalMs: 2350,
+    durationSec: 2.9,
+    peak: 0.018,
+    wave: 'sine',
+    droneHz: 220.0,
+  },
+  hotel_evening: {
+    notes: [220.0, 329.63, 415.3, 493.88],
+    intervalMs: 2200,
+    durationSec: 2.7,
+    peak: 0.019,
+    wave: 'sine',
+  },
+  bhai_dooj: {
+    notes: [261.63, 392.0, 523.25, 659.25, 587.33, 440.0],
+    intervalMs: 1850,
+    durationSec: 2.5,
+    peak: 0.023,
+    wave: 'sine',
+  },
+};
+
+function clamp01(value: number): number {
+  if (!Number.isFinite(value)) return 0.7;
+  return Math.max(0, Math.min(1, value));
 }
 
 class AmbientAudioController {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
+  private musicGain: GainNode | null = null;
+  private sfxGain: GainNode | null = null;
   private windGain: GainNode | null = null;
   private windFilter: BiquadFilterNode | null = null;
   private simmerGain: GainNode | null = null;
   private initialized = false;
-  private state: AmbientState = {
+  private userUnlocked = false;
+
+  private motifTimerId: number | null = null;
+  private motifStepIndex = 0;
+  private lastMotifTickAt = 0;
+
+  private customAudioEl: HTMLAudioElement | null = null;
+  private customTrackUrl: string | null = null;
+  private customTrackFailed = false;
+  private finalePhase: FinaleMusicPhase = 'inactive';
+  private customVolumeActual = 0;
+  private customVolumeTarget = 0;
+  private customRampTimerId: number | null = null;
+
+  private state: Required<AmbientState> = {
     muted: false,
     paused: false,
     mode: 'off',
+    musicVolume: 0.7,
+    sfxVolume: 0.85,
   };
 
   private ensureContext(): boolean {
@@ -48,6 +172,19 @@ class AmbientAudioController {
       const master = ctx.createGain();
       master.gain.value = 0;
       master.connect(ctx.destination);
+
+      const musicGain = ctx.createGain();
+      musicGain.gain.value = 0.7;
+      const musicLowpass = ctx.createBiquadFilter();
+      musicLowpass.type = 'lowpass';
+      musicLowpass.frequency.value = 1350;
+      musicLowpass.Q.value = 0.55;
+      musicLowpass.connect(musicGain);
+      musicGain.connect(master);
+
+      const sfxGain = ctx.createGain();
+      sfxGain.gain.value = 0.85;
+      sfxGain.connect(ctx.destination);
 
       // Shared 2-second soft pink-ish noise buffer for mountain breeze + kettle texture.
       const sampleRate = ctx.sampleRate;
@@ -80,7 +217,7 @@ class AmbientAudioController {
       windGain.connect(master);
       windSource.start();
 
-      // Subtle warm kettle simmer + stove hum bus (Dhaba only)
+      // Subtle warm kettle simmer / bazaar murmur bus
       const simmerSource = ctx.createBufferSource();
       simmerSource.buffer = buffer;
       simmerSource.loop = true;
@@ -95,8 +232,13 @@ class AmbientAudioController {
       simmerGain.connect(master);
       simmerSource.start();
 
+      // Store filter reference neatly via musicLowpass on musicGain node tag
+      (musicGain as unknown as { __inputNode?: AudioNode }).__inputNode = musicLowpass;
+
       this.ctx = ctx;
       this.masterGain = master;
+      this.musicGain = musicGain;
+      this.sfxGain = sfxGain;
       this.windFilter = windFilter;
       this.windGain = windGain;
       this.simmerGain = simmerGain;
@@ -107,35 +249,282 @@ class AmbientAudioController {
     }
   }
 
-  unlock(): void {
-    if (!this.ensureContext() || !this.ctx) return;
-    if (this.ctx.state === 'suspended') {
-      void this.ctx.resume().then(() => this.applyLevels()).catch(() => {});
-    } else {
-      this.applyLevels();
+  private isCustomTrackOverriding(): boolean {
+    return (
+      this.customTrackUrl !== null &&
+      !this.customTrackFailed &&
+      this.state.mode === 'bhai_dooj' &&
+      (this.finalePhase === 'applying_tilak' ||
+        this.finalePhase === 'sweet_offer' ||
+        this.finalePhase === 'eating_together' ||
+        this.finalePhase === 'creator_letter' ||
+        this.finalePhase === 'ending')
+    );
+  }
+
+  private getCustomTrackDesiredVolume(): number {
+    if (this.state.muted || this.state.paused || this.state.mode !== 'bhai_dooj') {
+      return 0;
+    }
+    if (this.customTrackUrl === null || this.customTrackFailed) {
+      return 0;
+    }
+    const vol = clamp01(this.state.musicVolume);
+    switch (this.finalePhase) {
+      case 'applying_tilak':
+        return vol * 0.86;
+      case 'sweet_offer':
+      case 'eating_together':
+        return vol * 0.78;
+      case 'creator_letter':
+        return vol * 0.28;
+      case 'ending':
+        return vol * 0.34;
+      default:
+        return 0;
     }
   }
 
-  syncState(next: AmbientState): void {
-    const changed =
-      next.muted !== this.state.muted ||
-      next.paused !== this.state.paused ||
-      next.mode !== this.state.mode;
-    this.state = next;
-    if (!changed && !this.initialized) return;
+  private updateCustomTrackElement(): void {
+    if (typeof window === 'undefined') return;
+
+    this.customVolumeTarget = this.getCustomTrackDesiredVolume();
+
+    if (!this.customTrackUrl) {
+      if (this.customAudioEl) {
+        this.customAudioEl.pause();
+        this.customAudioEl.removeAttribute('src');
+        this.customAudioEl.load();
+      }
+      this.customVolumeActual = 0;
+      return;
+    }
+
+    if (!this.customAudioEl) {
+      const audio = new Audio();
+      audio.loop = true;
+      audio.preload = 'auto';
+      audio.volume = 0;
+      audio.addEventListener('error', () => {
+        this.customTrackFailed = true;
+        this.applyLevels();
+      });
+      this.customAudioEl = audio;
+    }
+
+    if (this.customAudioEl.src !== this.customTrackUrl) {
+      this.customTrackFailed = false;
+      this.customAudioEl.src = this.customTrackUrl;
+      this.customAudioEl.currentTime = 0;
+      this.customVolumeActual = 0;
+      this.customAudioEl.volume = 0;
+    }
+
+    if (this.customVolumeTarget > 0.005 && this.userUnlocked && !this.customTrackFailed) {
+      if (this.customAudioEl.paused) {
+        void this.customAudioEl.play().catch(() => {
+          // Browser may wait for next gesture or unsupported codec; procedural fallback takes over cleanly
+        });
+      }
+    }
+
+    if (this.customRampTimerId === null) {
+      this.customRampTimerId = window.setInterval(() => {
+        if (!this.customAudioEl) {
+          if (this.customRampTimerId !== null) {
+            window.clearInterval(this.customRampTimerId);
+            this.customRampTimerId = null;
+          }
+          return;
+        }
+        const diff = this.customVolumeTarget - this.customVolumeActual;
+        if (Math.abs(diff) <= 0.015) {
+          this.customVolumeActual = this.customVolumeTarget;
+        } else {
+          this.customVolumeActual += diff * 0.14;
+        }
+        this.customAudioEl.volume = Math.max(0, Math.min(1, this.customVolumeActual));
+
+        if (this.customVolumeTarget === 0 && this.customVolumeActual <= 0.01) {
+          this.customAudioEl.pause();
+          this.customVolumeActual = 0;
+          if (this.customRampTimerId !== null) {
+            window.clearInterval(this.customRampTimerId);
+            this.customRampTimerId = null;
+          }
+        } else if (Math.abs(this.customVolumeTarget - this.customVolumeActual) <= 0.005) {
+          if (this.customRampTimerId !== null) {
+            window.clearInterval(this.customRampTimerId);
+            this.customRampTimerId = null;
+          }
+        }
+      }, 45);
+    }
+  }
+
+  private scheduleNextMotifNote(): void {
+    if (!this.ctx || !this.musicGain || this.ctx.state !== 'running') return;
+    if (this.state.muted || this.state.paused || this.state.mode === 'off') return;
+    if (this.isCustomTrackOverriding()) return;
+
+    const spec = MUSIC_MOTIFS[this.state.mode];
+    if (!spec) return;
+
+    const nowMs = performance.now();
+    if (nowMs - this.lastMotifTickAt < spec.intervalMs) return;
+    this.lastMotifTickAt = nowMs;
+
+    const inputNode =
+      (this.musicGain as unknown as { __inputNode?: AudioNode }).__inputNode ?? this.musicGain;
+
+    try {
+      const ctx = this.ctx;
+      const now = ctx.currentTime;
+      const freq = spec.notes[this.motifStepIndex % spec.notes.length];
+      this.motifStepIndex += 1;
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = spec.wave;
+      osc.frequency.setValueAtTime(freq, now);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(spec.peak, now + 0.32);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + spec.durationSec);
+
+      osc.connect(gain);
+      gain.connect(inputNode);
+      osc.start(now);
+      osc.stop(now + spec.durationSec + 0.08);
+
+      // Optional warm soft tanpura/fifth undertone every 2 notes for spiritual / summit serene spaces
+      if (spec.droneHz && this.motifStepIndex % 2 === 1) {
+        const drone = ctx.createOscillator();
+        const droneGain = ctx.createGain();
+        drone.type = 'sine';
+        drone.frequency.setValueAtTime(spec.droneHz, now);
+        droneGain.gain.setValueAtTime(0.0001, now);
+        droneGain.gain.exponentialRampToValueAtTime(spec.peak * 0.55, now + 0.55);
+        droneGain.gain.exponentialRampToValueAtTime(0.0001, now + spec.durationSec + 0.6);
+        drone.connect(droneGain);
+        droneGain.connect(inputNode);
+        drone.start(now);
+        drone.stop(now + spec.durationSec + 0.65);
+      }
+    } catch {
+      // Ignore oscillator cleanup issues cleanly
+    }
+  }
+
+  private ensureMotifLoop(shouldRun: boolean): void {
+    if (typeof window === 'undefined') return;
+    if (!shouldRun) {
+      if (this.motifTimerId !== null) {
+        window.clearInterval(this.motifTimerId);
+        this.motifTimerId = null;
+      }
+      return;
+    }
+    if (this.motifTimerId === null) {
+      this.motifTimerId = window.setInterval(() => {
+        this.scheduleNextMotifNote();
+      }, 320);
+    }
+  }
+
+  unlock(): void {
+    this.userUnlocked = true;
+    if (!this.ensureContext() || !this.ctx) {
+      this.updateCustomTrackElement();
+      return;
+    }
+    if (this.ctx.state === 'suspended') {
+      void this.ctx
+        .resume()
+        .then(() => {
+          this.applyLevels();
+          this.updateCustomTrackElement();
+        })
+        .catch(() => {});
+    } else {
+      this.applyLevels();
+      this.updateCustomTrackElement();
+    }
+  }
+
+  setFinaleTrackUrl(url: string | null): void {
+    if (this.customTrackUrl === url) return;
+    this.customTrackUrl = url;
+    this.customTrackFailed = false;
+    this.updateCustomTrackElement();
     this.applyLevels();
   }
 
+  syncFinaleMusicPhase(phase: FinaleMusicPhase): void {
+    if (this.finalePhase === phase) return;
+    this.finalePhase = phase;
+    this.updateCustomTrackElement();
+    this.applyLevels();
+  }
+
+  syncState(next: AmbientState): void {
+    const normalized: Required<AmbientState> = {
+      muted: next.muted,
+      paused: next.paused,
+      mode: next.mode,
+      musicVolume: clamp01(next.musicVolume ?? this.state.musicVolume),
+      sfxVolume: clamp01(next.sfxVolume ?? this.state.sfxVolume),
+    };
+    const modeChanged = normalized.mode !== this.state.mode;
+    const changed =
+      normalized.muted !== this.state.muted ||
+      normalized.paused !== this.state.paused ||
+      modeChanged ||
+      normalized.musicVolume !== this.state.musicVolume ||
+      normalized.sfxVolume !== this.state.sfxVolume;
+
+    this.state = normalized;
+    if (modeChanged) {
+      this.motifStepIndex = 0;
+      this.lastMotifTickAt = 0;
+    }
+    if (!changed && !this.initialized) return;
+    this.applyLevels();
+    this.updateCustomTrackElement();
+  }
+
+  private getSfxOutput(): AudioNode | null {
+    if (!this.ctx) return null;
+    return this.sfxGain ?? this.ctx.destination;
+  }
+
   private applyLevels(): void {
-    if (!this.ctx || !this.masterGain || !this.windGain || !this.windFilter || !this.simmerGain) {
+    if (
+      !this.ctx ||
+      !this.masterGain ||
+      !this.musicGain ||
+      !this.sfxGain ||
+      !this.windGain ||
+      !this.windFilter ||
+      !this.simmerGain
+    ) {
       return;
     }
 
     const now = this.ctx.currentTime;
     const silent = this.state.muted || this.state.paused || this.state.mode === 'off';
+    const musicVol = clamp01(this.state.musicVolume);
+    const sfxVol = clamp01(this.state.sfxVolume);
+
+    this.sfxGain.gain.setTargetAtTime(
+      this.state.muted || this.state.paused ? 0 : sfxVol,
+      now,
+      0.04
+    );
 
     if (silent) {
       this.masterGain.gain.setTargetAtTime(0, now, 0.08);
+      this.ensureMotifLoop(false);
       return;
     }
 
@@ -143,41 +532,52 @@ class AmbientAudioController {
       return;
     }
 
-    this.masterGain.gain.setTargetAtTime(0.65, now, 0.14);
+    this.masterGain.gain.setTargetAtTime(0.75, now, 0.16);
+    const overrideActive = this.isCustomTrackOverriding();
+    this.musicGain.gain.setTargetAtTime(overrideActive ? 0 : musicVol, now, 0.25);
+    this.ensureMotifLoop(!overrideActive && musicVol > 0.01);
 
-    if (this.state.mode === 'road') {
+    const ambientScale = 0.45 + 0.55 * musicVol;
+
+    if (this.state.mode === 'kitaabi') {
+      this.windFilter.frequency.setTargetAtTime(190, now, 0.2);
+      this.windGain.gain.setTargetAtTime(0.01 * ambientScale, now, 0.2);
+      this.simmerGain.gain.setTargetAtTime(0, now, 0.15);
+    } else if (this.state.mode === 'travel') {
+      this.windFilter.frequency.setTargetAtTime(340, now, 0.2);
+      this.windGain.gain.setTargetAtTime(0.045 * ambientScale, now, 0.2);
+      this.simmerGain.gain.setTargetAtTime(0, now, 0.15);
+    } else if (this.state.mode === 'road') {
       this.windFilter.frequency.setTargetAtTime(420, now, 0.2);
-      this.windGain.gain.setTargetAtTime(0.085, now, 0.2);
+      this.windGain.gain.setTargetAtTime(0.075 * ambientScale, now, 0.2);
       this.simmerGain.gain.setTargetAtTime(0, now, 0.15);
     } else if (this.state.mode === 'viewpoint') {
       this.windFilter.frequency.setTargetAtTime(320, now, 0.2);
-      this.windGain.gain.setTargetAtTime(0.068, now, 0.2);
+      this.windGain.gain.setTargetAtTime(0.058 * ambientScale, now, 0.2);
       this.simmerGain.gain.setTargetAtTime(0, now, 0.15);
     } else if (this.state.mode === 'dhaba') {
       this.windFilter.frequency.setTargetAtTime(240, now, 0.2);
-      this.windGain.gain.setTargetAtTime(0.035, now, 0.2);
-      this.simmerGain.gain.setTargetAtTime(0.045, now, 0.2);
+      this.windGain.gain.setTargetAtTime(0.028 * ambientScale, now, 0.2);
+      this.simmerGain.gain.setTargetAtTime(0.036 * ambientScale, now, 0.2);
     } else if (this.state.mode === 'neelkanth') {
       this.windFilter.frequency.setTargetAtTime(290, now, 0.2);
-      this.windGain.gain.setTargetAtTime(0.044, now, 0.2);
-      // Soft peaceful courtyard crowd murmur warmth
-      this.simmerGain.gain.setTargetAtTime(0.022, now, 0.2);
+      this.windGain.gain.setTargetAtTime(0.036 * ambientScale, now, 0.2);
+      this.simmerGain.gain.setTargetAtTime(0.018 * ambientScale, now, 0.2);
     } else if (this.state.mode === 'baalkuwari_stairs') {
       this.windFilter.frequency.setTargetAtTime(360, now, 0.2);
-      this.windGain.gain.setTargetAtTime(0.056, now, 0.2);
+      this.windGain.gain.setTargetAtTime(0.048 * ambientScale, now, 0.2);
       this.simmerGain.gain.setTargetAtTime(0, now, 0.15);
     } else if (this.state.mode === 'baalkuwari_temple') {
       this.windFilter.frequency.setTargetAtTime(300, now, 0.2);
-      this.windGain.gain.setTargetAtTime(0.048, now, 0.2);
-      this.simmerGain.gain.setTargetAtTime(0.012, now, 0.2);
+      this.windGain.gain.setTargetAtTime(0.042 * ambientScale, now, 0.2);
+      this.simmerGain.gain.setTargetAtTime(0.01 * ambientScale, now, 0.2);
     } else if (this.state.mode === 'hotel_evening') {
       this.windFilter.frequency.setTargetAtTime(220, now, 0.2);
-      this.windGain.gain.setTargetAtTime(0.028, now, 0.2);
-      this.simmerGain.gain.setTargetAtTime(0.014, now, 0.2);
+      this.windGain.gain.setTargetAtTime(0.024 * ambientScale, now, 0.2);
+      this.simmerGain.gain.setTargetAtTime(0.01 * ambientScale, now, 0.2);
     } else if (this.state.mode === 'bhai_dooj') {
-      // Quiet indoor celebration backdrop with near-silent warm air tone
       this.windFilter.frequency.setTargetAtTime(175, now, 0.2);
-      this.windGain.gain.setTargetAtTime(0.008, now, 0.2);
+      this.windGain.gain.setTargetAtTime(0.006 * ambientScale, now, 0.2);
       this.simmerGain.gain.setTargetAtTime(0, now, 0.2);
     }
   }
@@ -188,6 +588,8 @@ class AmbientAudioController {
   playTempleBell(): void {
     if (this.state.muted || this.state.paused) return;
     if (!this.ensureContext() || !this.ctx || this.ctx.state !== 'running') return;
+    const out = this.getSfxOutput();
+    if (!out) return;
 
     try {
       const ctx = this.ctx;
@@ -210,7 +612,7 @@ class AmbientAudioController {
         gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
         osc.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(out);
         osc.start(now);
         osc.stop(now + duration + 0.05);
       }
@@ -225,6 +627,8 @@ class AmbientAudioController {
   playDiyaChime(): void {
     if (this.state.muted || this.state.paused) return;
     if (!this.ensureContext() || !this.ctx || this.ctx.state !== 'running') return;
+    const out = this.getSfxOutput();
+    if (!out) return;
 
     try {
       const ctx = this.ctx;
@@ -241,7 +645,7 @@ class AmbientAudioController {
         gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.09 + 0.75);
 
         osc.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(out);
         osc.start(now + idx * 0.09);
         osc.stop(now + idx * 0.09 + 0.8);
       });
@@ -256,6 +660,8 @@ class AmbientAudioController {
   playShutterClick(): void {
     if (this.state.muted || this.state.paused) return;
     if (!this.ensureContext() || !this.ctx || this.ctx.state !== 'running') return;
+    const out = this.getSfxOutput();
+    if (!out) return;
 
     try {
       const ctx = this.ctx;
@@ -273,7 +679,7 @@ class AmbientAudioController {
         gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.032);
 
         osc.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(out);
         osc.start(now + offset);
         osc.stop(now + offset + 0.04);
       };
@@ -291,6 +697,8 @@ class AmbientAudioController {
   playTrafficPassWhoosh(): void {
     if (this.state.muted || this.state.paused) return;
     if (!this.ensureContext() || !this.ctx || this.ctx.state !== 'running') return;
+    const out = this.getSfxOutput();
+    if (!out) return;
 
     try {
       const ctx = this.ctx;
@@ -306,7 +714,7 @@ class AmbientAudioController {
       gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(out);
       osc.start(now);
       osc.stop(now + 0.26);
     } catch {
@@ -320,6 +728,8 @@ class AmbientAudioController {
   playTrafficHornWarn(): void {
     if (this.state.muted || this.state.paused) return;
     if (!this.ensureContext() || !this.ctx || this.ctx.state !== 'running') return;
+    const out = this.getSfxOutput();
+    if (!out) return;
 
     try {
       const ctx = this.ctx;
@@ -340,7 +750,7 @@ class AmbientAudioController {
 
         osc.connect(filter);
         filter.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(out);
         osc.start(now + offset);
         osc.stop(now + offset + 0.1);
       });
@@ -357,6 +767,8 @@ class AmbientAudioController {
   playHarHarMahadevChant(): void {
     if (this.state.muted || this.state.paused) return;
     if (!this.ensureContext() || !this.ctx || this.ctx.state !== 'running') return;
+    const out = this.getSfxOutput();
+    if (!out) return;
 
     try {
       const ctx = this.ctx;
@@ -391,7 +803,7 @@ class AmbientAudioController {
 
           osc.connect(filter);
           filter.connect(gain);
-          gain.connect(ctx.destination);
+          gain.connect(out);
           osc.start(now + offset);
           osc.stop(now + offset + dur + 0.06);
         });
@@ -407,6 +819,8 @@ class AmbientAudioController {
   playTilakBlessingTone(): void {
     if (this.state.muted || this.state.paused) return;
     if (!this.ensureContext() || !this.ctx || this.ctx.state !== 'running') return;
+    const out = this.getSfxOutput();
+    if (!out) return;
 
     try {
       const ctx = this.ctx;
@@ -423,7 +837,7 @@ class AmbientAudioController {
         gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.14 + 1.15);
 
         osc.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(out);
         osc.start(now + idx * 0.14);
         osc.stop(now + idx * 0.14 + 1.2);
       });
@@ -438,6 +852,8 @@ class AmbientAudioController {
   playBhaiDoojChime(): void {
     if (this.state.muted || this.state.paused) return;
     if (!this.ensureContext() || !this.ctx || this.ctx.state !== 'running') return;
+    const out = this.getSfxOutput();
+    if (!out) return;
 
     try {
       const ctx = this.ctx;
@@ -454,7 +870,7 @@ class AmbientAudioController {
         gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.18 + 1.4);
 
         osc.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(out);
         osc.start(now + idx * 0.18);
         osc.stop(now + idx * 0.18 + 1.45);
       });

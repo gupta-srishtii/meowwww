@@ -30,3 +30,16 @@ export const CREATOR_BHAI_DOOJ_LETTER = {
     'Draft note included for creator review before Phase 5 final release.',
 } as const;
 
+/**
+ * Special requested song metadata for the Bhai Dooj celebration finale.
+ * "Bhai Ne Meri Ladki" maps to the traditional Gujarati brother-sister song
+ * "Bhai Ni Beni Ladki (Kon Halave Limdi)" written by Avinash Vyas.
+ */
+export const BHAI_DOOJ_SPECIAL_TRACK_SPEC = {
+  requestedName: 'Bhai Ne Meri Ladki',
+  confirmedTraditionalTitle: 'Bhai Ni Beni Ladki (Kon Halave Limdi)',
+  lyricist: 'Avinash Vyas (classic Gujarati folk song)',
+  status: 'awaiting_creator_version',
+  note: 'Multiple singer versions exist (e.g., Hosh Barot, Poonam Gondaliya, Pravin Rawat). Attach your preferred local audio file inside Memories or on the Finale card; otherwise a gentle warm procedural theme plays.',
+} as const;
+

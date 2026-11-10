@@ -3,6 +3,7 @@
 import {
   ContextualActionPill,
   MinimalTopBar,
+  PolaroidToastCard,
 } from '@/components/ui/MinimalHudChrome';
 import type { WalkHotspot } from '@/hooks/useWalkController';
 
@@ -15,7 +16,10 @@ export interface NeelkanthHUDProps {
   rangBell: boolean;
   litDiya: boolean;
   hadDarshan: boolean;
+  capturedFood?: boolean;
   polaroidCount: number;
+  polaroidToastVisible?: boolean;
+  onDismissPolaroidToast?: () => void;
   nearbyHotspot: WalkHotspot | null;
   hasActiveNarration: boolean;
   activeDarshanPan: boolean;
@@ -31,7 +35,10 @@ export function NeelkanthHUD({
   rangBell,
   litDiya,
   hadDarshan,
+  capturedFood = false,
   polaroidCount,
+  polaroidToastVisible = false,
+  onDismissPolaroidToast,
   nearbyHotspot,
   hasActiveNarration,
   activeDarshanPan,
@@ -74,8 +81,26 @@ export function NeelkanthHUD({
           >
             {hadDarshan ? '✓ Darshan' : '○ Darshan'}
           </span>
+          <span
+            className={`rounded-md px-2 py-0.5 font-medium ${
+              capturedFood ? 'bg-emerald-950/80 text-emerald-300' : 'bg-slate-800/80 text-slate-300'
+            }`}
+          >
+            {capturedFood ? '✓ Meal Outside' : '○ Meal Outside'}
+          </span>
         </div>
       </MinimalTopBar>
+
+      {polaroidToastVisible && onDismissPolaroidToast && (
+        <PolaroidToastCard
+          polaroidId="scene07_neelkanth_food"
+          title="Meal Outside Neelkanth"
+          caption="Hot chhole bhature in steel thalis outside the Neelkanth market after temple darshan"
+          gradientClass="from-orange-200 via-amber-100 to-yellow-100"
+          stackedCount={polaroidCount}
+          onDismiss={onDismissPolaroidToast}
+        />
+      )}
 
       {/* Prayer Moment Caption */}
       {activeDarshanPan && (

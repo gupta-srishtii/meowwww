@@ -1,8 +1,18 @@
 'use client';
 
+import { useRef } from 'react';
 import type { BhaiDoojPhase } from '@/components/canvas/scenes/Scene13_BhaiDoojFinale';
 import { MinimalTopBar } from '@/components/ui/MinimalHudChrome';
-import { CREATOR_BHAI_DOOJ_LETTER, KITAABI_CALLBACK_BEAT } from '@/lib/finaleContent';
+import {
+  BHAI_DOOJ_SPECIAL_TRACK_SPEC,
+  CREATOR_BHAI_DOOJ_LETTER,
+  KITAABI_CALLBACK_BEAT,
+} from '@/lib/finaleContent';
+import {
+  getPrivateMediaSessionState,
+  registerLocalFinaleSong,
+  usePolaroidMemoryRevision,
+} from '@/lib/privateMemoryLoader';
 
 export interface BhaiDoojHUDProps {
   phase: BhaiDoojPhase;
@@ -33,6 +43,10 @@ export function BhaiDoojHUD({
   onSkipEating,
   onFinishFinale,
 }: BhaiDoojHUDProps) {
+  usePolaroidMemoryRevision();
+  const songInputRef = useRef<HTMLInputElement | null>(null);
+  const { finaleSongName } = getPrivateMediaSessionState();
+
   return (
     <>
       <MinimalTopBar
@@ -67,6 +81,30 @@ export function BhaiDoojHUD({
           >
             {phase === 'creator_letter' ? '✓ Sweets Shared' : '○ Mithai & Note'}
           </span>
+          <input
+            ref={songInputRef}
+            type="file"
+            accept="audio/*,.mp3,.wav,.m4a,.ogg,.aac,.flac,.webm"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0] ?? null;
+              if (file) registerLocalFinaleSong(file);
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => songInputRef.current?.click()}
+            title={BHAI_DOOJ_SPECIAL_TRACK_SPEC.note}
+            className={`rounded-md border px-2 py-0.5 font-medium transition ${
+              finaleSongName
+                ? 'border-amber-400/50 bg-amber-950/70 text-amber-200 hover:bg-amber-900/70'
+                : 'border-sky-400/40 bg-sky-950/60 text-sky-200 hover:bg-sky-900/70'
+            }`}
+          >
+            {finaleSongName
+              ? `♪ ${finaleSongName}`
+              : `♪ Attach "${BHAI_DOOJ_SPECIAL_TRACK_SPEC.confirmedTraditionalTitle.split(' (')[0]}"`}
+          </button>
         </div>
       </MinimalTopBar>
 

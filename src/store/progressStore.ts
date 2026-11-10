@@ -77,6 +77,8 @@ export interface ProgressStoreState {
 
   // Settings & Quality
   audioMuted: boolean;
+  musicVolume: number;
+  sfxVolume: number;
   guidedMode: boolean;
   qualityProfile: QualityProfile;
 
@@ -115,6 +117,8 @@ export interface ProgressStoreState {
   setContextLostPaused: (lost: boolean) => void;
   setModalPaused: (paused: boolean) => void;
   toggleAudio: () => void;
+  setMusicVolume: (volume: number) => void;
+  setSfxVolume: (volume: number) => void;
   toggleGuidedMode: () => void;
   setQualityProfile: (profile: QualityProfile) => void;
   downgradeQualityProfile: () => void;
@@ -165,6 +169,8 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
   modalPaused: false,
 
   audioMuted: false,
+  musicVolume: 0.7,
+  sfxVolume: 0.85,
   guidedMode: false,
   qualityProfile: detectInitialQualityProfile(),
 
@@ -401,7 +407,57 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
   setContextLostPaused: (lost) => set({ contextLostPaused: lost }),
   setModalPaused: (paused) => set({ modalPaused: paused }),
 
-  toggleAudio: () => set((state) => ({ audioMuted: !state.audioMuted })),
+  toggleAudio: () =>
+    set((state) => {
+      const nextMuted = !state.audioMuted;
+      try {
+        window.localStorage.setItem(
+          'road_made_us_family_audio_prefs',
+          JSON.stringify({
+            audioMuted: nextMuted,
+            musicVolume: state.musicVolume,
+            sfxVolume: state.sfxVolume,
+          })
+        );
+      } catch {
+        // Ignore restricted storage errors cleanly
+      }
+      return { audioMuted: nextMuted };
+    }),
+  setMusicVolume: (volume) =>
+    set((state) => {
+      const next = Math.max(0, Math.min(1, Number.isFinite(volume) ? volume : 0.7));
+      try {
+        window.localStorage.setItem(
+          'road_made_us_family_audio_prefs',
+          JSON.stringify({
+            audioMuted: state.audioMuted,
+            musicVolume: next,
+            sfxVolume: state.sfxVolume,
+          })
+        );
+      } catch {
+        // Ignore restricted storage errors cleanly
+      }
+      return { musicVolume: next };
+    }),
+  setSfxVolume: (volume) =>
+    set((state) => {
+      const next = Math.max(0, Math.min(1, Number.isFinite(volume) ? volume : 0.85));
+      try {
+        window.localStorage.setItem(
+          'road_made_us_family_audio_prefs',
+          JSON.stringify({
+            audioMuted: state.audioMuted,
+            musicVolume: state.musicVolume,
+            sfxVolume: next,
+          })
+        );
+      } catch {
+        // Ignore restricted storage errors cleanly
+      }
+      return { sfxVolume: next };
+    }),
   toggleGuidedMode: () => set((state) => ({ guidedMode: !state.guidedMode })),
   setQualityProfile: (profile) => set({ qualityProfile: profile }),
 
@@ -467,6 +523,30 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
   },
 
   hydrateCheckpointFromStorage: () => {
+    try {
+      const rawPrefs = window.localStorage.getItem('road_made_us_family_audio_prefs');
+      if (rawPrefs) {
+        const parsed = JSON.parse(rawPrefs) as Partial<{
+          audioMuted: boolean;
+          musicVolume: number;
+          sfxVolume: number;
+        }>;
+        set((state) => ({
+          audioMuted: typeof parsed.audioMuted === 'boolean' ? parsed.audioMuted : state.audioMuted,
+          musicVolume:
+            typeof parsed.musicVolume === 'number' && Number.isFinite(parsed.musicVolume)
+              ? Math.max(0, Math.min(1, parsed.musicVolume))
+              : state.musicVolume,
+          sfxVolume:
+            typeof parsed.sfxVolume === 'number' && Number.isFinite(parsed.sfxVolume)
+              ? Math.max(0, Math.min(1, parsed.sfxVolume))
+              : state.sfxVolume,
+        }));
+      }
+    } catch {
+      // Ignore audio prefs parsing errors cleanly
+    }
+
     const result = readCheckpointFromStorage();
     if (result.status === 'ok' && result.data) {
       const seg = result.data.mountainRoadSegment ?? 'to_dhaba';

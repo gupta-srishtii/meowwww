@@ -347,6 +347,7 @@ export interface SceneStageProps {
   bellSwingImpulseNonce: number;
   litDiya: boolean;
   hadDarshan: boolean;
+  capturedNeelkanthFood: boolean;
   activeDarshanPan: boolean;
   ateTrailheadMaggi: boolean;
   trailheadEatingActive: boolean;
@@ -408,6 +409,7 @@ export function SceneStage({
   bellSwingImpulseNonce,
   litDiya,
   hadDarshan,
+  capturedNeelkanthFood,
   activeDarshanPan,
   ateTrailheadMaggi,
   trailheadEatingActive,
@@ -615,6 +617,7 @@ export function SceneStage({
               bellSwingImpulseNonce={bellSwingImpulseNonce}
               litDiya={litDiya}
               hadDarshan={hadDarshan}
+              capturedFood={capturedNeelkanthFood}
               activeDarshanPan={activeDarshanPan}
               onNearbyHotspotChange={onNearbyHotspotChange}
               onSceneReady={controller.onMountedSceneReady}

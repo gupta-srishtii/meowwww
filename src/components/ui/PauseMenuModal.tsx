@@ -7,12 +7,16 @@ export interface PauseMenuModalProps {
   chapterTitle: string;
   qualityProfile: QualityProfile;
   audioMuted: boolean;
+  musicVolume: number;
+  sfxVolume: number;
   touchControlsVisible: boolean;
   canShowDevToggle?: boolean;
   devToolsVisible?: boolean;
   onToggleDevTools?: () => void;
   onChangeQuality: (profile: QualityProfile) => void;
   onToggleAudioMute: () => void;
+  onChangeMusicVolume: (volume: number) => void;
+  onChangeSfxVolume: (volume: number) => void;
   onToggleTouchControls: () => void;
   onResume: () => void;
   onOpenChapters: () => void;
@@ -31,12 +35,16 @@ export function PauseMenuModal({
   chapterTitle,
   qualityProfile,
   audioMuted,
+  musicVolume,
+  sfxVolume,
   touchControlsVisible,
   canShowDevToggle = false,
   devToolsVisible = false,
   onToggleDevTools,
   onChangeQuality,
   onToggleAudioMute,
+  onChangeMusicVolume,
+  onChangeSfxVolume,
   onToggleTouchControls,
   onResume,
   onOpenChapters,
@@ -109,6 +117,52 @@ export function PauseMenuModal({
             >
               {audioMuted ? 'Muted (M)' : 'On (M)'}
             </button>
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <label htmlFor="pause-music-volume" className="text-slate-300">
+              Music &amp; Ambience
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                id="pause-music-volume"
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                disabled={audioMuted}
+                value={Math.round(musicVolume * 100)}
+                aria-label="Music volume"
+                onChange={(e) => onChangeMusicVolume(Number(e.target.value) / 100)}
+                className="h-1.5 w-24 cursor-pointer accent-amber-400 disabled:cursor-not-allowed disabled:opacity-45"
+              />
+              <span className="w-8 text-right text-[10px] tabular-nums text-slate-400">
+                {audioMuted ? '0%' : `${Math.round(musicVolume * 100)}%`}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <label htmlFor="pause-sfx-volume" className="text-slate-300">
+              SFX Volume
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                id="pause-sfx-volume"
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                disabled={audioMuted}
+                value={Math.round(sfxVolume * 100)}
+                aria-label="SFX volume"
+                onChange={(e) => onChangeSfxVolume(Number(e.target.value) / 100)}
+                className="h-1.5 w-24 cursor-pointer accent-amber-400 disabled:cursor-not-allowed disabled:opacity-45"
+              />
+              <span className="w-8 text-right text-[10px] tabular-nums text-slate-400">
+                {audioMuted ? '0%' : `${Math.round(sfxVolume * 100)}%`}
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center justify-between gap-2">

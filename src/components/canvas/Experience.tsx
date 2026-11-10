@@ -39,7 +39,11 @@ import { useDrivingInput } from '@/hooks/useDrivingInput';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useWalkInput, type WalkHotspot } from '@/hooks/useWalkController';
 import { ambientAudio } from '@/lib/ambientAudio';
-import { POLAROID_MEMORY_SPECS } from '@/lib/privateMemoryLoader';
+import {
+  POLAROID_MEMORY_SPECS,
+  getPrivateMediaSessionState,
+  usePolaroidMemoryRevision,
+} from '@/lib/privateMemoryLoader';
 import {
   LEAD_START_DISTANCE,
   VIEWPOINT_RESUME_DISTANCE,
@@ -184,6 +188,10 @@ export default function Experience() {
   const [litDiya, setLitDiya] = useState(false);
   const [hadDarshan, setHadDarshan] = useState(false);
   const [activeDarshanPan, setActiveDarshanPan] = useState(false);
+  const [morningToastVisible, setMorningToastVisible] = useState(false);
+  const morningToastTimerRef = useRef<number | null>(null);
+  const [neelkanthToastVisible, setNeelkanthToastVisible] = useState(false);
+  const neelkanthToastTimerRef = useRef<number | null>(null);
   const neelkanthDarshanTimerRef = useRef<number | null>(null);
 
   // Scene 8/9/10 (Baal Kuwari Route, Pre-Climb Maggi, ~400 Stairs & Temple) UI state
@@ -236,7 +244,13 @@ export default function Experience() {
   const userPaused = useProgressStore((s) => s.userPaused);
   const isSimulationPaused = useProgressStore(selectIsSimulationPaused);
   const audioMuted = useProgressStore((s) => s.audioMuted);
+  const musicVolume = useProgressStore((s) => s.musicVolume);
+  const sfxVolume = useProgressStore((s) => s.sfxVolume);
   const toggleAudio = useProgressStore((s) => s.toggleAudio);
+  const setMusicVolume = useProgressStore((s) => s.setMusicVolume);
+  const setSfxVolume = useProgressStore((s) => s.setSfxVolume);
+  usePolaroidMemoryRevision();
+  const finaleSongUrl = getPrivateMediaSessionState().finaleSongUrl;
   const setUserPaused = useProgressStore((s) => s.setUserPaused);
   const setTabHiddenPaused = useProgressStore((s) => s.setTabHiddenPaused);
   const setContextLostPaused = useProgressStore((s) => s.setContextLostPaused);
@@ -311,6 +325,7 @@ export default function Experience() {
   const capturedViewpointShree = collectedPolaroids.includes('scene05_viewpoint_shree');
   const capturedViewpointSolo = collectedPolaroids.includes('scene05_viewpoint_solo');
   const capturedViewpointGroup = collectedPolaroids.includes('scene05_viewpoint_group');
+  const capturedNeelkanthFood = collectedPolaroids.includes('scene07_neelkanth_food');
   const capturedBaalKuwariPolaroid = collectedPolaroids.includes('scene10_baalkuwari');
   const capturedBaalKuwariBook = collectedPolaroids.includes('scene10_baalkuwari_book');
 
@@ -447,12 +462,22 @@ export default function Experience() {
   const handleMorningBreakfastComplete = useCallback(() => {
     setMorningBreakfastActive(false);
     setMorningBreakfastDone(true);
+    ambientAudio.playShutterClick();
+    capturePolaroidAndSave('scene03_tea_stop');
+    setMorningToastVisible(true);
+    if (morningToastTimerRef.current !== null) {
+      window.clearTimeout(morningToastTimerRef.current);
+    }
+    morningToastTimerRef.current = window.setTimeout(() => {
+      morningToastTimerRef.current = null;
+      setMorningToastVisible(false);
+    }, 4500);
     showTimedCaption(
       'Bun Maska & Chai',
       'Subah ki garma-garam chai aur bun maska ho gaya — ab scooty par Neelkanth ki taraf chalein!',
       3400
     );
-  }, [showTimedCaption]);
+  }, [capturePolaroidAndSave, showTimedCaption]);
 
   const handleScooterDepartureComplete = useCallback(() => {
     if (useProgressStore.getState().committedSceneId !== 4) return;
@@ -530,9 +555,38 @@ export default function Experience() {
     showTimedCaption,
   ]);
 
+  const handleCaptureNeelkanthFoodPolaroid = useCallback(() => {
+    if (useProgressStore.getState().committedSceneId !== 7) return;
+    if (useProgressStore.getState().activeNarration !== null || activeDarshanPan) return;
+
+    ambientAudio.playShutterClick();
+    const isNew = capturePolaroidAndSave('scene07_neelkanth_food');
+    setNeelkanthToastVisible(true);
+    if (neelkanthToastTimerRef.current !== null) {
+      window.clearTimeout(neelkanthToastTimerRef.current);
+    }
+    neelkanthToastTimerRef.current = window.setTimeout(() => {
+      neelkanthToastTimerRef.current = null;
+      setNeelkanthToastVisible(false);
+    }, 4500);
+
+    if (isNew) {
+      showTimedCaption(
+        'Meal Outside Neelkanth',
+        'Darshan ke baad bazaar ke bahar garma-garam chhole bhature aur lunch yaadein mein save ho gayi!',
+        3400
+      );
+    }
+  }, [activeDarshanPan, capturePolaroidAndSave, showTimedCaption]);
+
   const handleNeelkanthInteract = useCallback(() => {
     if (useProgressStore.getState().activeNarration !== null || activeDarshanPan) return;
     if (!nearbyHotspot) return;
+
+    if (nearbyHotspot.id === 'neelkanth_food') {
+      handleCaptureNeelkanthFoodPolaroid();
+      return;
+    }
 
     if (nearbyHotspot.id === 'bell') {
       setRangBell(true);
@@ -586,6 +640,7 @@ export default function Experience() {
     }
   }, [
     activeDarshanPan,
+    handleCaptureNeelkanthFoodPolaroid,
     nearbyHotspot,
     reducedMotion,
     showTimedCaption,
@@ -863,14 +918,20 @@ export default function Experience() {
       }
       return;
     }
+    if (isNeelkanthWalkActive && nearbyHotspot.id === 'neelkanth_food') {
+      handleCaptureNeelkanthFoodPolaroid();
+      return;
+    }
     if (isDhabaWalkActive) {
       handleCaptureDhabaPolaroid();
     }
   }, [
     handleCaptureBaalKuwariPolaroid,
     handleCaptureDhabaPolaroid,
+    handleCaptureNeelkanthFoodPolaroid,
     isBaalKuwariTempleActive,
     isDhabaWalkActive,
+    isNeelkanthWalkActive,
     isViewpointWalkActive,
     nearbyHotspot,
     triggerBaalKuwariBookPhoto,
@@ -1299,6 +1360,12 @@ export default function Experience() {
       if (neelkanthDarshanTimerRef.current !== null) {
         window.clearTimeout(neelkanthDarshanTimerRef.current);
       }
+      if (morningToastTimerRef.current !== null) {
+        window.clearTimeout(morningToastTimerRef.current);
+      }
+      if (neelkanthToastTimerRef.current !== null) {
+        window.clearTimeout(neelkanthToastTimerRef.current);
+      }
       if (baalKuwariToastTimerRef.current !== null) {
         window.clearTimeout(baalKuwariToastTimerRef.current);
       }
@@ -1317,33 +1384,39 @@ export default function Experience() {
     };
   }, []);
 
-  // Sync procedural Web Audio levels & unlock safely on first user gesture
+  // Sync multi-channel music, custom finale track, & ambient sound levels cleanly
   useEffect(() => {
     const mode =
       transitionPhase !== 'idle' || escalatedToFallback
         ? 'off'
-        : isDrivingSceneActive || isDepartureSceneActive
-          ? 'road'
-          : isViewpointWalkActive || (isDay1SceneActive && day1Phase === 'stay_explore')
-            ? 'viewpoint'
-            : isDhabaWalkActive || isBaalKuwariMaggiActive || isDay2MorningActive
-              ? 'dhaba'
-              : isNeelkanthWalkActive
-                ? 'neelkanth'
-                : isBaalKuwariStairsActive
-                  ? 'baalkuwari_stairs'
-                  : isBaalKuwariTempleActive
-                    ? 'baalkuwari_temple'
-                    : isHotelReturnWalkActive || isKitaabiSceneActive || isDay1SceneActive
-                      ? 'hotel_evening'
-                      : isBhaiDoojSceneActive || isEndingGalleryActive
-                        ? 'bhai_dooj'
-                        : 'off';
+        : isKitaabiSceneActive
+          ? 'kitaabi'
+          : (isDay1SceneActive && day1Phase === 'travel_cinematic') || isDepartureSceneActive
+            ? 'travel'
+            : isDrivingSceneActive
+              ? 'road'
+              : isViewpointWalkActive || (isDay1SceneActive && day1Phase === 'stay_explore')
+                ? 'viewpoint'
+                : isDhabaWalkActive || isBaalKuwariMaggiActive || isDay2MorningActive
+                  ? 'dhaba'
+                  : isNeelkanthWalkActive
+                    ? 'neelkanth'
+                    : isBaalKuwariStairsActive
+                      ? 'baalkuwari_stairs'
+                      : isBaalKuwariTempleActive
+                        ? 'baalkuwari_temple'
+                        : isHotelReturnWalkActive || isDay1SceneActive
+                          ? 'hotel_evening'
+                          : isBhaiDoojSceneActive || isEndingGalleryActive
+                            ? 'bhai_dooj'
+                            : 'off';
 
     ambientAudio.syncState({
       muted: audioMuted,
       paused: isSimulationPaused,
       mode,
+      musicVolume,
+      sfxVolume,
     });
   }, [
     audioMuted,
@@ -1364,8 +1437,23 @@ export default function Experience() {
     isNeelkanthWalkActive,
     isSimulationPaused,
     isViewpointWalkActive,
+    musicVolume,
+    sfxVolume,
     transitionPhase,
   ]);
+
+  useEffect(() => {
+    ambientAudio.setFinaleTrackUrl(finaleSongUrl);
+  }, [finaleSongUrl]);
+
+  useEffect(() => {
+    const phaseForMusic = isBhaiDoojSceneActive
+      ? bhaiDoojPhase
+      : isEndingGalleryActive
+        ? 'ending'
+        : 'inactive';
+    ambientAudio.syncFinaleMusicPhase(phaseForMusic);
+  }, [bhaiDoojPhase, isBhaiDoojSceneActive, isEndingGalleryActive]);
 
   useEffect(() => {
     const handleUnlock = () => ambientAudio.unlock();
@@ -1399,6 +1487,8 @@ export default function Experience() {
     setTrafficWarningVisible(false);
     setNearbyHotspot(null);
     setPolaroidToastVisible(false);
+    setMorningToastVisible(false);
+    setNeelkanthToastVisible(false);
     setActiveDarshanPan(false);
     setFoodCinematicActive(false);
     setFoodCinematicPlayedThisVisit(false);
@@ -1730,6 +1820,7 @@ export default function Experience() {
           bellSwingImpulseNonce={bellSwingImpulseNonce}
           litDiya={litDiya}
           hadDarshan={hadDarshan}
+          capturedNeelkanthFood={capturedNeelkanthFood}
           activeDarshanPan={activeDarshanPan}
           ateTrailheadMaggi={ateTrailheadMaggi}
           trailheadEatingActive={trailheadEatingActive}
@@ -1788,6 +1879,8 @@ export default function Experience() {
             onSkipEveningMaggi={handleDay1Complete}
             morningBreakfastActive={morningBreakfastActive}
             morningBreakfastDone={morningBreakfastDone}
+            morningToastVisible={morningToastVisible}
+            onDismissMorningToast={() => setMorningToastVisible(false)}
             onSkipBreakfast={handleMorningBreakfastComplete}
             onSkipDeparture={handleScooterDepartureComplete}
             touchControlsVisible={touchControlsVisible}
@@ -1936,7 +2029,10 @@ export default function Experience() {
             rangBell={rangBell}
             litDiya={litDiya}
             hadDarshan={hadDarshan}
+            capturedFood={capturedNeelkanthFood}
             polaroidCount={validPolaroidCount}
+            polaroidToastVisible={neelkanthToastVisible}
+            onDismissPolaroidToast={() => setNeelkanthToastVisible(false)}
             nearbyHotspot={nearbyHotspot}
             hasActiveNarration={activeNarration !== null}
             activeDarshanPan={activeDarshanPan}
@@ -2122,12 +2218,16 @@ export default function Experience() {
         chapterTitle={currentChapterTitle}
         qualityProfile={qualityProfile}
         audioMuted={audioMuted}
+        musicVolume={musicVolume}
+        sfxVolume={sfxVolume}
         touchControlsVisible={touchControlsVisible}
         canShowDevToggle={isDevEnvironment}
         devToolsVisible={devToolsVisible}
         onToggleDevTools={() => setDevToolsVisible((v) => !v)}
         onChangeQuality={setQualityProfile}
         onToggleAudioMute={toggleAudio}
+        onChangeMusicVolume={setMusicVolume}
+        onChangeSfxVolume={setSfxVolume}
         onToggleTouchControls={() => setTouchControlsVisible((visible) => !visible)}
         onResume={() => setUserPaused(false)}
         onOpenChapters={handleOpenChapters}

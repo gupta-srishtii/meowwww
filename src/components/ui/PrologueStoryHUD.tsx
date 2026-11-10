@@ -1,6 +1,10 @@
 'use client';
 
-import { MinimalTopBar, ContextualActionPill } from '@/components/ui/MinimalHudChrome';
+import {
+  MinimalTopBar,
+  ContextualActionPill,
+  PolaroidToastCard,
+} from '@/components/ui/MinimalHudChrome';
 import type { WalkHotspot } from '@/hooks/useWalkController';
 
 export interface PrologueStoryHUDProps {
@@ -20,6 +24,8 @@ export interface PrologueStoryHUDProps {
   // Scene 3
   morningBreakfastActive?: boolean;
   morningBreakfastDone?: boolean;
+  morningToastVisible?: boolean;
+  onDismissMorningToast?: () => void;
   onSkipBreakfast?: () => void;
   // Scene 4
   onSkipDeparture?: () => void;
@@ -65,6 +71,8 @@ export function PrologueStoryHUD({
   onSkipEveningMaggi,
   morningBreakfastActive = false,
   morningBreakfastDone = false,
+  morningToastVisible = false,
+  onDismissMorningToast,
   onSkipBreakfast,
   onSkipDeparture,
   touchControlsVisible = false,
@@ -243,10 +251,21 @@ export function PrologueStoryHUD({
                   : 'bg-slate-800/80 text-slate-300'
               }`}
             >
-              {morningBreakfastDone ? '✓ Bun Maska & Chai' : '○ Bun Maska & Chai'}
+              {morningBreakfastDone ? '✓ Bun Maska & Chai · Memory Saved' : '○ Bun Maska & Chai'}
             </span>
           </div>
         </MinimalTopBar>
+
+        {morningToastVisible && onDismissMorningToast && (
+          <PolaroidToastCard
+            polaroidId="scene03_tea_stop"
+            title="Morning Bun Maska & Kulhad Chai"
+            caption="Four steaming kulhads and fresh morning buns outside on the Rishikesh road before starting our ride"
+            gradientClass="from-amber-200 via-orange-100 to-amber-50"
+            stackedCount={polaroidCount}
+            onDismiss={onDismissMorningToast}
+          />
+        )}
 
         {morningBreakfastActive && (
           <div className="pointer-events-none fixed inset-x-0 bottom-6 z-20 flex justify-center px-4">

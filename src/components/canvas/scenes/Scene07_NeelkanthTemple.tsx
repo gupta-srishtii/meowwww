@@ -47,6 +47,7 @@ export interface Scene07NeelkanthTempleProps {
   bellSwingImpulseNonce: number;
   litDiya: boolean;
   hadDarshan: boolean;
+  capturedFood?: boolean;
   activeDarshanPan: boolean;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onSceneReady: (token: number, sceneId: SceneId) => void;
@@ -130,6 +131,7 @@ export function Scene07_NeelkanthTemple({
   bellSwingImpulseNonce,
   litDiya,
   hadDarshan,
+  capturedFood = false,
   activeDarshanPan,
   onNearbyHotspotChange,
   onSceneReady,
@@ -405,6 +407,7 @@ export function Scene07_NeelkanthTemple({
         bellSwingImpulseNonce={bellSwingImpulseNonce}
         litDiya={litDiya}
         hadDarshan={hadDarshan}
+        capturedFood={capturedFood}
       />
 
       {/* Playable Ishaan avatar entering vibrant market passage toward colorful temple gate */}

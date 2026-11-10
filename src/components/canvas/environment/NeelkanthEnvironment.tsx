@@ -41,9 +41,9 @@ export const NEELKANTH_OBSTACLES: readonly WalkObstacle[] = [
   // Entrance Gopuram left & right gate towers (`wide 3.8m walk opening in middle`)
   { kind: 'box', minX: -7.5, maxX: -1.9, minZ: 3.55, maxZ: 5.05 },
   { kind: 'box', minX: 1.9, maxX: 7.5, minZ: 3.55, maxZ: 5.05 },
-  // Outer temple market stalls (left flower & rudraksha stalls, right prasad shop)
+  // Outer temple market stalls (left flower & rudraksha stalls, right prasad & meal corner)
   { kind: 'box', minX: -6.2, maxX: -3.65, minZ: 6.0, maxZ: 11.75 },
-  { kind: 'box', minX: 3.65, maxX: 6.2, minZ: 6.0, maxZ: 9.25 },
+  { kind: 'box', minX: 3.35, maxX: 6.2, minZ: 6.0, maxZ: 9.25 },
   // Parked Scooter 1 & Scooter 2 in outer apron (physical collision around bikes)
   { kind: 'box', minX: 1.05, maxX: 2.75, minZ: 13.45, maxZ: 14.5 },
   { kind: 'box', minX: -2.25, maxX: -0.55, minZ: 13.45, maxZ: 14.5 },
@@ -81,6 +81,14 @@ export const NEELKANTH_HOTSPOTS: readonly WalkHotspot[] = [
     actionType: 'interact',
   },
   {
+    id: 'neelkanth_food',
+    label: 'Have Meal Outside Neelkanth',
+    x: 2.65,
+    z: 8.6,
+    radius: 1.55,
+    actionType: 'photo',
+  },
+  {
     id: 'scooters',
     label: 'Ride Scooters',
     x: 0.25,
@@ -97,6 +105,7 @@ export interface NeelkanthEnvironmentProps {
   bellSwingImpulseNonce: number;
   litDiya: boolean;
   hadDarshan: boolean;
+  capturedFood?: boolean;
 }
 
 const MAX_FOREST_PINES = 64;
@@ -167,6 +176,7 @@ export function NeelkanthEnvironment({
   bellSwingImpulseNonce,
   litDiya,
   hadDarshan,
+  capturedFood = false,
 }: NeelkanthEnvironmentProps) {
   const shadowsEnabled = QUALITY_PRESETS[qualityProfile].shadows;
   const reducedMotion = useReducedMotion();
@@ -850,6 +860,14 @@ export function NeelkanthEnvironment({
         visible={!hadDarshan}
         color="#fde047"
         height={1.0}
+        paused={paused}
+        reducedMotion={reducedMotion}
+      />
+      <HotspotBeaconSparkle
+        position={[3.78, 0.9, 8.6]}
+        visible={!capturedFood}
+        color="#f97316"
+        height={0.95}
         paused={paused}
         reducedMotion={reducedMotion}
       />
