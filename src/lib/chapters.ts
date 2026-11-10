@@ -1,4 +1,8 @@
-import type { MountainRoadSegmentId, MountainRoadSubStage } from '@/lib/mountainSpline';
+import type {
+  BaalKuwariSubStage,
+  MountainRoadSegmentId,
+  MountainRoadSubStage,
+} from '@/lib/mountainSpline';
 import type { SceneId } from '@/lib/sceneConfig';
 
 export type ChapterKey =
@@ -6,7 +10,11 @@ export type ChapterKey =
   | 'scenic_viewpoint'
   | 'maggi_chai_stop'
   | 'neelkanth_road'
-  | 'neelkanth_temple';
+  | 'neelkanth_temple'
+  | 'baal_kuwari_road'
+  | 'baal_kuwari_maggi'
+  | 'baal_kuwari_stairs'
+  | 'baal_kuwari_temple';
 
 export interface StoryChapterItem {
   key: ChapterKey;
@@ -16,6 +24,7 @@ export interface StoryChapterItem {
   targetSceneId: SceneId;
   targetSegment?: MountainRoadSegmentId;
   targetSubStage?: MountainRoadSubStage;
+  targetBaalSubStage?: BaalKuwariSubStage;
   polaroidIds: readonly string[];
 }
 
@@ -66,21 +75,65 @@ export const PHASE2_STORY_CHAPTERS: readonly StoryChapterItem[] = [
     targetSceneId: 7,
     polaroidIds: ['scene07_neelkanth'],
   },
+  {
+    key: 'baal_kuwari_road',
+    rank: 5,
+    title: 'Mountain Route to Baal Kuwari',
+    subtitle: 'Riding onward from Neelkanth along quiet cedar ridges toward the climb',
+    targetSceneId: 8,
+    targetSegment: 'to_baalkuwari',
+    targetBaalSubStage: 'driving',
+    polaroidIds: [],
+  },
+  {
+    key: 'baal_kuwari_maggi',
+    rank: 6,
+    title: 'Trailhead Pre-Climb Maggi Stop',
+    subtitle: 'Pausing together for hot Maggi at the base before starting the climb',
+    targetSceneId: 8,
+    targetBaalSubStage: 'maggi_stop',
+    polaroidIds: [],
+  },
+  {
+    key: 'baal_kuwari_stairs',
+    rank: 7,
+    title: 'Baal Kuwari: The ~400 Stairs',
+    subtitle: 'Climbing forested mountain steps together through four scenic flights',
+    targetSceneId: 9,
+    polaroidIds: [],
+  },
+  {
+    key: 'baal_kuwari_temple',
+    rank: 8,
+    title: 'Baal Kuwari Summit Temple',
+    subtitle: 'Quiet summit courtyard overlooking the distant Himalayan hills',
+    targetSceneId: 10,
+    polaroidIds: ['scene10_baalkuwari'],
+  },
 ];
 
 export const UPCOMING_CHAPTER_PREVIEW = {
-  title: 'Baal Kuwari Temple & ~400 Stairs',
-  subtitle: 'Next chapter coming soon',
+  title: 'Safe Evening Return & Hotel Farewell',
+  subtitle: 'Return ride & reunion arriving in next checkpoint',
 } as const;
 
 export function inferChapterRank(
   sceneId: SceneId,
   segment: MountainRoadSegmentId,
   subStage: MountainRoadSubStage,
-  polaroids: readonly string[]
+  polaroids: readonly string[],
+  baalKuwariSubStage: BaalKuwariSubStage = 'driving'
 ): number {
   let rank = 0;
-  if (sceneId === 7 || polaroids.includes('scene07_neelkanth')) {
+  if (sceneId === 10 || polaroids.includes('scene10_baalkuwari')) {
+    rank = 8;
+  } else if (sceneId === 9) {
+    rank = 7;
+  } else if (sceneId === 8 && baalKuwariSubStage === 'maggi_stop') {
+    rank = 6;
+  } else if (sceneId === 8 || (sceneId === 5 && segment === 'to_baalkuwari')) {
+    rank = 5;
+  } else if (sceneId === 7 || polaroids.includes('scene07_neelkanth')) {
     rank = 4;
   } else if (sceneId === 5 && segment === 'to_neelkanth') {
     rank = 3;
@@ -99,11 +152,18 @@ export function inferChapterRank(
 export function getActiveChapterKey(
   sceneId: SceneId,
   segment: MountainRoadSegmentId,
-  subStage: MountainRoadSubStage
+  subStage: MountainRoadSubStage,
+  baalKuwariSubStage: BaalKuwariSubStage = 'driving'
 ): ChapterKey {
+  if (sceneId === 10) return 'baal_kuwari_temple';
+  if (sceneId === 9) return 'baal_kuwari_stairs';
+  if (sceneId === 8) {
+    return baalKuwariSubStage === 'maggi_stop' ? 'baal_kuwari_maggi' : 'baal_kuwari_road';
+  }
   if (sceneId === 7) return 'neelkanth_temple';
   if (sceneId === 6) return 'maggi_chai_stop';
   if (segment === 'to_neelkanth') return 'neelkanth_road';
+  if (segment === 'to_baalkuwari') return 'baal_kuwari_road';
   if (subStage === 'viewpoint_walk') return 'scenic_viewpoint';
   return 'mountain_road';
 }

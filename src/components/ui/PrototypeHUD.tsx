@@ -22,6 +22,7 @@ export interface PrototypeHUDProps {
   onContinuePastViewpoint?: () => void;
   onContinueToDhaba?: () => void;
   onEnterNeelkanthTemple?: () => void;
+  onEnterBaalKuwariMaggi?: () => void;
   onReplayPreDhabaSegment?: () => void;
   telemetryRefs: TelemetryRefs;
 }
@@ -43,6 +44,7 @@ export function PrototypeHUD({
   onContinuePastViewpoint,
   onContinueToDhaba,
   onEnterNeelkanthTemple,
+  onEnterBaalKuwariMaggi,
   onReplayPreDhabaSegment,
   telemetryRefs,
 }: PrototypeHUDProps) {
@@ -53,8 +55,16 @@ export function PrototypeHUD({
     const canEnterDhaba = arrived && roadSegment === 'to_dhaba' && Boolean(onContinueToDhaba);
     const canEnterNeelkanth =
       arrived && roadSegment === 'to_neelkanth' && Boolean(onEnterNeelkanthTemple);
+    const canEnterBaalKuwariMaggi =
+      arrived && roadSegment === 'to_baalkuwari' && Boolean(onEnterBaalKuwariMaggi);
 
-    if (!canEnterViewpoint && !canPullOverViewpoint && !canEnterDhaba && !canEnterNeelkanth) {
+    if (
+      !canEnterViewpoint &&
+      !canPullOverViewpoint &&
+      !canEnterDhaba &&
+      !canEnterNeelkanth &&
+      !canEnterBaalKuwariMaggi
+    ) {
       return;
     }
 
@@ -66,7 +76,8 @@ export function PrototypeHUD({
       }
       if (
         event.code === 'KeyE' ||
-        (event.code === 'Enter' && (canEnterViewpoint || canEnterDhaba || canEnterNeelkanth))
+        (event.code === 'Enter' &&
+          (canEnterViewpoint || canEnterDhaba || canEnterNeelkanth || canEnterBaalKuwariMaggi))
       ) {
         event.preventDefault();
         if (canEnterViewpoint) {
@@ -75,6 +86,8 @@ export function PrototypeHUD({
           onContinueToDhaba?.();
         } else if (canEnterNeelkanth) {
           onEnterNeelkanthTemple?.();
+        } else if (canEnterBaalKuwariMaggi) {
+          onEnterBaalKuwariMaggi?.();
         } else if (canPullOverViewpoint) {
           onPullOverAtViewpoint?.();
         }
@@ -92,6 +105,7 @@ export function PrototypeHUD({
     roadSegment,
     onContinueToDhaba,
     onEnterNeelkanthTemple,
+    onEnterBaalKuwariMaggi,
     onPullOverAtViewpoint,
     onEnterViewpoint,
   ]);
@@ -102,7 +116,9 @@ export function PrototypeHUD({
         title={
           roadSegment === 'to_dhaba'
             ? 'Rishikesh Mountain Highway'
-            : 'Forest Road to Neelkanth'
+            : roadSegment === 'to_baalkuwari'
+              ? 'Mountain Route to Baal Kuwari'
+              : 'Forest Road to Neelkanth'
         }
         polaroidCount={polaroidCount}
         audioMuted={audioMuted}
@@ -220,6 +236,33 @@ export function PrototypeHUD({
                       className="rounded-xl bg-amber-400 px-4 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-amber-300"
                     >
                       Stop for Maggi &amp; Chai (E) →
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={onResetRide}
+                    className="rounded-xl border border-slate-600 bg-slate-800 px-3.5 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-slate-700"
+                  >
+                    Ride Again
+                  </button>
+                </div>
+              </>
+            ) : roadSegment === 'to_baalkuwari' ? (
+              <>
+                <p className="text-xs font-semibold tracking-[0.16em] text-amber-300 uppercase">
+                  Baal Kuwari Trailhead Base
+                </p>
+                <p className="text-xs text-slate-300">
+                  Scooters parked beneath the forest stairhead. Stop at the base Maggi stall before starting the ~400-step climb.
+                </p>
+                <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
+                  {onEnterBaalKuwariMaggi && (
+                    <button
+                      type="button"
+                      onClick={onEnterBaalKuwariMaggi}
+                      className="rounded-xl bg-amber-400 px-4 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-amber-300"
+                    >
+                      Stop for Pre-Climb Maggi (E) →
                     </button>
                   )}
                   <button

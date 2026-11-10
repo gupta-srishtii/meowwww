@@ -1,4 +1,5 @@
 import type {
+  BaalKuwariSubStage,
   MountainRoadSegmentId,
   MountainRoadSubStage,
 } from '@/lib/mountainSpline';
@@ -14,6 +15,7 @@ export interface CheckpointData {
   stairStepCount?: number;
   mountainRoadSegment?: MountainRoadSegmentId;
   roadSubStage?: MountainRoadSubStage;
+  baalKuwariSubStage?: BaalKuwariSubStage;
   roadResumeDistance?: number;
   audioMuted: boolean;
   guidedMode: boolean;
@@ -66,7 +68,8 @@ export function validateCheckpointData(raw: unknown): CheckpointData | null {
   if (
     candidate.mountainRoadSegment !== undefined &&
     candidate.mountainRoadSegment !== 'to_dhaba' &&
-    candidate.mountainRoadSegment !== 'to_neelkanth'
+    candidate.mountainRoadSegment !== 'to_neelkanth' &&
+    candidate.mountainRoadSegment !== 'to_baalkuwari'
   ) {
     return null;
   }
@@ -74,6 +77,13 @@ export function validateCheckpointData(raw: unknown): CheckpointData | null {
     candidate.roadSubStage !== undefined &&
     candidate.roadSubStage !== 'driving' &&
     candidate.roadSubStage !== 'viewpoint_walk'
+  ) {
+    return null;
+  }
+  if (
+    candidate.baalKuwariSubStage !== undefined &&
+    candidate.baalKuwariSubStage !== 'driving' &&
+    candidate.baalKuwariSubStage !== 'maggi_stop'
   ) {
     return null;
   }
@@ -103,6 +113,7 @@ export function validateCheckpointData(raw: unknown): CheckpointData | null {
     stairStepCount: candidate.stairStepCount,
     mountainRoadSegment: candidate.mountainRoadSegment,
     roadSubStage: candidate.roadSubStage,
+    baalKuwariSubStage: candidate.baalKuwariSubStage,
     roadResumeDistance: candidate.roadResumeDistance,
     audioMuted: candidate.audioMuted,
     guidedMode: candidate.guidedMode,

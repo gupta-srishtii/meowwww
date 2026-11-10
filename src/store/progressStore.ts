@@ -12,6 +12,7 @@ import {
 } from '@/lib/qualityProfile';
 import {
   LEAD_START_DISTANCE,
+  type BaalKuwariSubStage,
   type MountainRoadSegmentId,
   type MountainRoadSubStage,
 } from '@/lib/mountainSpline';
@@ -63,6 +64,7 @@ export interface ProgressStoreState {
   stairStepCount: number;
   mountainRoadSegment: MountainRoadSegmentId;
   roadSubStage: MountainRoadSubStage;
+  baalKuwariSubStage: BaalKuwariSubStage;
   roadResumeDistance: number;
   activeNarration: ActiveNarrationState | null;
 
@@ -103,6 +105,7 @@ export interface ProgressStoreState {
   setStairStepCount: (step: number) => void;
   setMountainRoadSegment: (segment: MountainRoadSegmentId) => void;
   setRoadSubStage: (subStage: MountainRoadSubStage) => void;
+  setBaalKuwariSubStage: (subStage: BaalKuwariSubStage) => void;
   setRoadResumeDistance: (distance: number) => void;
   setUserPaused: (paused: boolean) => void;
   setTabHiddenPaused: (paused: boolean) => void;
@@ -145,6 +148,7 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
   stairStepCount: 0,
   mountainRoadSegment: 'to_dhaba',
   roadSubStage: 'driving',
+  baalKuwariSubStage: 'driving',
   roadResumeDistance: LEAD_START_DISTANCE,
   activeNarration: null,
 
@@ -215,7 +219,8 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
         sceneId,
         state.mountainRoadSegment,
         state.roadSubStage,
-        state.collectedPolaroids
+        state.collectedPolaroids,
+        state.baalKuwariSubStage
       )
     );
 
@@ -307,7 +312,8 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
           state.committedSceneId,
           state.mountainRoadSegment,
           state.roadSubStage,
-          nextPolaroids
+          nextPolaroids,
+          state.baalKuwariSubStage
         )
       );
       set({ collectedPolaroids: nextPolaroids, furthestChapterRank: nextRank });
@@ -340,7 +346,13 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
       mountainRoadSegment: segment,
       furthestChapterRank: Math.max(
         state.furthestChapterRank,
-        inferChapterRank(state.committedSceneId, segment, state.roadSubStage, state.collectedPolaroids)
+        inferChapterRank(
+          state.committedSceneId,
+          segment,
+          state.roadSubStage,
+          state.collectedPolaroids,
+          state.baalKuwariSubStage
+        )
       ),
     })),
   setRoadSubStage: (subStage) =>
@@ -352,7 +364,22 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
           state.committedSceneId,
           state.mountainRoadSegment,
           subStage,
-          state.collectedPolaroids
+          state.collectedPolaroids,
+          state.baalKuwariSubStage
+        )
+      ),
+    })),
+  setBaalKuwariSubStage: (subStage) =>
+    set((state) => ({
+      baalKuwariSubStage: subStage,
+      furthestChapterRank: Math.max(
+        state.furthestChapterRank,
+        inferChapterRank(
+          state.committedSceneId,
+          state.mountainRoadSegment,
+          state.roadSubStage,
+          state.collectedPolaroids,
+          subStage
         )
       ),
     })),
@@ -384,6 +411,7 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
       stairStepCount: state.stairStepCount > 0 ? state.stairStepCount : undefined,
       mountainRoadSegment: state.mountainRoadSegment,
       roadSubStage: state.roadSubStage,
+      baalKuwariSubStage: state.baalKuwariSubStage,
       roadResumeDistance: state.roadResumeDistance,
       audioMuted: state.audioMuted,
       guidedMode: state.guidedMode,
@@ -405,15 +433,17 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
   restoreCheckpointSettings: (data) => {
     const seg = data.mountainRoadSegment ?? 'to_dhaba';
     const sub = data.roadSubStage ?? 'driving';
+    const baalSub = data.baalKuwariSubStage ?? 'driving';
     set((state) => ({
       collectedPolaroids: [...data.collectedPolaroids],
       furthestChapterRank: Math.max(
         state.furthestChapterRank,
-        inferChapterRank(data.committedSceneId, seg, sub, data.collectedPolaroids)
+        inferChapterRank(data.committedSceneId, seg, sub, data.collectedPolaroids, baalSub)
       ),
       stairStepCount: data.stairStepCount ?? 0,
       mountainRoadSegment: seg,
       roadSubStage: sub,
+      baalKuwariSubStage: baalSub,
       roadResumeDistance: data.roadResumeDistance ?? LEAD_START_DISTANCE,
       audioMuted: data.audioMuted,
       guidedMode: data.guidedMode,
@@ -428,6 +458,7 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
     if (result.status === 'ok' && result.data) {
       const seg = result.data.mountainRoadSegment ?? 'to_dhaba';
       const sub = result.data.roadSubStage ?? 'driving';
+      const baalSub = result.data.baalKuwariSubStage ?? 'driving';
       set((state) => ({
         collectedPolaroids: [...result.data!.collectedPolaroids],
         furthestChapterRank: Math.max(
@@ -436,10 +467,12 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
             result.data!.committedSceneId,
             seg,
             sub,
-            result.data!.collectedPolaroids
+            result.data!.collectedPolaroids,
+            baalSub
           )
         ),
         stairStepCount: result.data!.stairStepCount ?? 0,
+        baalKuwariSubStage: baalSub,
         audioMuted: result.data!.audioMuted,
         guidedMode: result.data!.guidedMode,
         lastCheckpoint: result.data,
@@ -482,7 +515,9 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
       furthestChapterRank: 0,
       mountainRoadSegment: 'to_dhaba',
       roadSubStage: 'driving',
+      baalKuwariSubStage: 'driving',
       roadResumeDistance: LEAD_START_DISTANCE,
+      stairStepCount: 0,
       checkpointStatusNote: removed
         ? 'Cleared saved checkpoint'
         : 'Cleared in-memory checkpoint (storage unavailable)',

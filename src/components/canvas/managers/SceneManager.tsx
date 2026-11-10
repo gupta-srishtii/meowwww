@@ -19,10 +19,17 @@ import {
 } from '@/components/canvas/scenes/Scene05_ViewpointStop';
 import { Scene06_MaggiChai } from '@/components/canvas/scenes/Scene06_MaggiChai';
 import { Scene07_NeelkanthTemple } from '@/components/canvas/scenes/Scene07_NeelkanthTemple';
+import { Scene08_BaalKuwariApproach } from '@/components/canvas/scenes/Scene08_BaalKuwariApproach';
+import { Scene09_BaalKuwariStairs } from '@/components/canvas/scenes/Scene09_BaalKuwariStairs';
+import { Scene10_BaalKuwariTemple } from '@/components/canvas/scenes/Scene10_BaalKuwariTemple';
 import { TempPhase1BTestScene } from '@/components/canvas/scenes/TempPhase1BTestScene';
 import type { DrivingInputState } from '@/hooks/useDrivingInput';
 import type { WalkHotspot, WalkInputState } from '@/hooks/useWalkController';
-import type { MountainRoadSegmentId, MountainRoadSubStage } from '@/lib/mountainSpline';
+import type {
+  BaalKuwariSubStage,
+  MountainRoadSegmentId,
+  MountainRoadSubStage,
+} from '@/lib/mountainSpline';
 import type { SceneId } from '@/lib/sceneConfig';
 import {
   selectIsSimulationPaused,
@@ -48,6 +55,10 @@ export interface SceneManagerController {
   requestRoadSubStageTransition: (
     nextSubStage: MountainRoadSubStage,
     options?: RoadSubStageTransitionOptions
+  ) => void;
+  requestBaalKuwariSubStageTransition: (
+    nextSubStage: BaalKuwariSubStage,
+    options?: { resumeDistance?: number; clearInputs?: () => void }
   ) => void;
   retryTransition: () => void;
   revertToCommittedScene: () => void;
@@ -177,6 +188,35 @@ export function useSceneTransitionController(): SceneManagerController {
     [cancelPendingAsync]
   );
 
+  const requestBaalKuwariSubStageTransition = useCallback(
+    (
+      nextSubStage: BaalKuwariSubStage,
+      options?: { resumeDistance?: number; clearInputs?: () => void }
+    ) => {
+      cancelPendingAsync();
+      options?.clearInputs?.();
+
+      const token = ++transitionTokenRef.current;
+      const store = useProgressStore.getState();
+      store.beginFadeOut(8, token, true);
+
+      fadeOutTimerRef.current = window.setTimeout(() => {
+        fadeOutTimerRef.current = null;
+        if (token !== transitionTokenRef.current) return;
+
+        const nextStore = useProgressStore.getState();
+        nextStore.setMountainRoadSegment('to_baalkuwari');
+        if (options?.resumeDistance !== undefined) {
+          nextStore.setRoadResumeDistance(options.resumeDistance);
+        }
+        nextStore.setBaalKuwariSubStage(nextSubStage);
+        nextStore.enterLoadingPhase(8, token);
+        nextStore.enterMountingPhase(token);
+      }, FADE_DURATION_MS);
+    },
+    [cancelPendingAsync]
+  );
+
   const onMountedSceneReady = useCallback((token: number, sceneId: SceneId) => {
     if (token !== transitionTokenRef.current) {
       useProgressStore.getState().recordStaleCallbackRejected();
@@ -239,6 +279,7 @@ export function useSceneTransitionController(): SceneManagerController {
   return {
     requestSceneTransition,
     requestRoadSubStageTransition,
+    requestBaalKuwariSubStageTransition,
     retryTransition,
     revertToCommittedScene,
     onMountedSceneReady,
@@ -268,6 +309,14 @@ export interface SceneStageProps {
   hadDarshan: boolean;
   activeDarshanPan: boolean;
   capturedNeelkanthPolaroid: boolean;
+  ateTrailheadMaggi: boolean;
+  trailheadEatingActive: boolean;
+  onTrailheadMaggiComplete: () => void;
+  onStairStepCountChange: (steps: number) => void;
+  onStairHalfwayMilestone: () => void;
+  rangBaalKuwariBell: boolean;
+  baalKuwariBellNonce: number;
+  capturedBaalKuwariPolaroid: boolean;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onArrivedChange: (arrived: boolean) => void;
   onInViewpointZoneChange: (inZone: boolean) => void;
@@ -300,6 +349,14 @@ export function SceneStage({
   hadDarshan,
   activeDarshanPan,
   capturedNeelkanthPolaroid,
+  ateTrailheadMaggi,
+  trailheadEatingActive,
+  onTrailheadMaggiComplete,
+  onStairStepCountChange,
+  onStairHalfwayMilestone,
+  rangBaalKuwariBell,
+  baalKuwariBellNonce,
+  capturedBaalKuwariPolaroid,
   onNearbyHotspotChange,
   onArrivedChange,
   onInViewpointZoneChange,
@@ -316,6 +373,8 @@ export function SceneStage({
   const qualityProfile = useProgressStore((s) => s.qualityProfile);
   const mountainRoadSegment = useProgressStore((s) => s.mountainRoadSegment);
   const roadSubStage = useProgressStore((s) => s.roadSubStage);
+  const baalKuwariSubStage = useProgressStore((s) => s.baalKuwariSubStage);
+  const stairStepCount = useProgressStore((s) => s.stairStepCount);
   const roadResumeDistance = useProgressStore((s) => s.roadResumeDistance);
   const downgradeQualityProfile = useProgressStore((s) => s.downgradeQualityProfile);
   const isPaused = useProgressStore(selectIsSimulationPaused);
@@ -337,7 +396,13 @@ export function SceneStage({
   const simulateMountFailure =
     transitionPhase === 'mounting' && devFailureMode === 'mount';
 
-  const boundaryResetKey = `${mountedSceneId}-${mountedSceneId === 5 ? roadSubStage : 'base'}-${retryNonce}`;
+  const boundaryResetKey = `${mountedSceneId}-${
+    mountedSceneId === 5
+      ? roadSubStage
+      : mountedSceneId === 8
+        ? baalKuwariSubStage
+        : 'base'
+  }-${retryNonce}`;
 
   return (
     <>
@@ -408,6 +473,52 @@ export function SceneStage({
               hadDarshan={hadDarshan}
               activeDarshanPan={activeDarshanPan}
               capturedPolaroid={capturedNeelkanthPolaroid}
+              onNearbyHotspotChange={onNearbyHotspotChange}
+              onSceneReady={controller.onMountedSceneReady}
+            />
+          ) : mountedSceneId === 8 ? (
+            <Scene08_BaalKuwariApproach
+              subStage={baalKuwariSubStage}
+              drivingInputRef={inputRef}
+              walkInputRef={walkInputRef}
+              qualityProfile={qualityProfile}
+              paused={scenePaused}
+              resetNonce={resetNonce}
+              startDistance={roadResumeDistance}
+              transitionToken={transitionToken}
+              simulateMountFailure={simulateMountFailure}
+              ateMaggi={ateTrailheadMaggi}
+              eatingActive={trailheadEatingActive}
+              onEatMaggiComplete={onTrailheadMaggiComplete}
+              onArrivedChange={onArrivedChange}
+              onAutoDowngradeQuality={downgradeQualityProfile}
+              onNearbyHotspotChange={onNearbyHotspotChange}
+              onSceneReady={controller.onMountedSceneReady}
+              telemetryRefs={telemetryRefs}
+            />
+          ) : mountedSceneId === 9 ? (
+            <Scene09_BaalKuwariStairs
+              walkInputRef={walkInputRef}
+              qualityProfile={qualityProfile}
+              paused={scenePaused}
+              transitionToken={transitionToken}
+              simulateMountFailure={simulateMountFailure}
+              initialStepCount={stairStepCount}
+              onStepCountChange={onStairStepCountChange}
+              onReachHalfwayMilestone={onStairHalfwayMilestone}
+              onNearbyHotspotChange={onNearbyHotspotChange}
+              onSceneReady={controller.onMountedSceneReady}
+            />
+          ) : mountedSceneId === 10 ? (
+            <Scene10_BaalKuwariTemple
+              walkInputRef={walkInputRef}
+              qualityProfile={qualityProfile}
+              paused={scenePaused}
+              transitionToken={transitionToken}
+              simulateMountFailure={simulateMountFailure}
+              rangBell={rangBaalKuwariBell}
+              bellImpulseNonce={baalKuwariBellNonce}
+              capturedPolaroid={capturedBaalKuwariPolaroid}
               onNearbyHotspotChange={onNearbyHotspotChange}
               onSceneReady={controller.onMountedSceneReady}
             />

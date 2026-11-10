@@ -256,6 +256,7 @@ export function applyCompanionRigFrame({
   lookTargetZ,
   elapsed,
   delta,
+  groundY = 0,
   idlePoseOverride,
   forcePrayBow = false,
   reducedMotion = false,
@@ -267,6 +268,7 @@ export function applyCompanionRigFrame({
   lookTargetZ: number;
   elapsed: number;
   delta: number;
+  groundY?: number;
   idlePoseOverride?: CharacterIdlePose;
   forcePrayBow?: boolean;
   reducedMotion?: boolean;
@@ -297,6 +299,7 @@ export function applyCompanionRigFrame({
     stridePhase: agent.stridePhase,
     elapsed,
     delta,
+    groundY,
     idlePose: resolvedIdle,
     torsoBaseY: 0.82,
     headTargetYawOffset,

@@ -12,6 +12,7 @@ import { DevPhase1BPanel } from '@/components/ui/DevPhase1BPanel';
 import { FallbackStorybookView } from '@/components/ui/FallbackStorybookView';
 import { ChapterSelectModal } from '@/components/ui/ChapterSelectModal';
 import { ControlsTutorialOverlay } from '@/components/ui/ControlsTutorialOverlay';
+import { BaalKuwariHUD } from '@/components/ui/BaalKuwariHUD';
 import { MobileTouchControls } from '@/components/ui/MobileTouchControls';
 import { MobileWalkControls } from '@/components/ui/MobileWalkControls';
 import { NarrationCard } from '@/components/ui/NarrationCard';
@@ -92,6 +93,15 @@ export default function Experience() {
   const neelkanthDarshanTimerRef = useRef<number | null>(null);
   const neelkanthToastTimerRef = useRef<number | null>(null);
 
+  // Scene 8/9/10 (Baal Kuwari Route, Pre-Climb Maggi, ~400 Stairs & Temple) UI state
+  const [ateTrailheadMaggi, setAteTrailheadMaggi] = useState(false);
+  const [trailheadEatingActive, setTrailheadEatingActive] = useState(false);
+  const [liveStairSteps, setLiveStairSteps] = useState(0);
+  const [rangBaalKuwariBell, setRangBaalKuwariBell] = useState(false);
+  const [baalKuwariBellNonce, setBaalKuwariBellNonce] = useState(0);
+  const [baalKuwariToastVisible, setBaalKuwariToastVisible] = useState(false);
+  const baalKuwariToastTimerRef = useRef<number | null>(null);
+
   const [chaptersOpen, setChaptersOpen] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [scooterReturnOpen, setScooterReturnOpen] = useState(false);
@@ -118,17 +128,33 @@ export default function Experience() {
   const setMountainRoadSegment = useProgressStore((s) => s.setMountainRoadSegment);
   const roadSubStage = useProgressStore((s) => s.roadSubStage);
   const setRoadSubStage = useProgressStore((s) => s.setRoadSubStage);
+  const baalKuwariSubStage = useProgressStore((s) => s.baalKuwariSubStage);
+  const setBaalKuwariSubStage = useProgressStore((s) => s.setBaalKuwariSubStage);
+  const setStairStepCount = useProgressStore((s) => s.setStairStepCount);
   const setRoadResumeDistance = useProgressStore((s) => s.setRoadResumeDistance);
 
-  const isDrivingSceneActive = committedSceneId === 5 && roadSubStage === 'driving';
+  const isBaalKuwariDriveActive = committedSceneId === 8 && baalKuwariSubStage === 'driving';
+  const isBaalKuwariMaggiActive = committedSceneId === 8 && baalKuwariSubStage === 'maggi_stop';
+  const isBaalKuwariStairsActive = committedSceneId === 9;
+  const isBaalKuwariTempleActive = committedSceneId === 10;
+
+  const isDrivingSceneActive =
+    (committedSceneId === 5 && roadSubStage === 'driving') || isBaalKuwariDriveActive;
   const isViewpointWalkActive = committedSceneId === 5 && roadSubStage === 'viewpoint_walk';
   const isDhabaWalkActive = committedSceneId === 6;
   const isNeelkanthWalkActive = committedSceneId === 7;
-  const isAnyWalkActive = isDhabaWalkActive || isViewpointWalkActive || isNeelkanthWalkActive;
+  const isAnyWalkActive =
+    isDhabaWalkActive ||
+    isViewpointWalkActive ||
+    isNeelkanthWalkActive ||
+    isBaalKuwariMaggiActive ||
+    isBaalKuwariStairsActive ||
+    isBaalKuwariTempleActive;
   const capturedDhabaPolaroid = collectedPolaroids.includes('scene06_dhaba');
   const capturedNeelkanthPolaroid = collectedPolaroids.includes('scene07_neelkanth');
   const capturedViewpointSolo = collectedPolaroids.includes('scene05_viewpoint_solo');
   const capturedViewpointGroup = collectedPolaroids.includes('scene05_viewpoint_group');
+  const capturedBaalKuwariPolaroid = collectedPolaroids.includes('scene10_baalkuwari');
 
   // Preserve the initial GL antialias creation flag to avoid remounting the WebGL context.
   const [initialAntialias] = useState<boolean>(
@@ -410,6 +436,44 @@ export default function Experience() {
     showNarration,
   ]);
 
+  const handleTrailheadMaggiComplete = useCallback(() => {
+    setTrailheadEatingActive(false);
+    setAteTrailheadMaggi(true);
+    showNarration({
+      id: 'scene08-maggi-complete',
+      speaker: 'Baal Kuwari Trailhead',
+      lines: [
+        'Hot Maggi before the staircase — ready to face the ~400 stairs together.',
+      ],
+    });
+  }, [showNarration]);
+
+  const handleCaptureBaalKuwariPolaroid = useCallback(() => {
+    if (useProgressStore.getState().committedSceneId !== 10) return;
+    if (useProgressStore.getState().activeNarration !== null) return;
+
+    ambientAudio.playShutterClick();
+    const isNew = capturePolaroidAndSave('scene10_baalkuwari');
+    setBaalKuwariToastVisible(true);
+    if (baalKuwariToastTimerRef.current !== null) {
+      window.clearTimeout(baalKuwariToastTimerRef.current);
+    }
+    baalKuwariToastTimerRef.current = window.setTimeout(() => {
+      baalKuwariToastTimerRef.current = null;
+      setBaalKuwariToastVisible(false);
+    }, 4500);
+
+    if (isNew) {
+      showNarration({
+        id: 'scene10-polaroid',
+        speaker: 'Baal Kuwari Summit',
+        lines: [
+          'Captured the Baal Kuwari summit courtyard Polaroid! Saved to your memories.',
+        ],
+      });
+    }
+  }, [capturePolaroidAndSave, showNarration]);
+
   const handleWalkInteract = useCallback(() => {
     if (isViewpointWalkActive) {
       if (!nearbyHotspot || viewpointPhotoMoment !== 'none') return;
@@ -422,18 +486,82 @@ export default function Experience() {
       }
       return;
     }
+    if (isBaalKuwariMaggiActive) {
+      if (trailheadEatingActive || useProgressStore.getState().activeNarration !== null) return;
+      if (!nearbyHotspot) return;
+      if (nearbyHotspot.id === 'trail_maggi') {
+        if (!ateTrailheadMaggi) {
+          clearInputsRef.current();
+          setTrailheadEatingActive(true);
+        } else {
+          showNarration({
+            id: 'scene08-maggi-done',
+            speaker: 'Trailhead Maggi Stop',
+            lines: ['Pre-climb Maggi finished — head through the stone arch to start the climb.'],
+          });
+        }
+      } else if (nearbyHotspot.id === 'start_climb') {
+        clearInputsRef.current();
+        setStairStepCount(0);
+        setLiveStairSteps(0);
+        sceneController.requestSceneTransition(9, { clearInputs: clearInputsRef.current });
+      } else if (nearbyHotspot.id === 'back_to_road') {
+        clearInputsRef.current();
+        sceneController.requestBaalKuwariSubStageTransition('driving', {
+          resumeDistance: LEAD_START_DISTANCE,
+          clearInputs: clearInputsRef.current,
+        });
+      }
+      return;
+    }
+    if (isBaalKuwariStairsActive) {
+      if (!nearbyHotspot || useProgressStore.getState().activeNarration !== null) return;
+      if (nearbyHotspot.id === 'enter_temple') {
+        clearInputsRef.current();
+        sceneController.requestSceneTransition(10, { clearInputs: clearInputsRef.current });
+      }
+      return;
+    }
+    if (isBaalKuwariTempleActive) {
+      if (!nearbyHotspot || useProgressStore.getState().activeNarration !== null) return;
+      if (nearbyHotspot.id === 'summit_bell') {
+        setRangBaalKuwariBell(true);
+        setBaalKuwariBellNonce((n) => n + 1);
+        ambientAudio.playTempleBell();
+      } else if (nearbyHotspot.id === 'summit_polaroid') {
+        handleCaptureBaalKuwariPolaroid();
+      } else if (nearbyHotspot.id === 'descent') {
+        showNarration({
+          id: 'scene10-descent-preview',
+          speaker: 'Baal Kuwari Summit',
+          lines: [
+            'Summit darshan & ~400 stairs completed! Evening return ride & hotel farewell follow in Commit 2.',
+          ],
+        });
+      }
+      return;
+    }
     if (isNeelkanthWalkActive) {
       handleNeelkanthInteract();
       return;
     }
     handleDhabaInteract();
   }, [
+    ateTrailheadMaggi,
+    handleCaptureBaalKuwariPolaroid,
     handleDhabaInteract,
     handleNeelkanthInteract,
     handleResumeRidingFromViewpoint,
+    isBaalKuwariMaggiActive,
+    isBaalKuwariStairsActive,
+    isBaalKuwariTempleActive,
     isNeelkanthWalkActive,
     isViewpointWalkActive,
     nearbyHotspot,
+    sceneController,
+    setStairStepCount,
+    showNarration,
+    trailheadEatingActive,
     triggerViewpointPhoto,
     viewpointPhotoMoment,
   ]);
@@ -449,6 +577,10 @@ export default function Experience() {
       }
       return;
     }
+    if (isBaalKuwariTempleActive) {
+      handleCaptureBaalKuwariPolaroid();
+      return;
+    }
     if (isNeelkanthWalkActive) {
       handleCaptureNeelkanthPolaroid();
       return;
@@ -457,8 +589,10 @@ export default function Experience() {
       handleCaptureDhabaPolaroid();
     }
   }, [
+    handleCaptureBaalKuwariPolaroid,
     handleCaptureDhabaPolaroid,
     handleCaptureNeelkanthPolaroid,
+    isBaalKuwariTempleActive,
     isDhabaWalkActive,
     isNeelkanthWalkActive,
     isViewpointWalkActive,
@@ -483,7 +617,8 @@ export default function Experience() {
     activeNarration === null &&
     viewpointPhotoMoment === 'none' &&
     !activeDarshanPan &&
-    !foodCinematicActive;
+    !foodCinematicActive &&
+    !trailheadEatingActive;
 
   const { inputRef, clearAllInputs, setMoveZoneControl, setActionZoneControl } =
     useDrivingInput(handleResetRide, drivingInputEnabled);
@@ -540,6 +675,42 @@ export default function Experience() {
       clearInputs: clearInputsRef.current,
     });
   }, [sceneController, setMountainRoadSegment, setRoadResumeDistance, setRoadSubStage]);
+
+  const handleRideToBaalKuwari = useCallback(() => {
+    clearInputsRef.current();
+    setMountainRoadSegment('to_baalkuwari');
+    setBaalKuwariSubStage('driving');
+    setRoadResumeDistance(LEAD_START_DISTANCE);
+    sceneController.requestSceneTransition(8, {
+      clearInputs: clearInputsRef.current,
+    });
+  }, [sceneController, setBaalKuwariSubStage, setMountainRoadSegment, setRoadResumeDistance]);
+
+  const handleEnterBaalKuwariMaggi = useCallback(() => {
+    clearInputsRef.current();
+    sceneController.requestBaalKuwariSubStageTransition('maggi_stop', {
+      clearInputs: clearInputsRef.current,
+    });
+  }, [sceneController]);
+
+  const handleBeginClimbFromMaggi = useCallback(() => {
+    clearInputsRef.current();
+    setStairStepCount(0);
+    setLiveStairSteps(0);
+    sceneController.requestSceneTransition(9, {
+      clearInputs: clearInputsRef.current,
+    });
+  }, [sceneController, setStairStepCount]);
+
+  const handleStairHalfwayMilestone = useCallback(() => {
+    setStairStepCount(200);
+    useProgressStore.getState().saveCheckpoint();
+    showNarration({
+      id: 'scene09-step-200',
+      speaker: 'Mid-Climb Rest Landing',
+      lines: ['Halfway up (~200 steps) — milestone saved as the group catches their breath together.'],
+    });
+  }, [setStairStepCount, showNarration]);
 
   const handlePullOverAtViewpoint = useCallback(() => {
     setViewpointPullOverNonce((prev) => prev + 1);
@@ -644,26 +815,61 @@ export default function Experience() {
         setSippedChai(false);
       }
 
+      if (chapter.targetSceneId === 8) {
+        const bkSub = chapter.targetBaalSubStage ?? 'driving';
+        setMountainRoadSegment('to_baalkuwari');
+        setRoadResumeDistance(LEAD_START_DISTANCE);
+        setTrailheadEatingActive(false);
+        setAteTrailheadMaggi(false);
+
+        if (committedSceneId === 8) {
+          if (bkSub !== baalKuwariSubStage) {
+            sceneController.requestBaalKuwariSubStageTransition(bkSub, {
+              resumeDistance: LEAD_START_DISTANCE,
+              clearInputs: clearAllMovementInputs,
+            });
+          } else {
+            setResetNonce((prev) => prev + 1);
+            setArrived(false);
+          }
+          return;
+        }
+        setBaalKuwariSubStage(bkSub);
+      }
+
+      if (chapter.targetSceneId === 9) {
+        setStairStepCount(0);
+        setLiveStairSteps(0);
+      }
+
       sceneController.requestSceneTransition(chapter.targetSceneId, {
         clearInputs: clearAllMovementInputs,
       });
     },
     [
+      baalKuwariSubStage,
       clearAllMovementInputs,
       committedSceneId,
       mountainRoadSegment,
       roadSubStage,
       sceneController,
+      setBaalKuwariSubStage,
       setMountainRoadSegment,
       setRoadResumeDistance,
       setRoadSubStage,
+      setStairStepCount,
       setUserPaused,
     ]
   );
 
   const handleRestartCurrentStretch = useCallback(() => {
     setUserPaused(false);
-    const activeKey = getActiveChapterKey(committedSceneId, mountainRoadSegment, roadSubStage);
+    const activeKey = getActiveChapterKey(
+      committedSceneId,
+      mountainRoadSegment,
+      roadSubStage,
+      baalKuwariSubStage
+    );
     const chapter = PHASE2_STORY_CHAPTERS.find((c) => c.key === activeKey);
     if (chapter) {
       handleSelectChapter(chapter);
@@ -671,6 +877,7 @@ export default function Experience() {
       handleResetRide();
     }
   }, [
+    baalKuwariSubStage,
     committedSceneId,
     handleResetRide,
     handleSelectChapter,
@@ -718,6 +925,9 @@ export default function Experience() {
       if (neelkanthToastTimerRef.current !== null) {
         window.clearTimeout(neelkanthToastTimerRef.current);
       }
+      if (baalKuwariToastTimerRef.current !== null) {
+        window.clearTimeout(baalKuwariToastTimerRef.current);
+      }
     };
   }, []);
 
@@ -730,11 +940,15 @@ export default function Experience() {
           ? 'road'
           : isViewpointWalkActive
             ? 'viewpoint'
-            : isDhabaWalkActive
+            : isDhabaWalkActive || isBaalKuwariMaggiActive
               ? 'dhaba'
               : isNeelkanthWalkActive
                 ? 'neelkanth'
-                : 'off';
+                : isBaalKuwariStairsActive
+                  ? 'baalkuwari_stairs'
+                  : isBaalKuwariTempleActive
+                    ? 'baalkuwari_temple'
+                    : 'off';
 
     ambientAudio.syncState({
       muted: audioMuted,
@@ -744,6 +958,9 @@ export default function Experience() {
   }, [
     audioMuted,
     escalatedToFallback,
+    isBaalKuwariMaggiActive,
+    isBaalKuwariStairsActive,
+    isBaalKuwariTempleActive,
     isDhabaWalkActive,
     isDrivingSceneActive,
     isNeelkanthWalkActive,
@@ -796,7 +1013,15 @@ export default function Experience() {
     setViewpointToastKind(null);
     setViewpointPhotoMoment('none');
     setViewpointPhotoLabel(null);
-  }, [committedSceneId, roadSubStage]);
+    setTrailheadEatingActive(false);
+    setBaalKuwariToastVisible(false);
+    if (committedSceneId === 8 && baalKuwariSubStage === 'maggi_stop') {
+      setAteTrailheadMaggi(false);
+    }
+    if (committedSceneId === 9) {
+      setLiveStairSteps(useProgressStore.getState().stairStepCount);
+    }
+  }, [baalKuwariSubStage, committedSceneId, roadSubStage]);
 
   // Independent pause, audio mute & cutscene skip listeners.
   useEffect(() => {
@@ -814,13 +1039,17 @@ export default function Experience() {
 
       if (
         event.code === 'Space' &&
-        foodCinematicActive &&
+        (foodCinematicActive || trailheadEatingActive) &&
         !userPaused &&
         !anyModalOpen &&
         useProgressStore.getState().transitionPhase === 'idle'
       ) {
         event.preventDefault();
-        handleFoodCinematicComplete();
+        if (trailheadEatingActive) {
+          handleTrailheadMaggiComplete();
+        } else {
+          handleFoodCinematicComplete();
+        }
         return;
       }
 
@@ -871,10 +1100,12 @@ export default function Experience() {
     foodCinematicActive,
     handleDismissControls,
     handleFoodCinematicComplete,
+    handleTrailheadMaggiComplete,
     scooterReturnOpen,
     setTabHiddenPaused,
     setUserPaused,
     toggleAudio,
+    trailheadEatingActive,
     userPaused,
   ]);
 
@@ -937,7 +1168,14 @@ export default function Experience() {
   const activePreset = QUALITY_PRESETS[qualityProfile];
   const currentChapterTitle =
     PHASE2_STORY_CHAPTERS.find(
-      (c) => c.key === getActiveChapterKey(committedSceneId, mountainRoadSegment, roadSubStage)
+      (c) =>
+        c.key ===
+        getActiveChapterKey(
+          committedSceneId,
+          mountainRoadSegment,
+          roadSubStage,
+          baalKuwariSubStage
+        )
     )?.title ?? 'Rishikesh Mountain Road';
 
   return (
@@ -991,6 +1229,14 @@ export default function Experience() {
           hadDarshan={hadDarshan}
           activeDarshanPan={activeDarshanPan}
           capturedNeelkanthPolaroid={capturedNeelkanthPolaroid}
+          ateTrailheadMaggi={ateTrailheadMaggi}
+          trailheadEatingActive={trailheadEatingActive}
+          onTrailheadMaggiComplete={handleTrailheadMaggiComplete}
+          onStairStepCountChange={setLiveStairSteps}
+          onStairHalfwayMilestone={handleStairHalfwayMilestone}
+          rangBaalKuwariBell={rangBaalKuwariBell}
+          baalKuwariBellNonce={baalKuwariBellNonce}
+          capturedBaalKuwariPolaroid={capturedBaalKuwariPolaroid}
           onNearbyHotspotChange={setNearbyHotspot}
           onArrivedChange={setArrived}
           onInViewpointZoneChange={setInViewpointZone}
@@ -1006,7 +1252,7 @@ export default function Experience() {
             inViewpointZone={inViewpointZone}
             viewpointArrived={viewpointArrived}
             trafficWarningVisible={trafficWarningVisible}
-            roadSegment={mountainRoadSegment}
+            roadSegment={committedSceneId === 8 ? 'to_baalkuwari' : mountainRoadSegment}
             polaroidCount={collectedPolaroids.length}
             audioMuted={audioMuted}
             onToggleAudioMute={toggleAudio}
@@ -1018,6 +1264,7 @@ export default function Experience() {
             onContinuePastViewpoint={handleContinuePastViewpoint}
             onContinueToDhaba={handleContinueToDhaba}
             onEnterNeelkanthTemple={handleEnterNeelkanthTemple}
+            onEnterBaalKuwariMaggi={handleEnterBaalKuwariMaggi}
             onReplayPreDhabaSegment={handleReplayPreDhabaSegment}
             telemetryRefs={telemetryRefs}
           />
@@ -1137,6 +1384,50 @@ export default function Experience() {
             onPhoto={handleWalkPhoto}
           />
         </>
+      ) : isBaalKuwariMaggiActive || isBaalKuwariStairsActive || isBaalKuwariTempleActive ? (
+        <>
+          <BaalKuwariHUD
+            mode={
+              isBaalKuwariMaggiActive
+                ? 'maggi_stop'
+                : isBaalKuwariStairsActive
+                  ? 'stairs'
+                  : 'temple'
+            }
+            audioMuted={audioMuted}
+            onToggleAudioMute={toggleAudio}
+            touchControlsVisible={touchControlsVisible}
+            onOpenChapters={handleOpenChapters}
+            onPause={handleOpenPause}
+            polaroidCount={collectedPolaroids.length}
+            nearbyHotspot={nearbyHotspot}
+            hasActiveNarration={activeNarration !== null}
+            ateMaggi={ateTrailheadMaggi}
+            eatingActive={trailheadEatingActive}
+            onBeginClimbFromMaggi={handleBeginClimbFromMaggi}
+            stepCount={liveStairSteps}
+            totalSteps={400}
+            rangBell={rangBaalKuwariBell}
+            capturedPolaroid={capturedBaalKuwariPolaroid}
+            polaroidToastVisible={baalKuwariToastVisible}
+            onDismissPolaroidToast={() => setBaalKuwariToastVisible(false)}
+            onTriggerHotspot={handleWalkInteract}
+          />
+          <MobileWalkControls
+            visible={
+              touchControlsVisible &&
+              !contextLost &&
+              !userPaused &&
+              !anyModalOpen &&
+              !trailheadEatingActive &&
+              transitionPhase === 'idle'
+            }
+            nearbyHotspot={nearbyHotspot}
+            onWalkMoveTouch={setWalkMoveTouch}
+            onInteract={handleWalkInteract}
+            onPhoto={handleWalkPhoto}
+          />
+        </>
       ) : null}
 
       <NarrationCard touchControlsVisible={touchControlsVisible} />
@@ -1176,6 +1467,10 @@ export default function Experience() {
 
       <ScooterReturnModal
         open={scooterReturnOpen && transitionPhase === 'idle'}
+        onRideToBaalKuwari={() => {
+          setScooterReturnOpen(false);
+          handleRideToBaalKuwari();
+        }}
         onRideBackOnRoad={() => {
           setScooterReturnOpen(false);
           handleReturnToRoadFromNeelkanth();

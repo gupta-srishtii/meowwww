@@ -21,6 +21,7 @@ export type Phase1BStageKind =
   | 'milestone_0_prototype'
   | 'temp_test_scene'
   | 'phase2_playable'
+  | 'phase3_playable'
   | 'unimplemented_stub';
 
 export interface PersistentSharedAssetDescriptor {
@@ -255,15 +256,23 @@ export const SCENE_REGISTRY: Record<SceneId, SceneDefinition> = {
   8: {
     id: 8,
     slug: 'ride-to-baal-kuwari',
-    title: 'Ride to Baal Kuwari',
-    type: 'CINEMATIC',
+    title: 'Ride to Baal Kuwari & Trailhead Maggi Stop',
+    type: 'GAMEPLAY',
     act: 'Act 2',
-    estDuration: '45–60s',
-    cameraMode: 'cinematic',
+    estDuration: '2–3 min',
+    cameraMode: 'follow',
     checkpointPolicy: 'on_commit',
-    phase1BStage: 'unimplemented_stub',
-    sharedAssets: ['srishti', 'ishaan', 'manish', 'yash', 'scooter'],
-    sceneOwnedAssets: [],
+    phase1BStage: 'phase3_playable',
+    sharedAssets: ['srishti', 'ishaan', 'manish', 'yash', 'scooter', 'shared-palette-atlas'],
+    sceneOwnedAssets: [
+      {
+        id: 'baal-kuwari-approach-env',
+        label: 'Forest Route to Baal Kuwari & Trailhead Maggi Stop',
+        url: 'procedural://baal-kuwari-approach',
+        ownership: 'scene_owned',
+        loadedKind: 'procedural',
+      },
+    ],
   },
   9: {
     id: 9,
@@ -271,25 +280,41 @@ export const SCENE_REGISTRY: Record<SceneId, SceneDefinition> = {
     title: 'Baal Kuwari: The ~400 Stairs',
     type: 'GAMEPLAY',
     act: 'Act 2',
-    estDuration: '3–5 min',
+    estDuration: '2–3 min',
     cameraMode: 'follow',
     checkpointPolicy: 'milestone',
-    phase1BStage: 'unimplemented_stub',
-    sharedAssets: ['srishti', 'ishaan', 'manish', 'yash'],
-    sceneOwnedAssets: [],
+    phase1BStage: 'phase3_playable',
+    sharedAssets: ['srishti', 'ishaan', 'manish', 'yash', 'shared-palette-atlas'],
+    sceneOwnedAssets: [
+      {
+        id: 'baal-kuwari-stairs-env',
+        label: 'Forest Hillside Segmented Staircase (~400 Steps)',
+        url: 'procedural://baal-kuwari-stairs',
+        ownership: 'scene_owned',
+        loadedKind: 'procedural',
+      },
+    ],
   },
   10: {
     id: 10,
     slug: 'baal-kuwari-arrival',
-    title: 'Baal Kuwari Temple Arrival',
-    type: 'CINEMATIC',
+    title: 'Baal Kuwari Temple Arrival & Summit',
+    type: 'GAMEPLAY',
     act: 'Act 2',
-    estDuration: '45–60s',
-    cameraMode: 'cinematic',
+    estDuration: '90s',
+    cameraMode: 'follow',
     checkpointPolicy: 'on_commit',
-    phase1BStage: 'unimplemented_stub',
-    sharedAssets: ['srishti', 'ishaan', 'manish', 'yash'],
-    sceneOwnedAssets: [],
+    phase1BStage: 'phase3_playable',
+    sharedAssets: ['srishti', 'ishaan', 'manish', 'yash', 'shared-palette-atlas'],
+    sceneOwnedAssets: [
+      {
+        id: 'baal-kuwari-temple-env',
+        label: 'Baal Kuwari Summit Sanctuary & Courtyard',
+        url: 'procedural://baal-kuwari-temple',
+        ownership: 'scene_owned',
+        loadedKind: 'procedural',
+      },
+    ],
   },
   11: {
     id: 11,

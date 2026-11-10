@@ -1,10 +1,10 @@
 # The Road That Made Us Family
-## MASTER_PLAN.md — v2.3 (Codex Final Audit Fixes & Architecture Verification)
+## MASTER_PLAN.md — v2.4 (Phase 3 Story Timeline Update & Baal Kuwari Plan)
 
-**Status:** PENDING APPROVAL  
+**Status:** ACTIVE — Phase 3 Planning & Implementation  
 **Option Selected:** Option B — Full Cinematic Experience, Phased Development (Quality-First, No Fixed Deadline)  
 **Last Updated:** 2026-11-10  
-**Revision:** v2.3 — Targeted audit corrections (Verified Node >=20.9.0 & lockfile dependency policy without unverified `@pmndrs/detect-gpu` version claims, corrected Next 15 & Framer Motion support statements, explicit R3F `dispose={null}` shared asset ownership, transition token & ErrorBoundary retry/retention, constrained companion follow distance, explicit Phase 1A technical readiness separation, WebGL2 requirement, scooter road clearance/braking, `localStorage`/context-recovery hardening, Blender 30fps sync, and `[PROPOSED]` staging badges)
+**Revision:** v2.4 — Recorded full confirmed Rishikesh trip chronology (Kitaabi Dastaan chats & phone calls, Lucknow train vs. Delhi bus, shared hotel 1st/ground floor rooms, Day 1 evening scooter Maggi, Day 2 bun maska & chai + Kumbhkaran delay, Neelkanth, pre-climb Maggi before Baal Kuwari, ~400 stairs with Ishaan helping, evening-bus safe quick return, hotel reunion with Srishti's original group without bus-stand dropoff, separate later Bhai Dooj epilogue), added Phase 3 implementation & two-commit boundaries, and logged the known deferred floating mountain geometry / tree polish item.
 
 ---
 
@@ -79,16 +79,18 @@ Srishti plays through the journey that turned Ishaan — whom she met online in 
 | Epilogue | Joy, nostalgia | "I want to keep these memories close." |
 
 ### Core Historical Beats (Preserved Without Invention)
-1. **Kitaabi Dastaan & the first "Bhai"** — Srishti and Ishaan met online in the Kitaabi Dastaan book community, began talking and sharing things, and she started calling him "Bhai". *(No unsupported origin medium such as voice chat is claimed as historical fact.)*
-2. **The ~2-minute Mahakumbh meeting** — they met briefly in person at Mahakumbh for approximately two minutes.
-3. **The Kumbhkaran morning** — during the Rishikesh trip, Ishaan slept until very late, earning the nickname "Kumbhkaran" and delaying their visit to Neelkanth Mahadev.
-4. **Two scooters on mountain roads** — four people on two scooters (Ishaan driving with Srishti seated behind him; Manish and Yash on the second scooter) riding through Rishikesh mountain roads.
-5. **Maggi and chai** — stopping roadside for Maggi and chai.
-6. **Neelkanth Mahadev** — visiting Neelkanth Mahadev Temple.
-7. **Journey to Baal Kuwari** — riding onward to the separate Baal Kuwari Temple.
-8. **Approximately 400 stairs at Baal Kuwari** — climbing ~400 stairs where Ishaan helped Srishti climb.
-9. **Mountain viewpoints & photos** — taking photos at scenic mountain viewpoints.
-10. **The Bhai Dooj tilak** — concluding with an interactive virtual Bhai Dooj tilak and a heartfelt personal message.
+1. **Kitaabi Dastaan online chats & phone calls → Rishikesh decision** — Srishti and Ishaan met online in the **Kitaabi Dastaan** book community, connected over online chats and phone calls, began calling him **"Bhai"**, and decided to meet in Rishikesh. *(No specific unconfirmed dialogue quotes are invented.)*
+2. **The ~2-minute Mahakumbh meeting** — they also shared a brief ~2-minute in-person meeting at Mahakumbh amidst a huge crowd.
+3. **Travel to Rishikesh & Shared Hotel Stay** — Ishaan traveled from **Lucknow by train** with his friends; Srishti traveled from **Delhi by bus**. They stayed at the same Rishikesh hotel — **Srishti on the first floor**, and **Ishaan and his friend on the ground floor**.
+4. **Day 1 — Group Time & Evening Scooter Maggi** — Srishti initially spent time with her original group; in the evening she went roaming on scooters with Ishaan and his friend and ate Maggi.
+5. **Day 2 Morning — Bun Maska, Chai & Kumbhkaran Delay** — Morning included **bun maska and chai** on a lively Rishikesh road. Ishaan and his friend woke up late (earning the playful **"Kumbhkaran"** memory), delaying their departure.
+6. **Two scooters on mountain roads + Maggi/chai stop (`Scenes 5–6`)** — Four friends on two scooters (Ishaan driving with Srishti pillion on Scooter 1; Manish and Yash on Scooter 2) riding through scenic Rishikesh mountain roads, viewpoint pull-off, and roadside Maggi & chai tapri.
+7. **Neelkanth Mahadev Temple (`Scene 7`)** — Visiting Neelkanth Mahadev Temple courtyard for darshan, brass bell, and oil diya.
+8. **Route to Baal Kuwari & Pre-Climb Maggi Stop (`Scene 8`)** — Riding onward along mountain forest roads toward **Baal Kuwari Temple**, stopping for a dedicated **Maggi stop** at the base before beginning the steep climb.
+9. **Approximately 400 Stairs at Baal Kuwari (`Scene 9`)** — Climbing ~400 stone forest steps in manageable segments, with **Ishaan accompanying and helping Srishti** along the climb and **Manish & Yash** naturally accompanying the group.
+10. **Baal Kuwari Temple Arrival (`Scene 10`)** — Reaching the peaceful summit temple at the top of the stairs for a serene memory moment.
+11. **Evening Bus Schedule — Quick Safe Return & Hotel Reunion (`Scenes 11–12`)** — Because Srishti had an evening bus, Ishaan and his friends helped everyone head down and return quickly yet **safely** back to the **hotel** — where **Srishti rejoined her original friends** for a gentle farewell. *(Explicitly does NOT depict Ishaan dropping her directly at the bus stand.)*
+12. **Separate Later Epilogue — The Bhai Dooj Tilak (`Scenes 13–14`, Later Phase)** — A separate, later emotional epilogue (not an event during the Rishikesh trip) concluding with an interactive virtual Bhai Dooj tilak, creator's personal letter, and 3D memory gallery.
 
 ### Design Principles
 - **Low-poly stylized Himalayan aesthetic** — warm, atmospheric, stylized characters and cinematic 3D environments (not a 2D slideshow).
@@ -111,13 +113,13 @@ Srishti plays through the journey that turned Ishaan — whom she met online in 
 | 5 | Mountain Road Ride | GAMEPLAY | Act 1 | 3–5 min | [CORE] (Honk/Wave/Cow/Flags: [OPTIONAL]) |
 | 6 | Maggi & Chai Stop | GAMEPLAY | Act 1 | 90–120s | [CORE] (Stall owner chat: [OPTIONAL]) |
 | 7 | Neelkanth Mahadev | GAMEPLAY | Act 2 | 90–120s | [CORE] |
-| 8 | Ride to Baal Kuwari | CINEMATIC | Act 2 | 45–60s | [CORE] |
-| 9 | Baal Kuwari: The ~400 Stairs | GAMEPLAY | Act 2 | 3–5 min | [CORE] (Rest-landing polaroids: [OPTIONAL]) |
-| 10 | Baal Kuwari Temple Arrival | CINEMATIC | Act 2 | 45–60s | [CORE] |
-| 11 | Summit, Viewpoints & Polaroids | GAMEPLAY | Act 3 | 2–3 min | [CORE] (Companion chats & bonus viewpoint: [OPTIONAL]) |
-| 12 | Descent Home | CINEMATIC | Act 3 | 45–60s | [CORE] |
-| 13 | Bhai Dooj Tilak | GAMEPLAY | Act 3 | 2–3 min | [CORE] (Finale flowers: [OPTIONAL]) |
-| 14 | Inspectable 3D Memory Gallery | ENDING/SYSTEM | Epilogue | Open-ended | [CORE] (Share poster: [OPTIONAL]) |
+| 8 | Ride to Baal Kuwari & Base Maggi Stop | GAMEPLAY | Act 2 | 2–3 min | [CORE] (`to_baalkuwari` forest road + distinct pre-climb trailhead Maggi stop) |
+| 9 | Baal Kuwari: The ~400 Stairs | GAMEPLAY | Act 2 | 2–3 min | [CORE] (4 segmented hillside flights + Ishaan helping animations + landing checkpoints) |
+| 10 | Baal Kuwari Temple Arrival & Summit Memory | CINEMATIC / GAMEPLAY | Act 2 | 90s | [CORE] (Peaceful arrival sweep + courtyard exploration & summit Polaroid) |
+| 11 | Evening Safe Return to Rishikesh | GAMEPLAY | Act 3 | 2 min | [CORE] (Time-sensitive yet calm downhill scooter return toward hotel) |
+| 12 | Hotel Return, Original Friends & Farewell | GAMEPLAY / CINEMATIC | Act 3 | 90s | [CORE] (Rishikesh hotel courtyard 1st/ground floor context, original group reunion, gentle farewell) |
+| 13 | Bhai Dooj Tilak *(Separate Later Epilogue)* | GAMEPLAY | Epilogue | 2–3 min | [CORE] (Deferred past Phase 3 — separate later occasion, not part of Rishikesh trip) |
+| 14 | Inspectable 3D Memory Gallery | ENDING/SYSTEM | Epilogue | Open-ended | [CORE] (Deferred past Phase 3) |
 
 **Scene type definitions:**
 - **SYSTEM** — engine/UI state or cozy title backdrop
@@ -244,68 +246,61 @@ Despite Kumbhkaran's late morning delay, the group reaches **Neelkanth Mahadev T
 
 ---
 
-### Scene 8 — Ride to Baal Kuwari (CINEMATIC · Act 2)
+### Scene 8 — Ride to Baal Kuwari & Pre-Climb Maggi Stop (GAMEPLAY · Act 2)
 
-**Camera:** Cinematic — sweeping valley shots following both scooters onto a narrower forest approach road  
+**Camera:** Third-person scooter follow on shadowed forest mountain curves → third-person walk mode at the trailhead base clearing  
 **What happens:**  
-Auto-play cinematic bridging **Neelkanth Mahadev** to the separate **Baal Kuwari Temple** `[CORE]`. As late-afternoon light filters through denser trees, Srishti, Ishaan, Manish, and Yash ride across the mountain ridge toward the base of the Baal Kuwari climb.
+Leaving **Neelkanth Mahadev Temple** back on their parked scooters, all four friends ride along a scenic forest mountain route (`segment: 'to_baalkuwari'`) toward the **Baal Kuwari** trailhead `[CORE]`. At the trailhead clearing beneath tall trees and the stone staircase gate, the group pauses at a distinct **pre-climb roadside Maggi stall** before beginning the ~400-step ascent `[CORE]`. *(Visually separate from Scene 6's valley overlook dhaba.)*
 
-**Director's note:** Neelkanth Mahadev and Baal Kuwari Temple are **two separate destinations** connected by this scooter journey. This scene preserves that real geographic separation unambiguously.  
-**Transition out:** Scooters park at the base of the staircase → Scene 9
+**Director's note:** Neelkanth Mahadev and Baal Kuwari Temple are **two separate destinations** connected by this scooter journey, and eating Maggi before starting the stairs preserves the real sequence without invented dialogue.  
+**Transition out:** Gather at the base archway & step onto the stone steps (`Press E`) → Scene 9
 
 ---
 
 ### Scene 9 — Baal Kuwari: The ~400 Stairs (GAMEPLAY · Act 2)
 
-**Camera:** Third-person follow looking upward along the stone staircase through trees  
+**Camera:** Third-person walk/climb follow looking smoothly up angled stone flights beneath Himalayan trees  
 **What happens:**  
-At the base of Baal Kuwari, Srishti faces a climb of **approximately 400 stairs** leading up to the temple at the summit `[CORE]`. This is the emotional core of Act 2 — sustained physical effort shared together.
+At the foot of Baal Kuwari, Srishti climbs a forested hillside staircase representing **~400 stone steps**, organized cleanly into **4 playable segmented flights (~100 steps per flight)** joined by flat rest landings at ~100, ~200, and ~300 steps so steady walking/climbing feels tactile rather than 400 repetitive taps `[CORE]`.
 
 **Mechanics:**
-- Tap/click rhythm or hold-to-climb mechanic with subtle breathing/footstep audio `[CORE]`.
-- Step counter HUD tracking progress up the ~400 stairs `[CORE]`.
-- At **~100 and ~300 steps:** Scenic rest landings looking back over the valley (polaroid photo opportunity `[OPTIONAL]`).
-- **Ishaan's Hand-Assist Interaction:** At strenuous stretches (including ~200 steps), **Ishaan reaches back his hand** — Srishti taps/interacts with his hand to accept help and climb through together (`[CORE]` interactive gesture of care, not passive cutscene).
-- **Mid-Climb Dialogue Prompt (`[PROPOSED — Requires User Approval]`):** At step 200, a gentle prompt reads *"Aadhe raste aa gaye Srishti — thak gayi kya?"* with encouraging choices.
+- Smooth walking movement ascends stair treads naturally with articulated climb steps and a calm HUD tracker (`Step ~X / 400 · Flight Y/4`) `[CORE]`.
+- **Ishaan's Supportive Climb Assistance:** On steeper upper stretches and rest landings, Ishaan slows beside or slightly ahead of Srishti, turns back with a helping-hand reach animation (`E` / Tap `"Take Ishaan's Hand"`), and climbs steadily with her (`[CORE]`).
+- **Manish & Yash** accompany the group along the staircase flights and pause warmly on landings `[CORE]`.
+- Rest-landing overlook Polaroid memory `[OPTIONAL]`.
 
-**Checkpoint committed** at step 200 (after step 200 state safely stabilizes).  
-**Transition out:** Reaching step ~400 reveals warm sunlight cresting the top step → Scene 10
-
----
-
-### Scene 10 — Baal Kuwari Temple Arrival (CINEMATIC · Act 2)
-
-**Camera:** Cinematic — slow reveal rising past the final stair, tilting upward toward the sky  
-**What happens:**  
-The earned reward after climbing ~400 stairs: **Baal Kuwari Temple** perched at the top `[CORE]`. Auto-play cinematic reveals the temple against the Himalayan horizon as Srishti, Ishaan, Manish, and Yash stand together taking in the accomplishment.
-
-**Director's note:** Baal Kuwari Temple is strictly the **destination at the top AFTER Scene 9** — never placed before or merged with Neelkanth Mahadev.  
-**Transition out:** Characters step onto the viewpoint ridge → Scene 11
+**Checkpoint committed** at step ~200 landing (`stairStepCount: 200`).  
+**Transition out:** Reaching step ~400 crests onto the hilltop courtyard arch → Scene 10
 
 ---
 
-### Scene 11 — Summit, Viewpoints & Polaroids (GAMEPLAY · Act 3)
+### Scene 10 — Baal Kuwari Temple Arrival & Summit Memory (CINEMATIC / GAMEPLAY · Act 2)
 
-**Camera:** Free walk mode on the Baal Kuwari summit viewpoints  
+**Camera:** Brief tranquil arrival sweep (~5–6s, skippable) revealing the hilltop shrine, transitioning smoothly into summit courtyard walk camera  
 **What happens:**  
-Srishti explores the mountain viewpoints around Baal Kuwari to capture trip photos (`[CORE]`):
-- **Guaranteed Srishti + Ishaan Mountain Polaroid (`[CORE]`):** At the primary summit viewpoint, triggering the photo frames Srishti and Ishaan together against the mountain skyline, preserving the heartfelt memory photo.
-- **Additional Viewpoints (`[CORE]` / `[OPTIONAL]`):** One additional group viewpoint with Manish & Yash (`[CORE]`), plus a bonus hidden ridge viewpoint (`[OPTIONAL]`).
-- Brief companion moments with Ishaan, Manish, and Yash (`[OPTIONAL]` · `[PROPOSED]` dialogue cards).
+Srishti, Ishaan, Manish, and Yash arrive at peaceful **Baal Kuwari Temple** perched above the pines `[CORE]`. After taking in the serene summit view, Srishti can ring the small summit bell, take a hilltop group Polaroid (`scene10_baalkuwari`), and receive a gentle **evening bus reminder** to head down calmly together before dusk `[CORE]`.
 
-**Narration card (Srishti emotional shift):** `[PROPOSED — Requires User Approval]` *"Up from here, Srishti dekhti hai ki yeh sirf ek trip nahi tha — yeh woh raasta tha jisne sabko apna bana diya."*  
-**Transition out:** Dusk approaches → cut to Scene 12
+**Transition out:** Head toward the descent trail / gate (`Press E`) → Scene 11
 
 ---
 
-### Scene 12 — Descent Home (CINEMATIC · Act 3)
+### Scene 11 — Evening Safe Return to Rishikesh (GAMEPLAY · Act 3)
 
-**Camera:** Cinematic — golden-purple dusk lighting, wide tracking shots  
+**Camera:** Warm golden-hour mountain follow framing both scooters cruising steadily downhill (`segment: 'to_hotel_return'`)  
 **What happens:**  
-Auto-play dusk cinematic of the ride back down through the cooling mountain air `[CORE]`. Acoustic guitar and soft piano carry the emotion silently as the two scooters cruise beneath the twilight sky.
+Because Srishti has an evening bus back toward Delhi, Ishaan and his friends organize a brisk, coordinated **time-sensitive yet safe** return ride down through warming afternoon light toward their Rishikesh hotel `[CORE]`. Emphasizes steady lane keeping, calm braking around gentle traffic, and Scooter 2 keeping close escort—with zero reckless speeding or stunt mechanics `[CORE]`.
 
-**Narration card:** `[PROPOSED — Requires User Approval]` *"Waapsi ka raasta hamesha chhota lagta hai... jab yaadein saath ho."*  
-**Transition out:** Dusk fades to black → warm indoor glow → Scene 13
+**Transition out:** Pull smoothly off at the hotel forecourt → Scene 12
+
+---
+
+### Scene 12 — Return to Rishikesh Hotel, Original Friends & Gentle Farewell (GAMEPLAY / CINEMATIC · Act 3)
+
+**Camera:** Warm early-evening third-person walk camera outside the Rishikesh hotel courtyard showing its ground-floor veranda (Ishaan & friends' room floor) and first-floor exterior balcony/stairs (Srishti's room floor)  
+**What happens:**  
+Back in the shared hotel courtyard, parked scooters rest beside the entrance as Srishti walks with Ishaan, Manish, and Yash toward **Srishti's original group of friends** waiting by the hotel steps `[CORE]`. Srishti interacts (`E` / Tap `"Rejoin Original Friends & Farewell"`) to reunite with her group while Ishaan, Manish, and Yash share a warm, gentle farewell wave and closing trip Polaroid (`scene12_hotel_farewell`) — closing the Rishikesh trip cleanly (`End of Phase 3 Story`) and pointing to the **separate later Bhai Dooj Epilogue** ahead (`Phase 4+`) without depicting Ishaan directly dropping her at the bus stand `[CORE]`.
+
+**Transition out:** Phase 3 Completion / Chapter Log Replay (`Scenes 13–14` preserved for the later Bhai Dooj Epilogue phase)
 
 ---
 
@@ -1135,24 +1130,35 @@ A self-contained playable demo proving the core 3D driving loop, attachment seat
 
 ---
 
-### Phase 3 — End-to-End Scene Assembly (Greybox) [CORE]
+### Phase 3 — Baal Kuwari & Safe Return (Scenes 8–12) [CORE]
 
-**Goal:** Playable end-to-end walkthrough of all 15 states (Scenes 0–14) using greybox geometry.
+**Goal:** Deliver the complete playable continuation from Neelkanth Mahadev through the forest route to Baal Kuwari, the distinct pre-climb Maggi stop, the segmented ~400-stair climb with Ishaan helping Srishti and Manish & Yash accompanying, calm summit temple arrival, safe evening scooter return, and Rishikesh hotel reunion & gentle farewell.
 
-**Tasks:**
-- Assemble greybox dioramas across all 15 scenes including Scene 0 cozy lamp, Scene 1 3D library reveal, Scene 2 Mahakumbh ~2-min flash, Scene 8 connecting scooter ride, Scene 10 Baal Kuwari summit reveal, and Scene 12 dusk descent
-- Implement polaroid capture collection (including guaranteed Scene 11 Srishti + Ishaan photo) and Scene 14 inspectable 3D memory gallery
-- Implement `[OPTIONAL]` Firefly Guided Mode
-- Wire lighting & time-of-day presets across Scenes 0–14
+**Two Planned Phase 3 Checkpoints (Commits):**
+1. **Commit 1 — Baal Kuwari Route, Staircase, Temple & Core Gameplay:**
+   - Updated `MASTER_PLAN.md` chronology, `sceneConfig.ts`, `mountainSpline.ts` (`'to_baalkuwari'`), `chapters.ts`, `checkpoint.ts`, and `progressStore.ts`
+   - Playable Scene 8 (`Route to Baal Kuwari` + distinct walkable `Pre-Climb Maggi Stop` before stairhead)
+   - Playable Scene 9 (`4` continuous forested staircase segments totaling `~400` stone steps, smooth step counter, rest landings + milestone checkpoint at step `200`, companion climbing continuity)
+   - Playable Scene 10 (`Baal Kuwari Temple Arrival & Summit Sanctuary` with bell, overlook exploration & summit Polaroid)
+   - Passing `npm.cmd run typecheck` and `npm.cmd run build`, committed & pushed to `origin/main`
+2. **Commit 2 — Companion Helping Interactions, Cinematics, Safe Return Ride & Hotel Farewell:**
+   - Articulate `'climb_step'`, `'hand_assist_reach'`, and `'cheer_wave'` poses + interactive **"Take Ishaan's Hand"** climb assistance & shared rest pacing in Scene 9
+   - Scene 10 serene hilltop arrival cinematic reveal + evening bus reminder
+   - Scene 11 (`Evening Safe Return` downhill scooter segment `'to_hotel_return'` with calm pacing & Scooter 2 escort — zero reckless driving)
+   - Scene 12 (`Rishikesh Hotel Return`: ground/1st floor hotel courtyard context, Srishti rejoining her original friends without depicting a bus-stand dropoff, gentle farewell wave + Trip Complete card)
+   - Passing `npm.cmd run typecheck` and `npm.cmd run build`, committed & pushed to `origin/main`
 
-**Measurable Acceptance Criteria:**
-- [ ] Full playthrough from Scene 0 through Scene 14 succeeds with zero console errors
-- [ ] Visual curtain transition cycle (`350ms` fade-out + `350ms` fade-in) totals `700ms`; total elapsed transition `< 800ms` when destination assets were background-preloaded (with loading spinner shown if network fetch exceeds `800ms`)
-- [ ] Checkpoint restores Scene 9 step-200 rest state and polaroids accurately after browser refresh
+**Known Deferred Issue (Intentional Exclusion from Phase 3 Fix):**
+- Some hillside mountain geometry and trees across road/temple segments still appear to float visually in rendered builds; recorded as an open visual-polish item for dedicated environment inspection rather than claimed fixed in Phase 3.
+
+### Known Deferred Visual Issues Log
+| Issue | Scope | Status |
+|-------|-------|--------|
+| Floating hillside trees & mountain slope gaps | Mountain road / viewpoint / dhaba / temple edges | **Deferred (Known Visual Polish Item — Do Not Mark Fixed)** |
 
 ---
 
-### Phase 4 — 3D Art Production & Asset Pipeline [CORE]
+### Phase 4 — Prologue, Epilogue & Stylized Asset Production [CORE]
 
 **Goal:** Replace greybox geometry with stylized low-poly Himalayan GLB assets meeting pipeline rules.
 

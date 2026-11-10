@@ -98,6 +98,28 @@ const SHACKS_BY_SEGMENT: Record<MountainRoadSegmentId, readonly ShackSpec[]> = {
       showParkedScooter: false,
     },
   ],
+  to_baalkuwari: [
+    {
+      id: 'road-chai-bk-1',
+      dist: 76,
+      variant: 'chai_tapri',
+      keeperShirt: '#f59e0b',
+      guestAColor: '#334155',
+      guestBColor: '#0f766e',
+      showSecondCustomer: true,
+      showParkedScooter: true,
+    },
+    {
+      id: 'road-fruit-bk-2',
+      dist: 178,
+      variant: 'fruit_coconut',
+      keeperShirt: '#ca8a04',
+      guestAColor: '#475569',
+      guestBColor: '#334155',
+      showSecondCustomer: false,
+      showParkedScooter: true,
+    },
+  ],
 };
 
 // Strictly positioned on outer hillside berm (`lateral <= -4.18m`), clear of all traffic lanes and stalls
@@ -164,6 +186,28 @@ const WALKERS_BY_SEGMENT: Record<MountainRoadSegmentId, readonly WalkerSpec[]> =
       phaseOffset: 0.8,
       shirtColor: '#a16207',
       pantsColor: '#1e293b',
+    },
+  ],
+  to_baalkuwari: [
+    {
+      id: 'walker-bk-1',
+      centerDist: 52,
+      lateral: -4.18,
+      spanMeters: 7.0,
+      speedMps: 1.05,
+      phaseOffset: 0.7,
+      shirtColor: '#0f766e',
+      pantsColor: '#1e293b',
+    },
+    {
+      id: 'walker-bk-2',
+      centerDist: 198,
+      lateral: -4.18,
+      spanMeters: 7.5,
+      speedMps: 1.1,
+      phaseOffset: 2.4,
+      shirtColor: '#c2410c',
+      pantsColor: '#334155',
     },
   ],
 };

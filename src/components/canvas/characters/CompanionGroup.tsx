@@ -105,7 +105,10 @@ function FriendRigInstance({
 }
 
 export interface CompanionGroupProps {
-  initialPositions: Record<FriendCompanionId, { x: number; z: number; yaw: number }>;
+  initialPositions: Record<
+    FriendCompanionId,
+    { x: number; y?: number; z: number; yaw: number }
+  >;
   holdingChaiCup?: boolean;
   holdingFork?: boolean;
   onRigsReady: (rigs: CompanionRigMap) => void;
@@ -144,7 +147,11 @@ export function CompanionGroup({
         variant="ishaan"
         hairColor="#18181b"
         scale={0.99}
-        initialPosition={[initialPositions.ishaan.x, 0, initialPositions.ishaan.z]}
+        initialPosition={[
+          initialPositions.ishaan.x,
+          initialPositions.ishaan.y ?? 0,
+          initialPositions.ishaan.z,
+        ]}
         initialYaw={initialPositions.ishaan.yaw}
         holdingChaiCup={holdingChaiCup}
         holdingFork={holdingFork}
@@ -157,7 +164,7 @@ export function CompanionGroup({
         scale={1.01}
         initialPosition={[
           initialPositions.friend_black_tee.x,
-          0,
+          initialPositions.friend_black_tee.y ?? 0,
           initialPositions.friend_black_tee.z,
         ]}
         initialYaw={initialPositions.friend_black_tee.yaw}
@@ -170,7 +177,11 @@ export function CompanionGroup({
         variant="friend_plaid"
         hairColor="#111827"
         scale={0.99}
-        initialPosition={[initialPositions.friend_plaid.x, 0, initialPositions.friend_plaid.z]}
+        initialPosition={[
+          initialPositions.friend_plaid.x,
+          initialPositions.friend_plaid.y ?? 0,
+          initialPositions.friend_plaid.z,
+        ]}
         initialYaw={initialPositions.friend_plaid.yaw}
         holdingChaiCup={holdingChaiCup}
         holdingFork={holdingFork}

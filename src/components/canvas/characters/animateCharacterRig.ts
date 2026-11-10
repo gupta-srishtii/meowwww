@@ -41,6 +41,7 @@ export interface CharacterRigFrameParams {
   elapsed: number;
   delta: number;
   idlePose?: CharacterIdlePose;
+  groundY?: number;
   torsoBaseY?: number;
   headTargetYawOffset?: number;
   armGesturePhase?: number;
@@ -91,6 +92,7 @@ export function animateCharacterRig({
   elapsed,
   delta,
   idlePose = 'default',
+  groundY = 0,
   torsoBaseY = 0.78,
   headTargetYawOffset = 0,
   armGesturePhase = 0,
@@ -125,7 +127,7 @@ export function animateCharacterRig({
 
     group.position.y = THREE.MathUtils.damp(
       group.position.y,
-      reducedMotion ? 0 : Math.abs(Math.sin(stridePhase)) * 0.028 * strideRatio,
+      groundY + (reducedMotion ? 0 : Math.abs(Math.sin(stridePhase)) * 0.028 * strideRatio),
       14,
       delta
     );
@@ -175,7 +177,7 @@ export function animateCharacterRig({
     idlePose === 'sit_sip' ||
     idlePose === 'sit_laugh';
 
-  const targetRootY = isSeated ? -0.25 : 0;
+  const targetRootY = groundY + (isSeated ? -0.25 : 0);
   const targetThighX = isSeated ? 1.4 : 0;
   const targetKneeX = isSeated ? -1.32 : 0;
 

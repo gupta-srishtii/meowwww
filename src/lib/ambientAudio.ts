@@ -4,7 +4,14 @@
  * Zero external audio assets required; respects user gesture unlock, pause, and mute state.
  */
 
-export type AmbientAudioMode = 'road' | 'viewpoint' | 'dhaba' | 'neelkanth' | 'off';
+export type AmbientAudioMode =
+  | 'road'
+  | 'viewpoint'
+  | 'dhaba'
+  | 'neelkanth'
+  | 'baalkuwari_stairs'
+  | 'baalkuwari_temple'
+  | 'off';
 
 interface AmbientState {
   muted: boolean;
@@ -153,6 +160,14 @@ class AmbientAudioController {
       this.windGain.gain.setTargetAtTime(0.044, now, 0.2);
       // Soft peaceful courtyard crowd murmur warmth
       this.simmerGain.gain.setTargetAtTime(0.022, now, 0.2);
+    } else if (this.state.mode === 'baalkuwari_stairs') {
+      this.windFilter.frequency.setTargetAtTime(360, now, 0.2);
+      this.windGain.gain.setTargetAtTime(0.056, now, 0.2);
+      this.simmerGain.gain.setTargetAtTime(0, now, 0.15);
+    } else if (this.state.mode === 'baalkuwari_temple') {
+      this.windFilter.frequency.setTargetAtTime(300, now, 0.2);
+      this.windGain.gain.setTargetAtTime(0.048, now, 0.2);
+      this.simmerGain.gain.setTargetAtTime(0.012, now, 0.2);
     }
   }
 

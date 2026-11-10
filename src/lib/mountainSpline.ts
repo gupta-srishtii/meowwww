@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 
-export type MountainRoadSegmentId = 'to_dhaba' | 'to_neelkanth';
+export type MountainRoadSegmentId = 'to_dhaba' | 'to_neelkanth' | 'to_baalkuwari';
 export type MountainRoadSubStage = 'driving' | 'viewpoint_walk';
+export type BaalKuwariSubStage = 'driving' | 'maggi_stop';
 
 export const ROAD_WIDTH = 7.0;
 export const ROAD_HALF_WIDTH = ROAD_WIDTH / 2; // 3.5m
@@ -43,6 +44,7 @@ export const VIEWPOINT_PARK_LEAD_LATERAL = 5.0;
 export const VIEWPOINT_PARK_COMP_LATERAL = 2.9;
 
 export const NEELKANTH_APPROACH_STOP_DISTANCE = 324.0;
+export const BAAL_KUWARI_STOP_DISTANCE = 278.0;
 
 export interface RoadFrame {
   point: THREE.Vector3;
@@ -75,19 +77,32 @@ export function createMountainRoadCurve(
           new THREE.Vector3(-24, 13.0, -386),
           new THREE.Vector3(-64, 14.2, -418),
         ]
-      : [
-          new THREE.Vector3(0, 0, 0),
-          new THREE.Vector3(-10, 1.5, -42),
-          new THREE.Vector3(-30, 3.6, -86),
-          new THREE.Vector3(-18, 5.8, -134),
-          new THREE.Vector3(14, 8.0, -182),
-          new THREE.Vector3(34, 10.2, -230),
-          new THREE.Vector3(22, 12.2, -278),
-          new THREE.Vector3(-4, 13.8, -328), // Neelkanth Mahadev gateway plaza ~324m
-          new THREE.Vector3(-34, 15.2, -374), // road curves past temple toward future Baal Kuwari forest route
-          new THREE.Vector3(-72, 16.4, -416),
-          new THREE.Vector3(-112, 17.6, -448),
-        ];
+      : segment === 'to_neelkanth'
+        ? [
+            new THREE.Vector3(0, 0, 0),
+            new THREE.Vector3(-10, 1.5, -42),
+            new THREE.Vector3(-30, 3.6, -86),
+            new THREE.Vector3(-18, 5.8, -134),
+            new THREE.Vector3(14, 8.0, -182),
+            new THREE.Vector3(34, 10.2, -230),
+            new THREE.Vector3(22, 12.2, -278),
+            new THREE.Vector3(-4, 13.8, -328), // Neelkanth Mahadev gateway plaza ~324m
+            new THREE.Vector3(-34, 15.2, -374), // road curves past temple toward future Baal Kuwari forest route
+            new THREE.Vector3(-72, 16.4, -416),
+            new THREE.Vector3(-112, 17.6, -448),
+          ]
+        : [
+            new THREE.Vector3(0, 0, 0),
+            new THREE.Vector3(12, 1.8, -40),
+            new THREE.Vector3(32, 4.2, -84),
+            new THREE.Vector3(18, 6.8, -132),
+            new THREE.Vector3(-16, 9.4, -178),
+            new THREE.Vector3(-28, 12.0, -226),
+            new THREE.Vector3(-12, 14.5, -274), // Baal Kuwari base trailhead & Maggi stop ~278m
+            new THREE.Vector3(16, 16.2, -322), // mountain ridge road bends past the stairhead
+            new THREE.Vector3(52, 17.8, -368),
+            new THREE.Vector3(92, 19.2, -406),
+          ];
 
   const curve = new THREE.CatmullRomCurve3(controlPoints, false, 'catmullrom', 0.5);
   // Fine arc-length lookup eliminates piecewise tangent micro-jitter along S-curves.
@@ -99,6 +114,9 @@ export function createMountainRoadCurve(
 export function getSegmentStopDistance(segment: MountainRoadSegmentId, totalLength: number): number {
   if (segment === 'to_dhaba') {
     return Math.min(DHABA_STOP_DISTANCE, totalLength - 60);
+  }
+  if (segment === 'to_baalkuwari') {
+    return Math.min(BAAL_KUWARI_STOP_DISTANCE, totalLength - 60);
   }
   return Math.min(NEELKANTH_APPROACH_STOP_DISTANCE, totalLength - 60);
 }

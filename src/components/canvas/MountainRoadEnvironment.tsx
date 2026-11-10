@@ -37,6 +37,7 @@ export interface MountainRoadEnvironmentProps {
 const STALL_DISTS_BY_SEGMENT: Record<MountainRoadSegmentId, readonly number[]> = {
   to_dhaba: [48, 96, 214],
   to_neelkanth: [96, 242],
+  to_baalkuwari: [76, 178],
 };
 
 function smoothStep01(t: number): number {
@@ -932,21 +933,42 @@ export function MountainRoadEnvironment({
   return (
     <group>
       {/* Warm daylight sky on route to dhaba shifting gracefully toward afternoon warmth near Neelkanth */}
-      <color attach="background" args={[roadSegment === 'to_dhaba' ? '#b8d8f0' : '#c6def0']} />
+      <color
+        attach="background"
+        args={[
+          roadSegment === 'to_dhaba'
+            ? '#b8d8f0'
+            : roadSegment === 'to_baalkuwari'
+              ? '#c9dfef'
+              : '#c6def0',
+        ]}
+      />
       <fog
         attach="fog"
-        args={[roadSegment === 'to_dhaba' ? '#b8d8f0' : '#cddff0', 95, 290]}
+        args={[
+          roadSegment === 'to_dhaba'
+            ? '#b8d8f0'
+            : roadSegment === 'to_baalkuwari'
+              ? '#d4e5f2'
+              : '#cddff0',
+          95,
+          290,
+        ]}
       />
 
       <hemisphereLight
-        args={[roadSegment === 'to_dhaba' ? '#e0f2fe' : '#fff3e0', '#686b57', 0.98]}
+        args={[
+          roadSegment === 'to_dhaba' ? '#e0f2fe' : '#fff3e0',
+          roadSegment === 'to_baalkuwari' ? '#4d6048' : '#686b57',
+          0.98,
+        ]}
       />
       <primitive object={lightTarget} />
       <directionalLight
         ref={dirLightRef}
         position={[60, 96, -120]}
         intensity={1.7}
-        color={roadSegment === 'to_dhaba' ? '#fff4db' : '#ffeacc'}
+        color={roadSegment === 'to_dhaba' ? '#fff4db' : roadSegment === 'to_baalkuwari' ? '#ffe6bf' : '#ffeacc'}
         castShadow={shadowsEnabled}
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -1086,7 +1108,7 @@ export function MountainRoadEnvironment({
         <meshBasicMaterial color="#2a9d8f" transparent opacity={0.35} />
       </mesh>
 
-      {/* Living roadside stall at the pull-off bay (Maggi/Chai stop in `to_dhaba`, or Neelkanth temple gate in `to_neelkanth`) */}
+      {/* Living roadside stall at the pull-off bay (Dhaba in `to_dhaba`, Trailhead Maggi/Arch in `to_baalkuwari`, or Neelkanth temple gate in `to_neelkanth`) */}
       {roadSegment === 'to_dhaba' ? (
         <group position={landmarks.stallCenter} quaternion={landmarks.stopQuat}>
           <RoadsideTapriAssembly
@@ -1102,6 +1124,53 @@ export function MountainRoadEnvironment({
             reducedMotion={reducedMotion}
             phaseOffset={2.7}
           />
+        </group>
+      ) : roadSegment === 'to_baalkuwari' ? (
+        <group position={landmarks.stallCenter} quaternion={landmarks.stopQuat}>
+          {/* Baal Kuwari Forest Trailhead Base Maggi Tapri & Rising Stone Steps Portal */}
+          <RoadsideTapriAssembly
+            sideOfRoad="right"
+            stallVariant="maggi_snacks"
+            keeperShirtColor="#0f766e"
+            customerAColor="#334155"
+            customerBColor="#9a3412"
+            showSecondCustomer
+            showParkedScooter={false}
+            includeRetainingPlinth
+            shadowsEnabled={shadowsEnabled}
+            paused={paused}
+            reducedMotion={reducedMotion}
+            phaseOffset={1.5}
+          />
+          {/* Trailhead Stone Arch & Visible First Steps Up the Mountain */}
+          <group position={[3.6, 0, -4.6]}>
+            <mesh position={[0, -2.5, 0]} receiveShadow={shadowsEnabled}>
+              <boxGeometry args={[6.4, 5.0, 5.2]} />
+              <meshStandardMaterial color="#675c4d" roughness={0.95} />
+            </mesh>
+            <mesh position={[-1.4, 1.45, 0]} castShadow={shadowsEnabled}>
+              <boxGeometry args={[0.42, 2.9, 0.42]} />
+              <meshStandardMaterial color="#8c7b67" roughness={0.9} />
+            </mesh>
+            <mesh position={[1.4, 1.45, 0]} castShadow={shadowsEnabled}>
+              <boxGeometry args={[0.42, 2.9, 0.42]} />
+              <meshStandardMaterial color="#8c7b67" roughness={0.9} />
+            </mesh>
+            <mesh position={[0, 2.95, 0]} castShadow={shadowsEnabled}>
+              <boxGeometry args={[3.5, 0.48, 0.56]} />
+              <meshStandardMaterial color="#b45309" roughness={0.78} />
+            </mesh>
+            {[0, 1, 2, 3, 4, 5].map((stepIdx) => (
+              <mesh
+                key={stepIdx}
+                position={[0.6 + stepIdx * 0.48, 0.14 + stepIdx * 0.24, 0]}
+                receiveShadow={shadowsEnabled}
+              >
+                <boxGeometry args={[0.56, 0.28, 2.2]} />
+                <meshStandardMaterial color="#948977" roughness={0.92} />
+              </mesh>
+            ))}
+          </group>
         </group>
       ) : (
         <group position={landmarks.stallCenter} quaternion={landmarks.stopQuat}>

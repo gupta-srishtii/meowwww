@@ -2,7 +2,12 @@
 
 import type { SceneManagerController } from '@/components/canvas/managers/SceneManager';
 import type { CheckpointData } from '@/lib/checkpoint';
-import { getSceneDefinition } from '@/lib/sceneConfig';
+import type {
+  BaalKuwariSubStage,
+  MountainRoadSegmentId,
+  MountainRoadSubStage,
+} from '@/lib/mountainSpline';
+import { getSceneDefinition, type SceneId } from '@/lib/sceneConfig';
 import { useProgressStore } from '@/store/progressStore';
 
 export interface TransitionOverlayProps {
@@ -15,17 +20,26 @@ export interface TransitionOverlayProps {
 }
 
 function getFriendlyStopTitle(
-  sceneId: number,
-  segment?: 'to_dhaba' | 'to_neelkanth',
-  subStage?: 'driving' | 'viewpoint_walk'
+  sceneId: SceneId,
+  segment?: MountainRoadSegmentId,
+  subStage?: MountainRoadSubStage,
+  baalKuwariSubStage?: BaalKuwariSubStage
 ): string {
   if (sceneId === 6) return 'Maggi & Chai Tapri';
   if (sceneId === 7) return 'Neelkanth Mahadev Temple';
+  if (sceneId === 8) {
+    return baalKuwariSubStage === 'maggi_stop'
+      ? 'Baal Kuwari Trailhead Maggi Stop'
+      : 'Mountain Route to Baal Kuwari';
+  }
+  if (sceneId === 9) return 'Baal Kuwari: The ~400 Stairs';
+  if (sceneId === 10) return 'Baal Kuwari Summit Temple';
   if (sceneId === 5) {
     if (subStage === 'viewpoint_walk') return 'Scenic Mountain Viewpoint';
+    if (segment === 'to_baalkuwari') return 'Mountain Route to Baal Kuwari';
     return segment === 'to_neelkanth' ? 'Forest Road to Neelkanth' : 'Rishikesh Mountain Road';
   }
-  return getSceneDefinition(sceneId as 5 | 6 | 7).title;
+  return getSceneDefinition(sceneId).title;
 }
 
 export function TransitionOverlay({
@@ -40,6 +54,7 @@ export function TransitionOverlay({
   const committedSceneId = useProgressStore((s) => s.committedSceneId);
   const mountainRoadSegment = useProgressStore((s) => s.mountainRoadSegment);
   const roadSubStage = useProgressStore((s) => s.roadSubStage);
+  const baalKuwariSubStage = useProgressStore((s) => s.baalKuwariSubStage);
   const transitionPhase = useProgressStore((s) => s.transitionPhase);
   const transitionError = useProgressStore((s) => s.transitionError);
   const userPaused = useProgressStore((s) => s.userPaused);
@@ -56,12 +71,14 @@ export function TransitionOverlay({
   const requestedTitle = getFriendlyStopTitle(
     requestedDef.id,
     mountainRoadSegment,
-    roadSubStage
+    roadSubStage,
+    baalKuwariSubStage
   );
   const committedTitle = getFriendlyStopTitle(
     committedSceneId,
     mountainRoadSegment,
-    roadSubStage
+    roadSubStage,
+    baalKuwariSubStage
   );
 
   return (
@@ -135,7 +152,8 @@ export function TransitionOverlay({
                 {getFriendlyStopTitle(
                   pendingResumeCheckpoint.committedSceneId,
                   pendingResumeCheckpoint.mountainRoadSegment,
-                  pendingResumeCheckpoint.roadSubStage
+                  pendingResumeCheckpoint.roadSubStage,
+                  pendingResumeCheckpoint.baalKuwariSubStage
                 )}
               </p>
             </div>

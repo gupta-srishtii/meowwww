@@ -25,12 +25,22 @@ export function ChapterSelectModal({
   const committedSceneId = useProgressStore((s) => s.committedSceneId);
   const mountainRoadSegment = useProgressStore((s) => s.mountainRoadSegment);
   const roadSubStage = useProgressStore((s) => s.roadSubStage);
+  const baalKuwariSubStage = useProgressStore((s) => s.baalKuwariSubStage);
   const furthestChapterRank = useProgressStore((s) => s.furthestChapterRank);
   const collectedPolaroids = useProgressStore((s) => s.collectedPolaroids);
 
   if (!open) return null;
 
-  const activeKey = getActiveChapterKey(committedSceneId, mountainRoadSegment, roadSubStage);
+  const activeKey = getActiveChapterKey(
+    committedSceneId,
+    mountainRoadSegment,
+    roadSubStage,
+    baalKuwariSubStage
+  );
+  const totalPolaroidsCount = PHASE2_STORY_CHAPTERS.reduce(
+    (sum, item) => sum + item.polaroidIds.length,
+    0
+  );
 
   return (
     <div
@@ -49,7 +59,7 @@ export function ChapterSelectModal({
               Memories &amp; Chapters
             </h2>
             <p className="mt-0.5 text-xs text-slate-400">
-              {collectedPolaroids.length} of 4 trip Polaroids collected
+              {collectedPolaroids.length} of {totalPolaroidsCount} trip Polaroids collected
             </p>
           </div>
 
@@ -124,7 +134,7 @@ export function ChapterSelectModal({
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold text-slate-200">
-                  6. {UPCOMING_CHAPTER_PREVIEW.title}
+                  {PHASE2_STORY_CHAPTERS.length + 1}. {UPCOMING_CHAPTER_PREVIEW.title}
                 </p>
                 <p className="mt-0.5 text-[11px] text-amber-300/80">
                   {UPCOMING_CHAPTER_PREVIEW.subtitle}
