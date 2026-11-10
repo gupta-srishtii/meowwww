@@ -15,6 +15,7 @@ export interface HotelReturnHUDProps {
   farewellDone: boolean;
   tripSummaryOpen: boolean;
   onDismissTripSummary: () => void;
+  onProceedToBhaiDooj: () => void;
   polaroidCount: number;
   nearbyHotspot: WalkHotspot | null;
   hasActiveNarration: boolean;
@@ -33,6 +34,7 @@ export function HotelReturnHUD({
   farewellDone,
   tripSummaryOpen,
   onDismissTripSummary,
+  onProceedToBhaiDooj,
   polaroidCount,
   nearbyHotspot,
   hasActiveNarration,
@@ -81,26 +83,36 @@ export function HotelReturnHUD({
                 Collected Memories: {polaroidCount} Polaroid{polaroidCount === 1 ? '' : 's'}
               </p>
               <p className="mt-1 text-slate-400">
-                Aage aane wala chapter: hamara alag se Bhai Dooj epilogue.
+                Agla aur aakhiri hissa: hamara interactive Bhai Dooj celebration.
               </p>
             </div>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  onDismissTripSummary();
+                  onProceedToBhaiDooj();
+                }}
+                className="w-full rounded-xl bg-amber-400 px-4 py-2.5 text-xs font-semibold text-slate-950 transition hover:bg-amber-300"
+              >
+                Celebrate Bhai Dooj Together →
+              </button>
               <button
                 type="button"
                 onClick={() => {
                   onDismissTripSummary();
                   onOpenChapters();
                 }}
-                className="flex-1 rounded-xl bg-amber-400 px-4 py-2 text-xs font-semibold text-slate-950 transition hover:bg-amber-300"
+                className="flex-1 rounded-xl border border-slate-600 bg-slate-800 px-4 py-2 text-xs font-medium text-slate-200 transition hover:bg-slate-700"
               >
-                Open Memories &amp; Chapters
+                Memories &amp; Chapters
               </button>
               <button
                 type="button"
                 onClick={onDismissTripSummary}
-                className="flex-1 rounded-xl border border-slate-600 bg-slate-800 px-4 py-2 text-xs font-medium text-slate-200 transition hover:bg-slate-700"
+                className="flex-1 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-xs font-medium text-slate-300 transition hover:bg-slate-800"
               >
-                Keep Exploring Stay &amp; Terrace
+                Keep Exploring Stay
               </button>
             </div>
           </div>

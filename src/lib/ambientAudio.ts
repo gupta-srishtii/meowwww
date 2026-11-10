@@ -12,6 +12,7 @@ export type AmbientAudioMode =
   | 'baalkuwari_stairs'
   | 'baalkuwari_temple'
   | 'hotel_evening'
+  | 'bhai_dooj'
   | 'off';
 
 interface AmbientState {
@@ -173,6 +174,11 @@ class AmbientAudioController {
       this.windFilter.frequency.setTargetAtTime(220, now, 0.2);
       this.windGain.gain.setTargetAtTime(0.028, now, 0.2);
       this.simmerGain.gain.setTargetAtTime(0.014, now, 0.2);
+    } else if (this.state.mode === 'bhai_dooj') {
+      // Quiet indoor celebration backdrop with near-silent warm air tone
+      this.windFilter.frequency.setTargetAtTime(175, now, 0.2);
+      this.windGain.gain.setTargetAtTime(0.008, now, 0.2);
+      this.simmerGain.gain.setTargetAtTime(0, now, 0.2);
     }
   }
 
@@ -390,6 +396,68 @@ class AmbientAudioController {
           osc.stop(now + offset + dur + 0.06);
         });
       }
+    } catch {
+      // Ignore audio edge failures cleanly
+    }
+  }
+
+  /**
+   * Warm gentle three-note pentatonic chime for Bhai Dooj Tilak ceremony.
+   */
+  playTilakBlessingTone(): void {
+    if (this.state.muted || this.state.paused) return;
+    if (!this.ensureContext() || !this.ctx || this.ctx.state !== 'running') return;
+
+    try {
+      const ctx = this.ctx;
+      const now = ctx.currentTime;
+      const notes = [440, 554.37, 659.25];
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.14);
+
+        gain.gain.setValueAtTime(0.0001, now + idx * 0.14);
+        gain.gain.exponentialRampToValueAtTime(0.055, now + idx * 0.14 + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.14 + 1.15);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + idx * 0.14);
+        osc.stop(now + idx * 0.14 + 1.2);
+      });
+    } catch {
+      // Ignore audio edge failures cleanly
+    }
+  }
+
+  /**
+   * Soft warm chord motif when entering the cozy Bhai Dooj room & memory gallery.
+   */
+  playBhaiDoojChime(): void {
+    if (this.state.muted || this.state.paused) return;
+    if (!this.ensureContext() || !this.ctx || this.ctx.state !== 'running') return;
+
+    try {
+      const ctx = this.ctx;
+      const now = ctx.currentTime;
+      const notes = [523.25, 659.25, 783.99, 1046.5];
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.18);
+
+        gain.gain.setValueAtTime(0.0001, now + idx * 0.18);
+        gain.gain.exponentialRampToValueAtTime(0.038, now + idx * 0.18 + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.18 + 1.4);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + idx * 0.18);
+        osc.stop(now + idx * 0.18 + 1.45);
+      });
     } catch {
       // Ignore audio edge failures cleanly
     }

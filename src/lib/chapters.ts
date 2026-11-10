@@ -21,7 +21,9 @@ export type ChapterKey =
   | 'baal_kuwari_stairs'
   | 'baal_kuwari_temple'
   | 'evening_return'
-  | 'hotel_farewell';
+  | 'hotel_farewell'
+  | 'bhai_dooj_finale'
+  | 'memory_gallery';
 
 export interface StoryChapterItem {
   key: ChapterKey;
@@ -180,12 +182,23 @@ export const PHASE2_STORY_CHAPTERS: readonly StoryChapterItem[] = [
     targetSceneId: 12,
     polaroidIds: [],
   },
+  {
+    key: 'bhai_dooj_finale',
+    rank: 16,
+    title: 'Bhai Dooj Tilak · Virtual Finale',
+    subtitle: 'Kitaabi Dastaan se Bhai Dooj tak — tilak, mithai aur chhota sa paigham',
+    targetSceneId: 13,
+    polaroidIds: [],
+  },
+  {
+    key: 'memory_gallery',
+    rank: 17,
+    title: 'Our Journey · Memories Showcase',
+    subtitle: 'Saath bitaye hue pal, collected Polaroids aur dobara khelne ke options',
+    targetSceneId: 14,
+    polaroidIds: [],
+  },
 ];
-
-export const UPCOMING_CHAPTER_PREVIEW = {
-  title: 'Bhai Dooj Tilak · Virtual Finale',
-  subtitle: 'Agle hisse mein — trip ke baad ka hamara virtual Bhai Dooj celebration',
-} as const;
 
 export function inferChapterRank(
   sceneId: SceneId,
@@ -195,7 +208,11 @@ export function inferChapterRank(
   baalKuwariSubStage: BaalKuwariSubStage = 'driving'
 ): number {
   let rank = 0;
-  if (sceneId === 12) {
+  if (sceneId === 14) {
+    rank = 17;
+  } else if (sceneId === 13) {
+    rank = 16;
+  } else if (sceneId === 12) {
     rank = 15;
   } else if (sceneId === 11 || (sceneId === 5 && segment === 'to_hotel_return')) {
     rank = 14;
@@ -247,6 +264,8 @@ export function getActiveChapterKey(
   subStage: MountainRoadSubStage,
   baalKuwariSubStage: BaalKuwariSubStage = 'driving'
 ): ChapterKey {
+  if (sceneId === 14) return 'memory_gallery';
+  if (sceneId === 13) return 'bhai_dooj_finale';
   if (sceneId === 12) return 'hotel_farewell';
   if (sceneId === 11) return 'evening_return';
   if (sceneId === 10) return 'baal_kuwari_temple';

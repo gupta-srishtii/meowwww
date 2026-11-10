@@ -1,10 +1,10 @@
 # The Road That Made Us Family
-## MASTER_PLAN.md — v2.5 (Phase 3 Realism Correction & Story Alignment)
+## MASTER_PLAN.md — v2.7 (Phase 4 Complete — Full Story & Bhai Dooj Finale)
 
-**Status:** ACTIVE — Phase 3 Experience & Story Polish (Do Not Start Phase 4)  
+**Status:** PHASE 4 COMPLETE — Reserved Phase 5 for Minor Refinements, Regression Fixes & Gift Release Readiness  
 **Option Selected:** Option B — Full Cinematic Experience, Phased Development (Quality-First, No Fixed Deadline)  
-**Last Updated:** 2026-11-10  
-**Revision:** v2.6 — Updated Phase 3 gameplay so **Ishaan** is the default third-person playable protagonist (bhai Dooj gift for Ishaan), converted Baal Kuwari ~400 stairs ascent & downhill return into automatic third-person cinematics with two connected hand-assists on steeper pitches and playful downhill jogging after darshan, corrected India LHT lanes across all road segments, and polished warm Hinglish personal story copy.
+**Last Updated:** 2026-11-11  
+**Revision:** v2.7 — Completed Phase 4 full story progression (Scenes 1–14 playable): Kitaabi Dastaan opening, Day 1 connected ground-floor stay/terrace/evening scooter, Day 2 Morning road Bun Maska & Chai, Scooter Departure, Scenic Viewpoint 3-photo overlook + tripod (`randomview point.jpg`), sharper Baal Kuwari off-road junction & distinct Second Maggi Clearing, Baal Kuwari Summit book overlook (`book on baalkumari temple me.jpg`), Interactive Virtual Bhai Dooj Finale (Kitaabi callback, Tilak ceremony, Mithai sharing & Creator Draft Letter), and Scene 14 Ending Showcase. Phase 5 reserved for final polish, regression verification, creator letter sign-off & release readiness.
 
 ---
 
@@ -106,20 +106,20 @@ Created as a Bhai Dooj gift for **Ishaan**: you play in third-person as **Ishaan
 | Scene ID | Title | Type | Act | Est. Duration | Classification |
 |----------|-------|------|-----|--------------|----------------|
 | 0 | Loading, Cozy Lamp & Title | SYSTEM | Prologue | 10–20s | [CORE] |
-| 1 | Kitaabi Dastaan: 3D Library Reveal | NARRATIVE | Prologue | 60–90s | [CORE] |
-| 2 | Mahakumbh Flash (~2 Minutes) | CINEMATIC | Prologue | 20–30s | [CORE] |
-| 3 | Kumbhkaran Awakens | GAMEPLAY | Act 1 | 90–120s | [CORE] |
-| 4 | Scooter Departure | CINEMATIC | Act 1 | 30–45s | [CORE] |
-| 5 | Mountain Road Ride | GAMEPLAY | Act 1 | 3–5 min | [CORE] (Honk/Wave/Cow/Flags: [OPTIONAL]) |
+| 1 | Kitaabi Dastaan: Online Chats & Calls | NARRATIVE | Prologue | 45s | [CORE] (`Phase 4 Playable`) |
+| 2 | Rishikesh Day 1: Train, Bus, Stay & Evening Ride | CINEMATIC / GAMEPLAY | Prologue | 2 min | [CORE] (`Phase 4 Playable`) |
+| 3 | Day 2 Morning: Bun Maska & Chai | GAMEPLAY | Act 1 | 90s | [CORE] (`Phase 4 Playable`) |
+| 4 | Morning Scooter Departure | CINEMATIC | Act 1 | 15s | [CORE] (`Phase 4 Playable`) |
+| 5 | Mountain Road Ride + 3-Photo Viewpoint | GAMEPLAY | Act 1 | 3–5 min | [CORE] (`Shree Solo`, `Shree & Ishaan`, `All Four` + tripod) |
 | 6 | Maggi & Chai Stop | GAMEPLAY | Act 1 | 90–120s | [CORE] (Stall owner chat: [OPTIONAL]) |
 | 7 | Neelkanth Mahadev | GAMEPLAY | Act 2 | 90–120s | [CORE] |
-| 8 | Ride to Baal Kuwari & Base Maggi Stop | GAMEPLAY | Act 2 | 2–3 min | [CORE] (`to_baalkuwari` forest road + distinct pre-climb trailhead Maggi stop) |
+| 8 | Off-Road to Baal Kuwari & Clearing Maggi #2 | GAMEPLAY | Act 2 | 2–3 min | [CORE] (Right-turn dirt junction, winding climbs & distinct Pahadi Clearing) |
 | 9 | Baal Kuwari: The ~400 Stairs | GAMEPLAY | Act 2 | 2–3 min | [CORE] (4 segmented hillside flights + Ishaan helping animations + landing checkpoints) |
-| 10 | Baal Kuwari Temple Arrival & Summit Memory | CINEMATIC / GAMEPLAY | Act 2 | 90s | [CORE] (Peaceful arrival sweep + courtyard exploration & summit Polaroid) |
+| 10 | Baal Kuwari Temple Arrival, Bell & Book Photo | CINEMATIC / GAMEPLAY | Act 2 | 90s | [CORE] (Arrival sweep, carved toran, summit Polaroid & Shree reading book photo) |
 | 11 | Evening Safe Return to Rishikesh | GAMEPLAY | Act 3 | 2 min | [CORE] (Time-sensitive yet calm downhill scooter return toward hotel) |
-| 12 | Hotel Return, Original Friends & Farewell | GAMEPLAY / CINEMATIC | Act 3 | 90s | [CORE] (Rishikesh hotel courtyard 1st/ground floor context, original group reunion, gentle farewell) |
-| 13 | Bhai Dooj Tilak *(Separate Later Epilogue)* | GAMEPLAY | Epilogue | 2–3 min | [CORE] (Deferred past Phase 3 — separate later occasion, not part of Rishikesh trip) |
-| 14 | Inspectable 3D Memory Gallery | ENDING/SYSTEM | Epilogue | Open-ended | [CORE] (Deferred past Phase 3) |
+| 12 | Rishikesh Stay, Terrace & Farewell | GAMEPLAY / CINEMATIC | Act 3 | 90s | [CORE] (Lane approach, connected house/terrace stay, gentle farewell -> Epilogue link) |
+| 13 | Virtual Bhai Dooj Finale (Ishaan & Shree) | GAMEPLAY | Epilogue | 2–3 min | [CORE] (`Phase 4 Playable`: Kitaabi callback, Tilak, Mithai, serene Eating Together & Personal Letter) |
+| 14 | The Road That Made Us Family — Ending Showcase | ENDING | Epilogue | Open-ended | [CORE] (`Phase 4 Playable`: Polaroid pedestals, Replay Journey, View Memories, Celebrate Again) |
 
 **Scene type definitions:**
 - **SYSTEM** — engine/UI state or cozy title backdrop
@@ -1159,40 +1159,29 @@ A self-contained playable demo proving the core 3D driving loop, attachment seat
 
 ---
 
-### Phase 4 — Prologue, Epilogue & Stylized Asset Production [CORE]
+### Phase 4 — Complete Rishikesh Story & Virtual Bhai Dooj Finale [CORE] ✅ COMPLETE
 
-**Goal:** Replace greybox geometry with stylized low-poly Himalayan GLB assets meeting pipeline rules.
+**Goal:** Deliver the complete end-to-end 3D story journey (Scenes 1–14), interactive Virtual Bhai Dooj ceremony for Ishaan & Shree, real private photo Polaroid confirmations (7 total), and Ending/Memories showcase while keeping `personal-photos/` strictly local-only via `URL.createObjectURL`.
 
-**Tasks:**
-- Model and skin Srishti, Ishaan, Manish, and Yash using Mixamo humanoid skeletons (Scene Frame Rate `30 fps`; keep `Armature` modifier live and unapplied)
-- Model shared scooter, cozy lamp/library, Rishikesh room, mountain road, dhaba, Neelkanth Mahadev, Baal Kuwari stairs & temple, and tilak thali props
-- Export NLA-baked clips with "Export Deformation Bones Only"
-- Optimize via `npx @gltf-transform/cli optimize input.glb output.glb --compress draco --texture-compress webp --texture-size 1024`
-- Build shared `512×512` WebP palette texture atlas (`< 100 KB`) and populate `ASSET_CREDITS.md`
-
-**Measurable Acceptance Criteria:**
-- [ ] Zero skinned characters frozen by accidentally applied `Armature` modifiers; Blender 30 fps clips match runtime `AnimationMixer` durations 1:1
-- [ ] GLB targets met: Characters `< 200 KB`, Scooter `< 150 KB`, Environments `< 500 KB`
-- [ ] Active mobile scene stays under `< 60,000` triangles and `< 50` draw calls
-- [ ] `ASSET_CREDITS.md` documents 100% of third-party assets & licenses
+**Completed Deliverables:**
+- Scenes 1–4 implemented & playable (`Kitaabi Dastaan`, `Day 1 Arrival, Stay & Evening Ride`, `Day 2 Morning Bun Maska & Chai`, `Morning Scooter Departure`) with `DEFAULT_INITIAL_SCENE_ID = 1`.
+- Scene 5 Scenic Viewpoint expanded to 3 confirmed Polaroid spots (`scene05_viewpoint_shree` from `randomview point.jpg`, `scene05_viewpoint_solo`, `scene05_viewpoint_group`) + camera tripod prop.
+- Baal Kuwari approach (`to_baalkuwari` & `to_baalkuwari_stairs`) refined with explicit right-turn off-road junction sign, narrower rugged dirt surface, switchback climb, and visually distinct afternoon Pahadi Clearing Maggi #2.
+- Scene 10 Baal Kuwari summit enhanced with carved toran gateway, backyard tripod, and Shree-with-book overlook Polaroid (`scene10_baalkuwari_book` from `book on baalkumari temple me.jpg`).
+- Scene 13 Interactive Virtual Bhai Dooj Finale (`BhaiDoojEnvironment` + `Scene13_BhaiDoojFinale` + `BhaiDoojHUD` + `finaleContent.ts`): Kitaabi callback -> Tilak ceremony -> Mithai offer -> serene eating together -> creator-editable draft message (`CREATOR_BHAI_DOOJ_LETTER`).
+- Scene 14 Ending & Memories Showcase (`Scene14_EndingGallery` + `EndingScreenHUD`): framed Polaroid pedestal arc, Replay Journey, View Memories (Polaroids tab), and Celebrate Again.
 
 ---
 
-### Phase 5 — Ceremonial Finale, Polish & Audio [CORE]
+### Phase 5 — Final Polish, Regression Verification & Release Readiness [CORE] *(Reserved Next Phase)*
 
-**Goal:** Complete the interactive Bhai Dooj tilak, music soundscape, and 3D memory gallery.
+**Goal:** Creator message finalization, minor refinements, regression sweep across Scenes 1–14, cross-browser check, and production release readiness.
 
-**Tasks:**
-- Implement fixed-camera Bhai Dooj tilak (Scene 13) supporting both **4-step Draw Mode** and **4-step Tap-to-Apply Accessibility Mode** (Roli → Forehead → Akshat Rice → Diya Flame)
-- Add `[OPTIONAL]` celebratory finale flowers & petal burst
-- Place creator's real heartfelt personal message
-- Polish Scene 14 inspectable 3D floating polaroid gallery (orbit + tap-to-read modal) + `[OPTIONAL]` share poster generator
-- Integrate Howler audio: mountain ambience, soft acoustic guitar, flute, emotional piano, and SFX
-
-**Measurable Acceptance Criteria:**
-- [ ] Both Draw Mode and 4-step Tap-to-Apply Mode complete all 4 ritual steps (including Akshat rice offering and diya lighting) cleanly on mouse and touch
-- [ ] Audio initializes gracefully on user interaction and strictly respects `audioMuted` across pause/resume
-- [ ] Scene 14 allows smooth 3D orbit/rotation and legible polaroid/letter reading on mobile portrait and desktop
+**Planned Tasks:**
+- Finalize `CREATOR_BHAI_DOOJ_LETTER` wording in `src/lib/finaleContent.ts` upon creator approval / edits
+- Run full end-to-end Scene 1→14 regression pass (desktop & touch viewport checks, audio mute/pause continuity, local photo folder linking smoke test)
+- Fix any minor visual/UX edge cases discovered in final creator playtest
+- Confirm Vercel production deploy settings and zero tracked secrets/private media before final handoff to Ishaan
 
 ---
 
@@ -1303,7 +1292,7 @@ Phase 1A creates neutral technical scaffolding (Next.js 16 shell, locked React 1
 1. **Scooter 2 Driver vs. Pillion:** Specify whether **Manish** or **Yash** drove the second scooter, or keep their roles unassigned.
 2. **Approval of `[PROPOSED]` Staging & Dialogue:** Confirm or revise proposed Hinglish lines and stylized visuals (Kitaabi Dastaan 3D library, Mahakumbh visual sweep, Scene 3 morning stay & alarm/water/headboard wake-up staging, dhaba stall owner chat, cow encounter, step-200 prompt, and Scene 13 4-step puja thali setup).
 3. **Real Trip Photo References (`private-assets/` / `personal-photos/`):** Local gitignored photo references for character outfits, scooters, Neelkanth, Baal Kuwari stairs, and polaroid illustrations.
-4. **Heartfelt Final Message:** Your personal Bhai Dooj message for Ishaan (authored exclusively by you prior to Phase 5).
+4. **Heartfelt Final Message (`CREATOR_BHAI_DOOJ_LETTER`):** Review or customize the creator draft inside `src/lib/finaleContent.ts` before Phase 5 final release readiness.
 5. **Hosting & Privacy:** Public custom domain vs. unlisted/private URL (or simple greeting passcode) for the finished Vercel release.
 
 ---

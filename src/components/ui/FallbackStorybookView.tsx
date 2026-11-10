@@ -4,24 +4,32 @@ interface FallbackStorybookViewProps {
   reason?: string;
 }
 
+const STORY_SUMMARY_BEATS = [
+  '1. Kitaabi Dastaan — Online reading circle chats & long calls leading to our Rishikesh plan.',
+  '2. Rishikesh Day 1 & Stay — Arriving by train & bus, lane stay, terrace view & evening scooter Maggi.',
+  '3. Day 2 Morning & Mountain Ride — Bun maska & chai on the main road, viewpoint overlook, roadside tapri & Neelkanth Mahadev.',
+  '4. Baal Kuwari Off-Road & Summit — Rugged dirt track, pre-climb clearing Maggi, ~400 steep steps, bell & summit book overlook.',
+  '5. Safe Return & Virtual Bhai Dooj Finale — Back to the guesthouse before evening bus, then Tilak, mithai & personal Bhai Dooj letter.',
+] as const;
+
 export function FallbackStorybookView({
   reason = 'WebGL2 is unavailable or disabled in this browser.',
 }: FallbackStorybookViewProps) {
   return (
-    <div className="flex h-full w-full items-center justify-center bg-[#0b1020] px-6 py-10 text-slate-100">
-      <section className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-xl sm:p-8">
+    <div className="flex h-full w-full items-center justify-center overflow-y-auto bg-[#0b1020] px-6 py-10 text-slate-100">
+      <section className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900/85 p-6 shadow-xl sm:p-8">
         <p className="text-xs font-medium tracking-[0.2em] text-amber-300/85 uppercase">
-          2D Fallback Mode
+          2D Storybook Mode
         </p>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-50">
           The Road That Made Us Family
         </h1>
-        <p className="mt-3 text-sm leading-relaxed text-slate-300">{reason}</p>
-        <p className="mt-3 text-sm leading-relaxed text-slate-400">
-          This lightweight fallback shell is active so the site remains accessible
-          without 3D hardware acceleration. Full 2D fallback chapters will be
-          wired in later phases.
-        </p>
+        <p className="mt-2 text-xs leading-relaxed text-slate-300">{reason}</p>
+        <ul className="mt-4 space-y-2 rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-xs leading-relaxed text-slate-300">
+          {STORY_SUMMARY_BEATS.map((beat, idx) => (
+            <li key={idx}>{beat}</li>
+          ))}
+        </ul>
         <button
           type="button"
           onClick={() => window.location.reload()}
@@ -33,4 +41,3 @@ export function FallbackStorybookView({
     </div>
   );
 }
-

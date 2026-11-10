@@ -9,11 +9,14 @@ import {
 } from '@/components/canvas/managers/SceneManager';
 import type { Day1Phase } from '@/components/canvas/scenes/Scene02_RishikeshDay1';
 import type { ViewpointPhotoMoment } from '@/components/canvas/scenes/Scene05_ViewpointStop';
+import type { BhaiDoojPhase } from '@/components/canvas/scenes/Scene13_BhaiDoojFinale';
 import { DevPhase1BPanel } from '@/components/ui/DevPhase1BPanel';
 import { FallbackStorybookView } from '@/components/ui/FallbackStorybookView';
 import { ChapterSelectModal } from '@/components/ui/ChapterSelectModal';
 import { ControlsTutorialOverlay } from '@/components/ui/ControlsTutorialOverlay';
 import { BaalKuwariHUD } from '@/components/ui/BaalKuwariHUD';
+import { BhaiDoojHUD } from '@/components/ui/BhaiDoojHUD';
+import { EndingScreenHUD } from '@/components/ui/EndingScreenHUD';
 import { HotelReturnHUD } from '@/components/ui/HotelReturnHUD';
 import { MobileTouchControls } from '@/components/ui/MobileTouchControls';
 import { MobileWalkControls } from '@/components/ui/MobileWalkControls';
@@ -214,7 +217,12 @@ export default function Experience() {
   const [hotelSummaryOpen, setHotelSummaryOpen] = useState(false);
   const hotelSummaryTimerRef = useRef<number | null>(null);
 
+  // Scene 13 (Virtual Bhai Dooj Finale) state
+  const [bhaiDoojPhase, setBhaiDoojPhase] = useState<BhaiDoojPhase>('kitaabi_callback');
+  const [bhaiDoojTilakApplied, setBhaiDoojTilakApplied] = useState(false);
+
   const [chaptersOpen, setChaptersOpen] = useState(false);
+  const [chaptersInitialTab, setChaptersInitialTab] = useState<'chapters' | 'memories'>('chapters');
   const [controlsOpen, setControlsOpen] = useState(false);
   const [scooterReturnOpen, setScooterReturnOpen] = useState(false);
   const isDevEnvironment = process.env.NODE_ENV === 'development';
@@ -278,6 +286,8 @@ export default function Experience() {
   const isBaalKuwariTempleActive = committedSceneId === 10;
   const isSafeReturnDriveActive = committedSceneId === 11;
   const isHotelReturnWalkActive = committedSceneId === 12;
+  const isBhaiDoojSceneActive = committedSceneId === 13;
+  const isEndingGalleryActive = committedSceneId === 14;
 
   const isDrivingSceneActive =
     (committedSceneId === 5 && roadSubStage === 'driving') ||
@@ -1067,8 +1077,41 @@ export default function Experience() {
     clearAllMovementInputs();
     setScooterReturnOpen(false);
     setUserPaused(false);
+    setChaptersInitialTab('chapters');
     setChaptersOpen(true);
   }, [clearAllMovementInputs, setUserPaused]);
+
+  const handleOpenMemoriesTab = useCallback(() => {
+    clearAllMovementInputs();
+    setScooterReturnOpen(false);
+    setUserPaused(false);
+    setChaptersInitialTab('memories');
+    setChaptersOpen(true);
+  }, [clearAllMovementInputs, setUserPaused]);
+
+  const handleProceedToBhaiDooj = useCallback(() => {
+    clearInputsRef.current();
+    setHotelSummaryOpen(false);
+    setBhaiDoojPhase('kitaabi_callback');
+    setBhaiDoojTilakApplied(false);
+    sceneController.requestSceneTransition(13, { clearInputs: clearInputsRef.current });
+  }, [sceneController]);
+
+  const handleFinishBhaiDooj = useCallback(() => {
+    clearInputsRef.current();
+    sceneController.requestSceneTransition(14, { clearInputs: clearInputsRef.current });
+  }, [sceneController]);
+
+  const handleReplayJourney = useCallback(() => {
+    clearInputsRef.current();
+    setKitaabiStep(0);
+    setDay1Phase('travel_cinematic');
+    setMorningBreakfastActive(false);
+    setMorningBreakfastDone(false);
+    setBhaiDoojPhase('kitaabi_callback');
+    setBhaiDoojTilakApplied(false);
+    sceneController.requestSceneTransition(1, { clearInputs: clearInputsRef.current });
+  }, [sceneController]);
 
   const handleOpenPause = useCallback(() => {
     clearAllMovementInputs();
@@ -1293,7 +1336,9 @@ export default function Experience() {
                     ? 'baalkuwari_temple'
                     : isHotelReturnWalkActive || isKitaabiSceneActive || isDay1SceneActive
                       ? 'hotel_evening'
-                      : 'off';
+                      : isBhaiDoojSceneActive || isEndingGalleryActive
+                        ? 'bhai_dooj'
+                        : 'off';
 
     ambientAudio.syncState({
       muted: audioMuted,
@@ -1307,11 +1352,13 @@ export default function Experience() {
     isBaalKuwariMaggiActive,
     isBaalKuwariStairsActive,
     isBaalKuwariTempleActive,
+    isBhaiDoojSceneActive,
     isDay1SceneActive,
     isDay2MorningActive,
     isDepartureSceneActive,
     isDhabaWalkActive,
     isDrivingSceneActive,
+    isEndingGalleryActive,
     isHotelReturnWalkActive,
     isKitaabiSceneActive,
     isNeelkanthWalkActive,
@@ -1376,6 +1423,12 @@ export default function Experience() {
     } else if (committedSceneId === 3) {
       setMorningBreakfastActive(false);
       setMorningBreakfastDone(false);
+    } else if (committedSceneId === 13) {
+      setBhaiDoojPhase('kitaabi_callback');
+      setBhaiDoojTilakApplied(false);
+      ambientAudio.playBhaiDoojChime();
+    } else if (committedSceneId === 14) {
+      ambientAudio.playBhaiDoojChime();
     }
     if (captionTimerRef.current !== null) {
       window.clearTimeout(captionTimerRef.current);
@@ -1402,12 +1455,32 @@ export default function Experience() {
       }
 
       if (
+        (event.code === 'KeyE' || event.code === 'Enter') &&
+        isBhaiDoojSceneActive &&
+        !userPaused &&
+        !anyModalOpen &&
+        useProgressStore.getState().transitionPhase === 'idle'
+      ) {
+        if (bhaiDoojPhase === 'arrival') {
+          event.preventDefault();
+          setBhaiDoojPhase('applying_tilak');
+          return;
+        }
+        if (bhaiDoojPhase === 'sweet_offer') {
+          event.preventDefault();
+          setBhaiDoojPhase('eating_together');
+          return;
+        }
+      }
+
+      if (
         event.code === 'Space' &&
         (foodCinematicActive ||
           trailheadEatingActive ||
           summitArrivalCinematicActive ||
           isBaalKuwariStairsActive ||
           isDepartureSceneActive ||
+          (isBhaiDoojSceneActive && bhaiDoojPhase === 'eating_together') ||
           (isDay2MorningActive && morningBreakfastActive) ||
           (isDay1SceneActive && day1Phase !== 'stay_explore')) &&
         !userPaused &&
@@ -1415,7 +1488,9 @@ export default function Experience() {
         useProgressStore.getState().transitionPhase === 'idle'
       ) {
         event.preventDefault();
-        if (isDepartureSceneActive) {
+        if (isBhaiDoojSceneActive && bhaiDoojPhase === 'eating_together') {
+          setBhaiDoojPhase('creator_letter');
+        } else if (isDepartureSceneActive) {
           handleScooterDepartureComplete();
         } else if (isDay2MorningActive && morningBreakfastActive) {
           handleMorningBreakfastComplete();
@@ -1481,6 +1556,7 @@ export default function Experience() {
   }, [
     anyModalOpen,
     baalKuwariStairDirection,
+    bhaiDoojPhase,
     chaptersOpen,
     clearAllMovementInputs,
     controlsOpen,
@@ -1496,6 +1572,7 @@ export default function Experience() {
     handleSummitArrivalCinematicComplete,
     handleTrailheadMaggiComplete,
     isBaalKuwariStairsActive,
+    isBhaiDoojSceneActive,
     isDay1SceneActive,
     isDay2MorningActive,
     isDepartureSceneActive,
@@ -1670,6 +1747,12 @@ export default function Experience() {
           capturedBookPolaroid={capturedBaalKuwariBook}
           bookPhotoActive={bookPhotoActive}
           hotelFarewellDone={hotelFarewellDone}
+          bhaiDoojPhase={bhaiDoojPhase}
+          bhaiDoojTilakApplied={bhaiDoojTilakApplied}
+          onBhaiDoojTilakApplied={() => setBhaiDoojTilakApplied(true)}
+          onBhaiDoojTilakComplete={() => setBhaiDoojPhase('sweet_offer')}
+          onBhaiDoojEatingComplete={() => setBhaiDoojPhase('creator_letter')}
+          collectedPolaroids={collectedPolaroids}
           onNearbyHotspotChange={setNearbyHotspot}
           onArrivedChange={setArrived}
           onInViewpointZoneChange={setInViewpointZone}
@@ -1966,6 +2049,7 @@ export default function Experience() {
             farewellDone={hotelFarewellDone}
             tripSummaryOpen={hotelSummaryOpen}
             onDismissTripSummary={() => setHotelSummaryOpen(false)}
+            onProceedToBhaiDooj={handleProceedToBhaiDooj}
             polaroidCount={validPolaroidCount}
             nearbyHotspot={nearbyHotspot}
             hasActiveNarration={activeNarration !== null}
@@ -1986,6 +2070,32 @@ export default function Experience() {
             onPhoto={handleWalkPhoto}
           />
         </>
+      ) : isBhaiDoojSceneActive ? (
+        <BhaiDoojHUD
+          phase={bhaiDoojPhase}
+          tilakApplied={bhaiDoojTilakApplied}
+          audioMuted={audioMuted}
+          onToggleAudioMute={toggleAudio}
+          onOpenChapters={handleOpenChapters}
+          onPause={handleOpenPause}
+          polaroidCount={validPolaroidCount}
+          onStartCelebration={() => setBhaiDoojPhase('arrival')}
+          onTriggerTilak={() => setBhaiDoojPhase('applying_tilak')}
+          onAcceptSweets={() => setBhaiDoojPhase('eating_together')}
+          onSkipEating={() => setBhaiDoojPhase('creator_letter')}
+          onFinishFinale={handleFinishBhaiDooj}
+        />
+      ) : isEndingGalleryActive ? (
+        <EndingScreenHUD
+          audioMuted={audioMuted}
+          onToggleAudioMute={toggleAudio}
+          onOpenChapters={handleOpenChapters}
+          onPause={handleOpenPause}
+          polaroidCount={validPolaroidCount}
+          onReplayJourney={handleReplayJourney}
+          onViewMemories={handleOpenMemoriesTab}
+          onCelebrateAgain={handleProceedToBhaiDooj}
+        />
       ) : null}
 
       {activeCaption && activeNarration === null && (
@@ -2030,6 +2140,7 @@ export default function Experience() {
 
       <ChapterSelectModal
         open={chaptersOpen}
+        initialTab={chaptersInitialTab}
         onClose={() => setChaptersOpen(false)}
         onSelectChapter={handleSelectChapter}
       />

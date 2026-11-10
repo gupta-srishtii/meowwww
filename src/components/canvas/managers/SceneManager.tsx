@@ -34,6 +34,11 @@ import {
 import { Scene10_BaalKuwariTemple } from '@/components/canvas/scenes/Scene10_BaalKuwariTemple';
 import { Scene11_SafeReturnRide } from '@/components/canvas/scenes/Scene11_SafeReturnRide';
 import { Scene12_HotelReturn } from '@/components/canvas/scenes/Scene12_HotelReturn';
+import {
+  Scene13_BhaiDoojFinale,
+  type BhaiDoojPhase,
+} from '@/components/canvas/scenes/Scene13_BhaiDoojFinale';
+import { Scene14_EndingGallery } from '@/components/canvas/scenes/Scene14_EndingGallery';
 import { TempPhase1BTestScene } from '@/components/canvas/scenes/TempPhase1BTestScene';
 import type { DrivingInputState } from '@/hooks/useDrivingInput';
 import type { WalkHotspot, WalkInputState } from '@/hooks/useWalkController';
@@ -359,6 +364,12 @@ export interface SceneStageProps {
   capturedBookPolaroid: boolean;
   bookPhotoActive: boolean;
   hotelFarewellDone: boolean;
+  bhaiDoojPhase: BhaiDoojPhase;
+  bhaiDoojTilakApplied: boolean;
+  onBhaiDoojTilakApplied: () => void;
+  onBhaiDoojTilakComplete: () => void;
+  onBhaiDoojEatingComplete: () => void;
+  collectedPolaroids: readonly string[];
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onArrivedChange: (arrived: boolean) => void;
   onInViewpointZoneChange: (inZone: boolean) => void;
@@ -414,6 +425,12 @@ export function SceneStage({
   capturedBookPolaroid,
   bookPhotoActive,
   hotelFarewellDone,
+  bhaiDoojPhase,
+  bhaiDoojTilakApplied,
+  onBhaiDoojTilakApplied,
+  onBhaiDoojTilakComplete,
+  onBhaiDoojEatingComplete,
+  collectedPolaroids,
   onNearbyHotspotChange,
   onArrivedChange,
   onInViewpointZoneChange,
@@ -451,6 +468,9 @@ export function SceneStage({
       9: [10, 11],
       10: [9, 11],
       11: [12],
+      12: [13],
+      13: [14],
+      14: [1],
     };
     const targets = nextMap[committedSceneId];
     if (!targets) return;
@@ -675,6 +695,28 @@ export function SceneStage({
               simulateMountFailure={simulateMountFailure}
               farewellDone={hotelFarewellDone}
               onNearbyHotspotChange={onNearbyHotspotChange}
+              onSceneReady={controller.onMountedSceneReady}
+            />
+          ) : mountedSceneId === 13 ? (
+            <Scene13_BhaiDoojFinale
+              qualityProfile={qualityProfile}
+              paused={scenePaused}
+              transitionToken={transitionToken}
+              simulateMountFailure={simulateMountFailure}
+              phase={bhaiDoojPhase}
+              tilakApplied={bhaiDoojTilakApplied}
+              onTilakApplied={onBhaiDoojTilakApplied}
+              onTilakComplete={onBhaiDoojTilakComplete}
+              onEatingComplete={onBhaiDoojEatingComplete}
+              onSceneReady={controller.onMountedSceneReady}
+            />
+          ) : mountedSceneId === 14 ? (
+            <Scene14_EndingGallery
+              qualityProfile={qualityProfile}
+              paused={scenePaused}
+              transitionToken={transitionToken}
+              simulateMountFailure={simulateMountFailure}
+              collectedPolaroids={collectedPolaroids}
               onSceneReady={controller.onMountedSceneReady}
             />
           ) : (

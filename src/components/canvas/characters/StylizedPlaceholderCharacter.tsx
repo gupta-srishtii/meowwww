@@ -39,6 +39,8 @@ export interface StylizedPlaceholderCharacterProps {
   hairColor?: string;
   holdingChaiCup?: boolean;
   holdingFork?: boolean;
+  holdingSweet?: boolean;
+  tilakApplied?: boolean;
   castShadow?: boolean;
   showNameTag?: boolean;
 }
@@ -71,6 +73,8 @@ export function StylizedPlaceholderCharacter({
   hairColor = '#18181b',
   holdingChaiCup = false,
   holdingFork = false,
+  holdingSweet = false,
+  tilakApplied = false,
   castShadow = false,
   showNameTag = true,
 }: StylizedPlaceholderCharacterProps) {
@@ -300,7 +304,7 @@ export function StylizedPlaceholderCharacter({
                 </mesh>
               )}
               {holdingFork && (
-                <group position={[0, -0.18, -0.085]} rotation={[Math.PI / 2.2, 0, 0]}>
+                <group position={[0, -0.2, -0.085]} rotation={[Math.PI / 2.2, 0, 0]}>
                   <mesh>
                     <cylinderGeometry args={[0.006, 0.006, 0.17, 6]} />
                     <meshStandardMaterial color="#cbd5e1" metalness={0.75} roughness={0.3} />
@@ -308,6 +312,18 @@ export function StylizedPlaceholderCharacter({
                   <mesh position={[0, -0.09, 0]}>
                     <sphereGeometry args={[0.022, 8, 6]} />
                     <meshStandardMaterial color="#eab308" roughness={0.78} />
+                  </mesh>
+                </group>
+              )}
+              {holdingSweet && (
+                <group position={[0, -0.185, -0.045]}>
+                  <mesh castShadow={castShadow}>
+                    <sphereGeometry args={[0.032, 10, 10]} />
+                    <meshStandardMaterial color="#f59e0b" roughness={0.65} />
+                  </mesh>
+                  <mesh position={[0, 0.028, 0]}>
+                    <sphereGeometry args={[0.01, 6, 6]} />
+                    <meshStandardMaterial color="#fef08a" roughness={0.5} />
                   </mesh>
                 </group>
               )}
@@ -667,6 +683,29 @@ export function StylizedPlaceholderCharacter({
               <sphereGeometry args={[0.105, 12, 10]} />
               <meshStandardMaterial color={hairColor} roughness={0.88} />
             </mesh>
+          )}
+          {isIshaan && tilakApplied && (
+            /* Luminous vermilion Bhai Dooj tilak & akshat centered cleanly on forehead */
+            <group position={[0, 0.044, -0.128]}>
+              <mesh>
+                <boxGeometry args={[0.018, 0.042, 0.012]} />
+                <meshStandardMaterial
+                  color="#dc2626"
+                  emissive="#ef4444"
+                  emissiveIntensity={0.45}
+                  roughness={0.5}
+                />
+              </mesh>
+              <mesh position={[0, 0.01, -0.008]}>
+                <sphereGeometry args={[0.009, 8, 8]} />
+                <meshStandardMaterial
+                  color="#fef08a"
+                  emissive="#fbbf24"
+                  emissiveIntensity={0.35}
+                  roughness={0.45}
+                />
+              </mesh>
+            </group>
           )}
           <CharacterHeadOverlay variant={characterVariant} showTag={showNameTag} headY={0.28} />
         </group>

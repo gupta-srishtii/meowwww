@@ -1,7 +1,5 @@
 'use client';
 
-import { UPCOMING_CHAPTER_PREVIEW } from '@/lib/chapters';
-
 export interface ScooterReturnModalProps {
   open: boolean;
   onRideToBaalKuwari: () => void;
@@ -77,7 +75,7 @@ export function ScooterReturnModal({
 
         <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/60 px-3.5 py-2 text-center">
           <p className="text-[10px] text-slate-400">
-            Next up: {UPCOMING_CHAPTER_PREVIEW.title} ({UPCOMING_CHAPTER_PREVIEW.subtitle})
+            Next up: Off-Road Track to Baal Kuwari · Steep Steps &amp; Summit Temple
           </p>
         </div>
       </div>

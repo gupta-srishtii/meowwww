@@ -1,9 +1,8 @@
 'use client';
 
-import { useRef, useState, type InputHTMLAttributes } from 'react';
+import { useEffect, useRef, useState, type InputHTMLAttributes } from 'react';
 import {
   PHASE2_STORY_CHAPTERS,
-  UPCOMING_CHAPTER_PREVIEW,
   getActiveChapterKey,
   type StoryChapterItem,
 } from '@/lib/chapters';
@@ -17,6 +16,7 @@ import { useProgressStore } from '@/store/progressStore';
 
 export interface ChapterSelectModalProps {
   open: boolean;
+  initialTab?: 'chapters' | 'memories';
   onClose: () => void;
   onSelectChapter: (chapter: StoryChapterItem) => void;
 }
@@ -28,6 +28,7 @@ export interface ChapterSelectModalProps {
  */
 export function ChapterSelectModal({
   open,
+  initialTab = 'chapters',
   onClose,
   onSelectChapter,
 }: ChapterSelectModalProps) {
@@ -39,10 +40,16 @@ export function ChapterSelectModal({
   const collectedPolaroids = useProgressStore((s) => s.collectedPolaroids);
 
   usePolaroidMemoryRevision();
-  const [activeTab, setActiveTab] = useState<'chapters' | 'memories'>('chapters');
+  const [activeTab, setActiveTab] = useState<'chapters' | 'memories'>(initialTab);
   const [previewPolaroidId, setPreviewPolaroidId] = useState<string | null>(null);
   const [localLinkStatus, setLocalLinkStatus] = useState<string | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab, open]);
 
   if (!open) return null;
 
@@ -181,22 +188,6 @@ export function ChapterSelectModal({
                 </li>
               );
             })}
-
-            <li className="rounded-xl border border-dashed border-slate-700/70 bg-slate-950/30 p-3 opacity-75">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold text-slate-200">
-                    {PHASE2_STORY_CHAPTERS.length + 1}. {UPCOMING_CHAPTER_PREVIEW.title}
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-amber-300/80">
-                    {UPCOMING_CHAPTER_PREVIEW.subtitle}
-                  </p>
-                </div>
-                <span className="rounded-full border border-slate-700 bg-slate-900 px-2.5 py-0.5 text-[10px] font-medium text-slate-400">
-                  Soon
-                </span>
-              </div>
-            </li>
           </ul>
         ) : (
           <div className="mt-3 space-y-3">
