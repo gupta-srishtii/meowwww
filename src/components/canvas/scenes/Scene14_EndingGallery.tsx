@@ -223,12 +223,16 @@ export function Scene14_EndingGallery({
         <ringGeometry args={[5.9, 6.08, 48]} />
         <meshStandardMaterial color="#fbbf24" emissive="#d97706" emissiveIntensity={0.45} />
       </mesh>
+      <mesh position={[0, 0.004, 0.2]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[1.38, 1.44, 36]} />
+        <meshStandardMaterial color="#f59e0b" emissive="#d97706" emissiveIntensity={0.35} />
+      </mesh>
 
-      {/* Semicircle of confirmed Polaroid pedestal frames */}
+      {/* Semicircle of confirmed Polaroid pedestal frames (generous arc spacing for 9+ Polaroids) */}
       {galleryItems.map((item, idx) => {
-        const angle = THREE.MathUtils.lerp(-1.25, 1.25, idx / Math.max(1, galleryItems.length - 1));
-        const px = Math.sin(angle) * 4.55;
-        const pz = -1.2 - Math.cos(angle) * 2.85;
+        const angle = THREE.MathUtils.lerp(-1.42, 1.42, idx / Math.max(1, galleryItems.length - 1));
+        const px = Math.sin(angle) * 5.25;
+        const pz = -1.1 - Math.cos(angle) * 3.15;
         const collected = collectedPolaroids.includes(item.id);
         return (
           <group key={item.id} position={[px, 0, pz]} rotation={[0, -angle * 0.72, 0]}>
@@ -237,14 +241,14 @@ export function Scene14_EndingGallery({
               <meshStandardMaterial color="#334155" roughness={0.72} />
             </mesh>
             <mesh position={[0, 1.62, 0]} castShadow={shadowsEnabled}>
-              <boxGeometry args={[1.05, 0.88, 0.06]} />
+              <boxGeometry args={[1.0, 0.84, 0.06]} />
               <meshStandardMaterial
                 color={collected ? '#fef3c7' : '#cbd5e1'}
                 roughness={0.55}
               />
             </mesh>
             <mesh position={[0, 1.62, 0.036]}>
-              <planeGeometry args={[0.92, 0.72]} />
+              <planeGeometry args={[0.88, 0.68]} />
               <meshBasicMaterial map={cardTextures[idx] ?? undefined} />
             </mesh>
           </group>

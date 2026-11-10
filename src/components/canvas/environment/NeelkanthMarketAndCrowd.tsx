@@ -264,38 +264,54 @@ export function NeelkanthMarketAndCrowd({
 
         {/* Outer Steel Thali Meal Corner (chhole bhature & hot plate matching real Neelkanth meal photo) */}
         <group position={[-1.08, 0, 1.0]}>
-          <mesh position={[0, 0.36, 0]} castShadow={castShadow} receiveShadow={castShadow}>
-            <boxGeometry args={[0.52, 0.72, 0.72]} />
+          {/* Table top & warm red runner cloth */}
+          <mesh position={[0, 0.7, 0]} castShadow={castShadow} receiveShadow={castShadow}>
+            <boxGeometry args={[0.56, 0.05, 0.74]} />
             <meshStandardMaterial color="#6d4c3d" roughness={0.88} />
           </mesh>
+          <mesh position={[0, 0.728, 0]}>
+            <boxGeometry args={[0.42, 0.012, 0.62]} />
+            <meshStandardMaterial color="#b91c1c" roughness={0.9} />
+          </mesh>
+          {[
+            [-0.22, -0.3],
+            [0.22, -0.3],
+            [-0.22, 0.3],
+            [0.22, 0.3],
+          ].map(([lx, lz], lIdx) => (
+            <mesh key={`thali-leg-${lIdx}`} position={[lx, 0.34, lz]} castShadow={castShadow}>
+              <boxGeometry args={[0.05, 0.68, 0.05]} />
+              <meshStandardMaterial color="#4e3222" roughness={0.9} />
+            </mesh>
+          ))}
           {/* Shining steel thali plate */}
-          <mesh position={[0, 0.735, 0]} castShadow={castShadow}>
+          <mesh position={[0, 0.745, 0]} castShadow={castShadow}>
             <cylinderGeometry args={[0.21, 0.19, 0.025, 16]} />
             <meshStandardMaterial color="#e2e8f0" metalness={0.82} roughness={0.2} />
           </mesh>
           {/* Steel katori bowls (chhole curry & chutney) */}
-          <mesh position={[-0.07, 0.765, -0.06]}>
+          <mesh position={[-0.07, 0.778, -0.06]}>
             <cylinderGeometry args={[0.055, 0.042, 0.04, 12]} />
             <meshStandardMaterial color="#cbd5e1" metalness={0.78} roughness={0.24} />
           </mesh>
-          <mesh position={[-0.07, 0.78, -0.06]}>
+          <mesh position={[-0.07, 0.793, -0.06]}>
             <cylinderGeometry args={[0.046, 0.046, 0.015, 12]} />
             <meshStandardMaterial color="#9a3412" roughness={0.75} />
           </mesh>
-          <mesh position={[0.06, 0.762, -0.08]}>
+          <mesh position={[0.06, 0.775, -0.08]}>
             <cylinderGeometry args={[0.042, 0.032, 0.032, 10]} />
             <meshStandardMaterial color="#cbd5e1" metalness={0.78} roughness={0.24} />
           </mesh>
-          <mesh position={[0.06, 0.774, -0.08]}>
+          <mesh position={[0.06, 0.787, -0.08]}>
             <cylinderGeometry args={[0.034, 0.034, 0.012, 10]} />
             <meshStandardMaterial color="#15803d" roughness={0.8} />
           </mesh>
           {/* Golden fluffy puffed bhature */}
-          <mesh position={[0.03, 0.768, 0.06]} scale={[1.25, 0.45, 0.95]} castShadow={castShadow}>
+          <mesh position={[0.03, 0.782, 0.06]} scale={[1.25, 0.45, 0.95]} castShadow={castShadow}>
             <sphereGeometry args={[0.078, 12, 10]} />
             <meshStandardMaterial color="#f59e0b" roughness={0.68} />
           </mesh>
-          <mesh position={[-0.06, 0.758, 0.08]} scale={[1.1, 0.4, 0.9]}>
+          <mesh position={[-0.06, 0.772, 0.08]} scale={[1.1, 0.4, 0.9]}>
             <sphereGeometry args={[0.066, 10, 8]} />
             <meshStandardMaterial color="#d97706" roughness={0.72} />
           </mesh>

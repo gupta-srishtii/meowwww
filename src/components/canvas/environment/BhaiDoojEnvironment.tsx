@@ -112,6 +112,13 @@ export function BhaiDoojEnvironment({
         <boxGeometry args={[11.6, 0.9, 0.08]} />
         <meshStandardMaterial color="#6d4329" roughness={0.82} />
       </mesh>
+      {/* Draped warm saffron/crimson festive side curtains flanking altar wall */}
+      {[-3.45, 3.45].map((dx) => (
+        <mesh key={`curtain-${dx}`} position={[dx, 2.2, -2.32]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[0.72, 3.2, 0.08]} />
+          <meshStandardMaterial color="#9f1239" roughness={0.9} />
+        </mesh>
+      ))}
       {/* Brass mandala/sunburst frame centered on home altar wall */}
       <mesh position={[0, 2.1, -2.35]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.52, 0.52, 0.04, 24]} />
@@ -226,7 +233,7 @@ export function BhaiDoojEnvironment({
           <meshStandardMaterial color="#fef9c3" roughness={0.78} />
         </mesh>
 
-        {/* Lit Brass Puja Diya & Gentle Flame */}
+        {/* Lit Brass Puja Diya & Gentle Flame + Delicate Marigold Petals on Chowki Corners */}
         <mesh position={[0, 0.288, 0.1]}>
           <cylinderGeometry args={[0.04, 0.025, 0.03, 12]} />
           <meshStandardMaterial color="#b45309" metalness={0.7} roughness={0.3} />
@@ -235,6 +242,21 @@ export function BhaiDoojEnvironment({
           <coneGeometry args={[0.018, 0.06, 10]} />
           <meshBasicMaterial color="#fde047" />
         </mesh>
+        {[
+          [-0.32, 0.18, '#f59e0b'],
+          [-0.25, 0.21, '#ea580c'],
+          [0.24, -0.18, '#f59e0b'],
+          [-0.28, -0.17, '#ef4444'],
+        ].map(([px, pz, col], idx) => (
+          <mesh
+            key={`petal-${idx}`}
+            position={[px as number, 0.252, pz as number]}
+            rotation={[-Math.PI / 2, 0, idx * 0.7]}
+          >
+            <circleGeometry args={[0.024, 8]} />
+            <meshStandardMaterial color={col as string} roughness={0.8} />
+          </mesh>
+        ))}
         <pointLight
           ref={diyaLightRef}
           position={[0, 0.52, 0.1]}

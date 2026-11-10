@@ -619,6 +619,35 @@ export function HotelReturnEnvironment({
           <boxGeometry args={[0.56, 0.36, 0.07]} />
           <meshStandardMaterial color="#e11d48" roughness={0.88} />
         </mesh>
+        {/* Warm bronze porch wall sconces & balcony potted marigold plants */}
+        {[-1.25, 0.35].map((sx) => (
+          <group key={`porch-lamp-${sx}`} position={[sx, 1.88, 2.66]}>
+            <mesh>
+              <boxGeometry args={[0.12, 0.16, 0.1]} />
+              <meshStandardMaterial color="#78350f" roughness={0.65} />
+            </mesh>
+            <mesh position={[0, -0.02, 0.04]}>
+              <sphereGeometry args={[0.052, 8, 8]} />
+              <meshStandardMaterial
+                color="#fef08a"
+                emissive="#f59e0b"
+                emissiveIntensity={isMorning ? 0.35 : 1.1}
+              />
+            </mesh>
+          </group>
+        ))}
+        {[-1.95, 0.55].map((px) => (
+          <group key={`balc-pot-${px}`} position={[px, 2.49, 3.02]}>
+            <mesh position={[0, 0.12, 0]}>
+              <cylinderGeometry args={[0.14, 0.1, 0.24, 9]} />
+              <meshStandardMaterial color="#b45309" roughness={0.86} />
+            </mesh>
+            <mesh position={[0, 0.28, 0]}>
+              <dodecahedronGeometry args={[0.18, 0]} />
+              <meshStandardMaterial color="#2f5e36" roughness={0.9} flatShading />
+            </mesh>
+          </group>
+        ))}
 
         {/* 4. OPEN ROOFTOP TERRACE (`y = TERRACE_Y = 4.65`) */}
         <mesh position={[0, TERRACE_Y - 0.04, 0]} receiveShadow={shadowsEnabled}>
@@ -645,6 +674,15 @@ export function HotelReturnEnvironment({
         <mesh position={[-1.0, TERRACE_Y + 0.44, 2.65]} castShadow={shadowsEnabled}>
           <boxGeometry args={[7.4, 0.88, 0.2]} />
           <meshStandardMaterial color="#ded3c1" roughness={0.88} />
+        </mesh>
+        {/* Terracotta parapet coping trim crowning terrace walls */}
+        <mesh position={[0, TERRACE_Y + 0.9, -2.65]}>
+          <boxGeometry args={[9.65, 0.06, 0.26]} />
+          <meshStandardMaterial color="#a85532" roughness={0.85} />
+        </mesh>
+        <mesh position={[-1.0, TERRACE_Y + 0.9, 2.65]}>
+          <boxGeometry args={[7.5, 0.06, 0.26]} />
+          <meshStandardMaterial color="#a85532" roughness={0.85} />
         </mesh>
 
         {/* Terrace Details: Black Roof Water Tank, Potted Plants, Seating & String Fairy Bulbs */}
@@ -773,7 +811,28 @@ export function HotelReturnEnvironment({
       {/* Lively Morning Road Bun-Maska & Kulhad Chai Stall Outside Interior Lane (Day 2 Morning only) */}
       {isMorning && (
         <group position={[-1.55, 0, 7.68]}>
-          {/* Wooden roadside tea counter & warm canopy */}
+          {/* Framed timber posts + colorful striped roadside tea tapri awning */}
+          {[
+            [-0.86, -0.46],
+            [0.86, -0.46],
+            [-0.86, 0.46],
+            [0.86, 0.46],
+          ].map(([px, pz], idx) => (
+            <mesh key={`awning-post-${idx}`} position={[px, 1.12, pz]} castShadow={shadowsEnabled}>
+              <cylinderGeometry args={[0.036, 0.042, 2.24, 6]} />
+              <meshStandardMaterial color="#4e301d" roughness={0.9} />
+            </mesh>
+          ))}
+          <mesh position={[0, 2.26, 0]} rotation={[-0.08, 0, 0]} castShadow={shadowsEnabled}>
+            <boxGeometry args={[2.05, 0.07, 1.35]} />
+            <meshStandardMaterial color="#d97706" roughness={0.82} />
+          </mesh>
+          {/* Hanging warm tapri lantern */}
+          <mesh position={[0.45, 1.98, 0.25]}>
+            <sphereGeometry args={[0.07, 8, 8]} />
+            <meshStandardMaterial color="#fef08a" emissive="#fbbf24" emissiveIntensity={1.1} />
+          </mesh>
+          {/* Wooden roadside tea counter & counter top */}
           <mesh position={[0, 0.48, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
             <boxGeometry args={[1.7, 0.96, 0.95]} />
             <meshStandardMaterial color="#785233" roughness={0.88} />
@@ -782,15 +841,32 @@ export function HotelReturnEnvironment({
             <boxGeometry args={[1.82, 0.08, 1.05]} />
             <meshStandardMaterial color="#9a6b44" roughness={0.82} />
           </mesh>
-          {/* Sidewalk tea bench for Ishaan & Shree sharing Bun Maska & Chai */}
-          <mesh position={[1.18, 0.24, -0.32]} castShadow={shadowsEnabled}>
-            <boxGeometry args={[0.92, 0.48, 0.42]} />
-            <meshStandardMaterial color="#6b4423" roughness={0.88} />
-          </mesh>
-          {/* Steel kettle + 2 buttered golden bun-maskas on tray + 2 earthen kulhads */}
+          {/* Crafted 4-legged sidewalk wooden bench beside tea stall */}
+          <group position={[1.18, 0, -0.32]}>
+            <mesh position={[0, 0.44, 0]} castShadow={shadowsEnabled}>
+              <boxGeometry args={[0.96, 0.07, 0.44]} />
+              <meshStandardMaterial color="#7c4a26" roughness={0.86} />
+            </mesh>
+            {[
+              [-0.4, -0.16],
+              [0.4, -0.16],
+              [-0.4, 0.16],
+              [0.4, 0.16],
+            ].map(([lx, lz], lIdx) => (
+              <mesh key={`bench-leg-${lIdx}`} position={[lx, 0.21, lz]} castShadow={shadowsEnabled}>
+                <boxGeometry args={[0.07, 0.42, 0.07]} />
+                <meshStandardMaterial color="#583319" roughness={0.9} />
+              </mesh>
+            ))}
+          </group>
+          {/* Steel kettle + biscuit jar + 2 buttered golden bun-maskas + 2 earthen kulhads */}
           <mesh position={[-0.42, 1.12, -0.1]} castShadow={shadowsEnabled}>
             <cylinderGeometry args={[0.14, 0.16, 0.22, 12]} />
             <meshStandardMaterial color="#cbd5e1" metalness={0.65} roughness={0.32} />
+          </mesh>
+          <mesh position={[-0.58, 1.12, 0.2]}>
+            <cylinderGeometry args={[0.085, 0.085, 0.2, 10]} />
+            <meshStandardMaterial color="#fde68a" transparent opacity={0.78} roughness={0.25} />
           </mesh>
           {[0.18, 0.44].map((bx, bIdx) => (
             <group key={`bun-${bIdx}`} position={[bx, 1.05, 0.08]}>

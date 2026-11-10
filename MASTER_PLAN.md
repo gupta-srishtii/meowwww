@@ -1,10 +1,10 @@
 # The Road That Made Us Family
-## MASTER_PLAN.md — v2.7 (Phase 4 Complete — Full Story & Bhai Dooj Finale)
+## MASTER_PLAN.md — v2.8 (Phase 5 Complete — Photo Integration, Cinematic Realism & Finale Music System)
 
-**Status:** PHASE 4 COMPLETE — Reserved Phase 5 for Minor Refinements, Regression Fixes & Gift Release Readiness  
+**Status:** PHASE 5 IMPLEMENTATION COMPLETE — Verified End-to-End (Pending Final Creator Sign-Off on Finale Song Recording & Personal Letter Before Deployment)  
 **Option Selected:** Option B — Full Cinematic Experience, Phased Development (Quality-First, No Fixed Deadline)  
 **Last Updated:** 2026-11-11  
-**Revision:** v2.7 — Completed Phase 4 full story progression (Scenes 1–14 playable): Kitaabi Dastaan opening, Day 1 connected ground-floor stay/terrace/evening scooter, Day 2 Morning road Bun Maska & Chai, Scooter Departure, Scenic Viewpoint 3-photo overlook + tripod (`randomview point.jpg`), sharper Baal Kuwari off-road junction & distinct Second Maggi Clearing, Baal Kuwari Summit book overlook (`book on baalkumari temple me.jpg`), Interactive Virtual Bhai Dooj Finale (Kitaabi callback, Tilak ceremony, Mithai sharing & Creator Draft Letter), and Scene 14 Ending Showcase. Phase 5 reserved for final polish, regression verification, creator letter sign-off & release readiness.
+**Revision:** v2.8 — Completed Phase 5: integrated all 9 confirmed personal-photos mappings (`tea stop.jpg`, `randomview point srishti.jpg`, `me and ishaan explaing mountains.jpg`, `all four togethere.jpg`, `maggi and tea.jpg`, `food in neelkanth.jpg`, `baalkumari stairs.jpg`, `baalkumari vieew.jpg`, `book on baalkumari temple me.jpg`), added one-click local directory + finale audio linker (`URL.createObjectURL`), fixed portrait/landscape Polaroid aspect framing, added multi-channel music & SFX volume controls plus local *"Bhai Ni Beni Ladki (Kon Halave Limdi)"* finale track envelope with procedural fallback, upgraded house/stall/altar/showcase 3D realism, and ran Scenes 1–14 continuity & build checks (without deploying).
 
 ---
 
@@ -1173,15 +1173,17 @@ A self-contained playable demo proving the core 3D driving loop, attachment seat
 
 ---
 
-### Phase 5 — Final Polish, Regression Verification & Release Readiness [CORE] *(Reserved Next Phase)*
+### Phase 5 — Photo Integration, Cinematic Realism, Music & Final Polish [CORE] ✅ COMPLETE
 
-**Goal:** Creator message finalization, minor refinements, regression sweep across Scenes 1–14, cross-browser check, and production release readiness.
+**Goal:** Real-photo integration (9 confirmed local Polaroids), private media & custom finale track loading UX, multi-channel music/SFX audio architecture, 3D visual realism refinements, and Scenes 1–14 regression & build verification (no deployment yet).
 
-**Planned Tasks:**
-- Finalize `CREATOR_BHAI_DOOJ_LETTER` wording in `src/lib/finaleContent.ts` upon creator approval / edits
-- Run full end-to-end Scene 1→14 regression pass (desktop & touch viewport checks, audio mute/pause continuity, local photo folder linking smoke test)
-- Fix any minor visual/UX edge cases discovered in final creator playtest
-- Confirm Vercel production deploy settings and zero tracked secrets/private media before final handoff to Ishaan
+**Completed Tasks:**
+- **Commit A (`d3ca6a2`):** Fixed `randomview point srishti.jpg` & `baalkumari vieew.jpg` filename mismatches, added confirmed Scene 3 (`tea stop.jpg`) and Scene 7 (`food in neelkanth.jpg`) Polaroid memories (9 total), added adaptive `object-contain` Polaroid toast/lightbox framing, built multi-channel music & SFX audio engine (`musicVolume`, `sfxVolume`, chapter motifs, *"Bhai Ni Beni Ladki"* custom finale track envelope + fallback), and added browser-only directory/audio pickers with reload notice.
+- **Commit B:** Upgraded Scene 14 showcase spacing for 9 Polaroid pedestals, enhanced Rishikesh stay & Morning Bun Maska stall craft (legs, canopy, sconce lanterns, planters, parapet trim), upgraded Neelkanth meal corner & Bhai Dooj altar warmth, and ran full end-to-end Scenes 1–14 continuity, `typecheck`, `next build`, and headless Edge visual verification.
+
+**Remaining Creator Pre-Deploy Items:**
+- Confirm exact artist/recording for *"Bhai Ni Beni Ladki"* (`BHAI_DOOJ_SPECIAL_TRACK_SPEC`) and supply local audio file for playback testing.
+- Review/personalize `CREATOR_BHAI_DOOJ_LETTER` in `src/lib/finaleContent.ts` before Vercel release readiness.
 
 ---
 
@@ -1292,7 +1294,7 @@ Phase 1A creates neutral technical scaffolding (Next.js 16 shell, locked React 1
 1. **Scooter 2 Driver vs. Pillion:** Specify whether **Manish** or **Yash** drove the second scooter, or keep their roles unassigned.
 2. **Approval of `[PROPOSED]` Staging & Dialogue:** Confirm or revise proposed Hinglish lines and stylized visuals (Kitaabi Dastaan 3D library, Mahakumbh visual sweep, Scene 3 morning stay & alarm/water/headboard wake-up staging, dhaba stall owner chat, cow encounter, step-200 prompt, and Scene 13 4-step puja thali setup).
 3. **Real Trip Photo References (`private-assets/` / `personal-photos/`):** Local gitignored photo references for character outfits, scooters, Neelkanth, Baal Kuwari stairs, and polaroid illustrations.
-4. **Heartfelt Final Message (`CREATOR_BHAI_DOOJ_LETTER`):** Review or customize the creator draft inside `src/lib/finaleContent.ts` before Phase 5 final release readiness.
+4. **Heartfelt Final Message (`CREATOR_BHAI_DOOJ_LETTER`) & Finale Song:** Review or customize the creator draft inside `src/lib/finaleContent.ts` and confirm/attach preferred local recording for *"Bhai Ni Beni Ladki (Kon Halave Limdi)"* (`BHAI_DOOJ_SPECIAL_TRACK_SPEC`) before final release.
 5. **Hosting & Privacy:** Public custom domain vs. unlisted/private URL (or simple greeting passcode) for the finished Vercel release.
 
 ---
