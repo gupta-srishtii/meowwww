@@ -133,7 +133,7 @@ export function selectIsSimulationPaused(state: ProgressStoreState): boolean {
   );
 }
 
-const DEFAULT_INITIAL_SCENE_ID: SceneId = 5;
+const DEFAULT_INITIAL_SCENE_ID: SceneId = 1;
 
 export const useProgressStore = create<ProgressStoreState>((set, get) => ({
   requestedSceneId: DEFAULT_INITIAL_SCENE_ID,

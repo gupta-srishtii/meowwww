@@ -100,30 +100,31 @@ export function createMountainRoadCurve(
           ]
         : segment === 'to_baalkuwari'
           ? [
-              // Rugged uneven forested mountain off-road dirt track toward roadside Maggi clearing
+              // Explicit right-hand cut onto rugged mountain off-road dirt track toward Maggi clearing
               new THREE.Vector3(0, 0, 0),
-              new THREE.Vector3(14, 2.2, -38),
-              new THREE.Vector3(36, 4.9, -80),
-              new THREE.Vector3(16, 7.1, -128),
-              new THREE.Vector3(-22, 10.6, -174),
-              new THREE.Vector3(-32, 13.0, -224),
-              new THREE.Vector3(-10, 15.2, -274), // Separate forest clearing Maggi stop ~278m
-              new THREE.Vector3(18, 17.4, -322),
-              new THREE.Vector3(56, 19.4, -368),
-              new THREE.Vector3(96, 21.0, -406),
+              new THREE.Vector3(2, 0.2, -16),
+              new THREE.Vector3(20, 1.9, -36),
+              new THREE.Vector3(50, 4.7, -54),
+              new THREE.Vector3(68, 7.6, -88),
+              new THREE.Vector3(44, 10.6, -134),
+              new THREE.Vector3(10, 13.0, -178),
+              new THREE.Vector3(-12, 15.2, -228),
+              new THREE.Vector3(6, 17.4, -276), // Separate forest clearing Maggi stop ~278m
+              new THREE.Vector3(40, 19.4, -322),
+              new THREE.Vector3(82, 21.0, -364),
             ]
           : segment === 'to_baalkuwari_stairs'
             ? [
-                // Post-Maggi winding rugged mountain scooter trail straight up to Baal Kuwari staircase base (~258m)
+                // Post-Maggi winding switchback mountain scooter trail up to Baal Kuwari staircase (~258m)
                 new THREE.Vector3(0, 0, 0),
-                new THREE.Vector3(-12, 2.4, -36),
-                new THREE.Vector3(-34, 5.2, -76),
-                new THREE.Vector3(-22, 8.0, -122),
-                new THREE.Vector3(14, 11.2, -168),
-                new THREE.Vector3(28, 13.8, -214),
-                new THREE.Vector3(8, 16.0, -256), // Staircase entrance gate & parking bay (~258m)
-                new THREE.Vector3(-20, 17.6, -298),
-                new THREE.Vector3(-56, 18.8, -338),
+                new THREE.Vector3(-4, 1.2, -24),
+                new THREE.Vector3(-28, 3.8, -54),
+                new THREE.Vector3(-38, 6.6, -94),
+                new THREE.Vector3(-8, 9.8, -134),
+                new THREE.Vector3(24, 12.6, -168),
+                new THREE.Vector3(18, 15.2, -212),
+                new THREE.Vector3(-10, 17.2, -252), // Staircase entrance gate & parking bay (~258m)
+                new THREE.Vector3(-42, 18.8, -290),
               ]
             : [
                 // Evening Safe Return Descent toward Rishikesh Accommodation Lane (~266m stop bay)
@@ -202,12 +203,12 @@ export function sampleOffroadTrackBump(
   if (arrivalFade <= 0) {
     return { heaveY: 0, pitchRad: 0, rollRad: 0 };
   }
-  const waveA = Math.sin(distance * 0.44 + lateral * 0.35);
-  const waveB = Math.sin(distance * 1.18 - lateral * 0.72);
-  const waveC = Math.cos(distance * 2.15 + lateral * 0.55);
+  const waveA = Math.sin(distance * 0.48 + lateral * 0.35);
+  const waveB = Math.sin(distance * 1.24 - lateral * 0.72);
+  const waveC = Math.cos(distance * 2.25 + lateral * 0.55);
   return {
-    heaveY: (waveA * 0.024 + waveB * 0.015 + waveC * 0.008) * arrivalFade,
-    pitchRad: (Math.cos(distance * 0.44) * 0.016 + Math.cos(distance * 1.18) * 0.012) * arrivalFade,
-    rollRad: (Math.sin(distance * 0.85 + lateral * 0.9) * 0.022 + waveB * 0.01) * arrivalFade,
+    heaveY: (waveA * 0.032 + waveB * 0.02 + waveC * 0.011) * arrivalFade,
+    pitchRad: (Math.cos(distance * 0.48) * 0.021 + Math.cos(distance * 1.24) * 0.014) * arrivalFade,
+    rollRad: (Math.sin(distance * 0.92 + lateral * 0.9) * 0.028 + waveB * 0.012) * arrivalFade,
   };
 }

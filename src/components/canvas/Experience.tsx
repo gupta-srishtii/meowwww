@@ -7,6 +7,7 @@ import {
   SceneStage,
   useSceneTransitionController,
 } from '@/components/canvas/managers/SceneManager';
+import type { Day1Phase } from '@/components/canvas/scenes/Scene02_RishikeshDay1';
 import type { ViewpointPhotoMoment } from '@/components/canvas/scenes/Scene05_ViewpointStop';
 import { DevPhase1BPanel } from '@/components/ui/DevPhase1BPanel';
 import { FallbackStorybookView } from '@/components/ui/FallbackStorybookView';
@@ -19,6 +20,7 @@ import { MobileWalkControls } from '@/components/ui/MobileWalkControls';
 import { NarrationCard } from '@/components/ui/NarrationCard';
 import { NeelkanthHUD } from '@/components/ui/NeelkanthHUD';
 import { PauseMenuModal } from '@/components/ui/PauseMenuModal';
+import { PrologueStoryHUD } from '@/components/ui/PrologueStoryHUD';
 import { PrototypeHUD } from '@/components/ui/PrototypeHUD';
 import { ScooterReturnModal } from '@/components/ui/ScooterReturnModal';
 import { TransitionOverlay } from '@/components/ui/TransitionOverlay';
@@ -150,10 +152,16 @@ export default function Experience() {
   const trafficWarnTimerRef = useRef<number | null>(null);
   const [resetNonce, setResetNonce] = useState(0);
 
+  // Prologue Scenes 1–4 progression state
+  const [kitaabiStep, setKitaabiStep] = useState(0);
+  const [day1Phase, setDay1Phase] = useState<Day1Phase>('travel_cinematic');
+  const [morningBreakfastActive, setMorningBreakfastActive] = useState(false);
+  const [morningBreakfastDone, setMorningBreakfastDone] = useState(false);
+
   // Viewpoint Photo Pose & Toast state
   const [viewpointPhotoMoment, setViewpointPhotoMoment] = useState<ViewpointPhotoMoment>('none');
   const [viewpointPhotoLabel, setViewpointPhotoLabel] = useState<string | null>(null);
-  const [viewpointToastKind, setViewpointToastKind] = useState<'solo' | 'group' | null>(null);
+  const [viewpointToastKind, setViewpointToastKind] = useState<'shree' | 'solo' | 'group' | null>(null);
   const viewpointPoseTimerRef = useRef<number | null>(null);
   const viewpointFinishTimerRef = useRef<number | null>(null);
   const viewpointToastTimerRef = useRef<number | null>(null);
@@ -181,8 +189,11 @@ export default function Experience() {
   const [summitArrivalCinematicActive, setSummitArrivalCinematicActive] = useState(false);
   const [rangBaalKuwariBell, setRangBaalKuwariBell] = useState(false);
   const [baalKuwariBellNonce, setBaalKuwariBellNonce] = useState(0);
-  const [baalKuwariToastKind, setBaalKuwariToastKind] = useState<'stairs' | 'summit' | null>(null);
+  const [bookPhotoActive, setBookPhotoActive] = useState(false);
+  const [baalKuwariToastKind, setBaalKuwariToastKind] = useState<'stairs' | 'summit' | 'book' | null>(null);
   const baalKuwariToastTimerRef = useRef<number | null>(null);
+  const bookPhotoPoseTimerRef = useRef<number | null>(null);
+  const bookPhotoFinishTimerRef = useRef<number | null>(null);
 
   const stairStepCountEl = useRef<HTMLSpanElement | null>(null);
   const stairBarFillEl = useRef<HTMLDivElement | null>(null);
@@ -255,6 +266,10 @@ export default function Experience() {
   const setStairStepCount = useProgressStore((s) => s.setStairStepCount);
   const setRoadResumeDistance = useProgressStore((s) => s.setRoadResumeDistance);
 
+  const isKitaabiSceneActive = committedSceneId === 1;
+  const isDay1SceneActive = committedSceneId === 2;
+  const isDay2MorningActive = committedSceneId === 3;
+  const isDepartureSceneActive = committedSceneId === 4;
   const isBaalKuwariDriveActive = committedSceneId === 8 && baalKuwariSubStage === 'driving';
   const isBaalKuwariMaggiActive = committedSceneId === 8 && baalKuwariSubStage === 'maggi_stop';
   const isBaalKuwariStairsDriveActive =
@@ -273,6 +288,8 @@ export default function Experience() {
   const isDhabaWalkActive = committedSceneId === 6;
   const isNeelkanthWalkActive = committedSceneId === 7;
   const isAnyWalkActive =
+    (isDay1SceneActive && day1Phase === 'stay_explore') ||
+    isDay2MorningActive ||
     isDhabaWalkActive ||
     isViewpointWalkActive ||
     isNeelkanthWalkActive ||
@@ -281,9 +298,11 @@ export default function Experience() {
     isHotelReturnWalkActive;
   const validPolaroidCount = collectedPolaroids.filter((id) => id in POLAROID_MEMORY_SPECS).length;
   const capturedDhabaPolaroid = collectedPolaroids.includes('scene06_dhaba');
+  const capturedViewpointShree = collectedPolaroids.includes('scene05_viewpoint_shree');
   const capturedViewpointSolo = collectedPolaroids.includes('scene05_viewpoint_solo');
   const capturedViewpointGroup = collectedPolaroids.includes('scene05_viewpoint_group');
   const capturedBaalKuwariPolaroid = collectedPolaroids.includes('scene10_baalkuwari');
+  const capturedBaalKuwariBook = collectedPolaroids.includes('scene10_baalkuwari_book');
 
   // Preserve the initial GL antialias creation flag to avoid remounting the WebGL context.
   const [initialAntialias] = useState<boolean>(
@@ -348,7 +367,7 @@ export default function Experience() {
   }, [sceneController]);
 
   const triggerViewpointPhoto = useCallback(
-    (kind: 'solo' | 'group') => {
+    (kind: 'shree' | 'solo' | 'group') => {
       const store = useProgressStore.getState();
       if (store.committedSceneId !== 5 || store.roadSubStage !== 'viewpoint_walk') return;
       if (viewpointPhotoMoment !== 'none') return;
@@ -360,9 +379,11 @@ export default function Experience() {
 
       setViewpointPhotoMoment(kind);
       setViewpointPhotoLabel(
-        kind === 'solo'
-          ? 'Shree & Ishaan — rail ke paas ghaati aur pahadiyan dekhte hue!'
-          : 'Sab log rail ke paas saath mein khade hokar photo ke liye!'
+        kind === 'shree'
+          ? 'Shree — nadi aur ghaati ke mod ke saamne khade hue!'
+          : kind === 'solo'
+            ? 'Shree & Ishaan — rail ke paas ghaati aur pahadiyan dekhte hue!'
+            : 'Sab log rail ke paas saath mein khade hokar photo ke liye!'
       );
 
       const snapDelay = reducedMotion ? 140 : 900;
@@ -372,7 +393,11 @@ export default function Experience() {
         viewpointPoseTimerRef.current = null;
         ambientAudio.playShutterClick();
         capturePolaroidAndSave(
-          kind === 'solo' ? 'scene05_viewpoint_solo' : 'scene05_viewpoint_group'
+          kind === 'shree'
+            ? 'scene05_viewpoint_shree'
+            : kind === 'solo'
+              ? 'scene05_viewpoint_solo'
+              : 'scene05_viewpoint_group'
         );
         setViewpointToastKind(kind);
 
@@ -390,6 +415,43 @@ export default function Experience() {
     },
     [capturePolaroidAndSave, reducedMotion, viewpointPhotoMoment]
   );
+
+  const handleAdvanceKitaabi = useCallback(() => {
+    if (kitaabiStep < 1) {
+      setKitaabiStep(1);
+    } else {
+      clearInputsRef.current();
+      setDay1Phase('travel_cinematic');
+      sceneController.requestSceneTransition(2, { clearInputs: clearInputsRef.current });
+    }
+  }, [kitaabiStep, sceneController]);
+
+  const handleDay1Complete = useCallback(() => {
+    if (useProgressStore.getState().committedSceneId !== 2) return;
+    clearInputsRef.current();
+    setMorningBreakfastActive(false);
+    setMorningBreakfastDone(false);
+    sceneController.requestSceneTransition(3, { clearInputs: clearInputsRef.current });
+  }, [sceneController]);
+
+  const handleMorningBreakfastComplete = useCallback(() => {
+    setMorningBreakfastActive(false);
+    setMorningBreakfastDone(true);
+    showTimedCaption(
+      'Bun Maska & Chai',
+      'Subah ki garma-garam chai aur bun maska ho gaya — ab scooty par Neelkanth ki taraf chalein!',
+      3400
+    );
+  }, [showTimedCaption]);
+
+  const handleScooterDepartureComplete = useCallback(() => {
+    if (useProgressStore.getState().committedSceneId !== 4) return;
+    clearInputsRef.current();
+    setMountainRoadSegment('to_dhaba');
+    setRoadSubStage('driving');
+    setRoadResumeDistance(LEAD_START_DISTANCE);
+    sceneController.requestSceneTransition(5, { clearInputs: clearInputsRef.current });
+  }, [sceneController, setMountainRoadSegment, setRoadResumeDistance, setRoadSubStage]);
 
   const handleContinueRidingFromDhaba = useCallback(() => {
     clearInputsRef.current();
@@ -530,13 +592,18 @@ export default function Experience() {
   }, [showTimedCaption]);
 
   const handleCaptureBaalKuwariPolaroid = useCallback(
-    (kind: 'stairs' | 'summit') => {
+    (kind: 'stairs' | 'summit' | 'book') => {
       const targetScene = kind === 'stairs' ? 9 : 10;
       if (useProgressStore.getState().committedSceneId !== targetScene) return;
       if (useProgressStore.getState().activeNarration !== null) return;
 
       ambientAudio.playShutterClick();
-      const key = kind === 'stairs' ? 'scene09_stairs_landing' : 'scene10_baalkuwari';
+      const key =
+        kind === 'stairs'
+          ? 'scene09_stairs_landing'
+          : kind === 'book'
+            ? 'scene10_baalkuwari_book'
+            : 'scene10_baalkuwari';
       const isNew = capturePolaroidAndSave(key);
       setBaalKuwariToastKind(kind);
       if (baalKuwariToastTimerRef.current !== null) {
@@ -549,10 +616,16 @@ export default function Experience() {
 
       if (isNew) {
         showTimedCaption(
-          kind === 'stairs' ? 'Climb Rest Overlook' : 'Baal Kuwari Summit',
+          kind === 'stairs'
+            ? 'Climb Rest Overlook'
+            : kind === 'book'
+              ? 'With Her Book — Baal Kuwari'
+              : 'Baal Kuwari Summit',
           kind === 'stairs'
             ? 'Halfway rest par jungle valley Polaroid memories mein save ho gayi!'
-            : 'Baal Kuwari summit courtyard Polaroid memories mein save ho gayi!',
+            : kind === 'book'
+              ? 'Temple backyard overlook par kitaab ke saath waali Polaroid save ho gayi!'
+              : 'Baal Kuwari summit courtyard Polaroid memories mein save ho gayi!',
           3000
         );
       }
@@ -560,10 +633,77 @@ export default function Experience() {
     [capturePolaroidAndSave, showTimedCaption]
   );
 
+  const triggerBaalKuwariBookPhoto = useCallback(() => {
+    const store = useProgressStore.getState();
+    if (store.committedSceneId !== 10 || store.activeNarration !== null || bookPhotoActive) return;
+
+    clearInputsRef.current();
+    if (bookPhotoPoseTimerRef.current !== null) window.clearTimeout(bookPhotoPoseTimerRef.current);
+    if (bookPhotoFinishTimerRef.current !== null) window.clearTimeout(bookPhotoFinishTimerRef.current);
+
+    setBookPhotoActive(true);
+    const snapDelay = reducedMotion ? 140 : 880;
+    const holdDelay = reducedMotion ? 240 : 900;
+
+    bookPhotoPoseTimerRef.current = window.setTimeout(() => {
+      bookPhotoPoseTimerRef.current = null;
+      handleCaptureBaalKuwariPolaroid('book');
+
+      bookPhotoFinishTimerRef.current = window.setTimeout(() => {
+        bookPhotoFinishTimerRef.current = null;
+        setBookPhotoActive(false);
+      }, holdDelay);
+    }, snapDelay);
+  }, [bookPhotoActive, handleCaptureBaalKuwariPolaroid, reducedMotion]);
+
   const handleWalkInteract = useCallback(() => {
+    if (isDay1SceneActive && day1Phase === 'stay_explore') {
+      if (!nearbyHotspot || useProgressStore.getState().activeNarration !== null) return;
+      if (nearbyHotspot.id === 'go_to_terrace') {
+        clearInputsRef.current();
+        window.dispatchEvent(new CustomEvent('day1:toggle-terrace', { detail: { to: 'up' } }));
+      } else if (nearbyHotspot.id === 'back_to_lane') {
+        clearInputsRef.current();
+        window.dispatchEvent(new CustomEvent('day1:toggle-terrace', { detail: { to: 'down' } }));
+      } else if (nearbyHotspot.id === 'day1_scooter_maggi') {
+        clearInputsRef.current();
+        setDay1Phase('evening_maggi');
+      }
+      return;
+    }
+    if (isDay2MorningActive) {
+      if (morningBreakfastActive || useProgressStore.getState().activeNarration !== null) return;
+      if (!nearbyHotspot) return;
+      if (nearbyHotspot.id === 'bun_maska_chai') {
+        if (!morningBreakfastDone) {
+          clearInputsRef.current();
+          setMorningBreakfastActive(true);
+        } else {
+          showTimedCaption(
+            'Bun Maska & Chai',
+            'Breakfast ho gaya — chalo ab scooty ke paas chalkar Neelkanth nikalte hain!',
+            2800
+          );
+        }
+      } else if (nearbyHotspot.id === 'depart_neelkanth') {
+        if (morningBreakfastDone) {
+          clearInputsRef.current();
+          sceneController.requestSceneTransition(4, { clearInputs: clearInputsRef.current });
+        } else {
+          showTimedCaption(
+            'Morning Tea Stop',
+            'Pehle main road stall par chal kar bun maska aur chai saath mein pi lete hain!',
+            2800
+          );
+        }
+      }
+      return;
+    }
     if (isViewpointWalkActive) {
       if (!nearbyHotspot || viewpointPhotoMoment !== 'none') return;
-      if (nearbyHotspot.id === 'viewpoint_solo') {
+      if (nearbyHotspot.id === 'viewpoint_shree') {
+        triggerViewpointPhoto('shree');
+      } else if (nearbyHotspot.id === 'viewpoint_solo') {
         triggerViewpointPhoto('solo');
       } else if (nearbyHotspot.id === 'viewpoint_group') {
         triggerViewpointPhoto('group');
@@ -604,6 +744,7 @@ export default function Experience() {
     if (isBaalKuwariTempleActive) {
       if (
         summitArrivalCinematicActive ||
+        bookPhotoActive ||
         !nearbyHotspot ||
         useProgressStore.getState().activeNarration !== null
       ) {
@@ -615,6 +756,8 @@ export default function Experience() {
         ambientAudio.playTempleBell();
       } else if (nearbyHotspot.id === 'summit_polaroid') {
         handleCaptureBaalKuwariPolaroid('summit');
+      } else if (nearbyHotspot.id === 'book_polaroid') {
+        triggerBaalKuwariBookPhoto();
       } else if (nearbyHotspot.id === 'descent') {
         clearInputsRef.current();
         setBaalKuwariStairDirection('descent');
@@ -660,6 +803,8 @@ export default function Experience() {
     handleDhabaInteract();
   }, [
     ateTrailheadMaggi,
+    bookPhotoActive,
+    day1Phase,
     handleCaptureBaalKuwariPolaroid,
     handleDhabaInteract,
     handleNeelkanthInteract,
@@ -667,9 +812,13 @@ export default function Experience() {
     hotelSummaryOpen,
     isBaalKuwariMaggiActive,
     isBaalKuwariTempleActive,
+    isDay1SceneActive,
+    isDay2MorningActive,
     isHotelReturnWalkActive,
     isNeelkanthWalkActive,
     isViewpointWalkActive,
+    morningBreakfastActive,
+    morningBreakfastDone,
     nearbyHotspot,
     reducedMotion,
     sceneController,
@@ -678,6 +827,7 @@ export default function Experience() {
     showTimedCaption,
     summitArrivalCinematicActive,
     trailheadEatingActive,
+    triggerBaalKuwariBookPhoto,
     triggerViewpointPhoto,
     viewpointPhotoMoment,
   ]);
@@ -686,7 +836,9 @@ export default function Experience() {
     if (nearbyHotspot?.actionType !== 'photo') return;
 
     if (isViewpointWalkActive) {
-      if (nearbyHotspot.id === 'viewpoint_group') {
+      if (nearbyHotspot.id === 'viewpoint_shree') {
+        triggerViewpointPhoto('shree');
+      } else if (nearbyHotspot.id === 'viewpoint_group') {
         triggerViewpointPhoto('group');
       } else if (nearbyHotspot.id === 'viewpoint_solo') {
         triggerViewpointPhoto('solo');
@@ -694,7 +846,11 @@ export default function Experience() {
       return;
     }
     if (isBaalKuwariTempleActive) {
-      handleCaptureBaalKuwariPolaroid('summit');
+      if (nearbyHotspot.id === 'book_polaroid') {
+        triggerBaalKuwariBookPhoto();
+      } else {
+        handleCaptureBaalKuwariPolaroid('summit');
+      }
       return;
     }
     if (isDhabaWalkActive) {
@@ -707,6 +863,7 @@ export default function Experience() {
     isDhabaWalkActive,
     isViewpointWalkActive,
     nearbyHotspot,
+    triggerBaalKuwariBookPhoto,
     triggerViewpointPhoto,
   ]);
 
@@ -730,6 +887,8 @@ export default function Experience() {
     !foodCinematicActive &&
     !trailheadEatingActive &&
     !summitArrivalCinematicActive &&
+    !bookPhotoActive &&
+    !morningBreakfastActive &&
     !hotelSummaryOpen;
 
   const { inputRef, clearAllInputs, setMoveZoneControl, setActionZoneControl } =
@@ -1100,6 +1259,12 @@ export default function Experience() {
       if (baalKuwariToastTimerRef.current !== null) {
         window.clearTimeout(baalKuwariToastTimerRef.current);
       }
+      if (bookPhotoPoseTimerRef.current !== null) {
+        window.clearTimeout(bookPhotoPoseTimerRef.current);
+      }
+      if (bookPhotoFinishTimerRef.current !== null) {
+        window.clearTimeout(bookPhotoFinishTimerRef.current);
+      }
       if (hotelSummaryTimerRef.current !== null) {
         window.clearTimeout(hotelSummaryTimerRef.current);
       }
@@ -1114,11 +1279,11 @@ export default function Experience() {
     const mode =
       transitionPhase !== 'idle' || escalatedToFallback
         ? 'off'
-        : isDrivingSceneActive
+        : isDrivingSceneActive || isDepartureSceneActive
           ? 'road'
-          : isViewpointWalkActive
+          : isViewpointWalkActive || (isDay1SceneActive && day1Phase === 'stay_explore')
             ? 'viewpoint'
-            : isDhabaWalkActive || isBaalKuwariMaggiActive
+            : isDhabaWalkActive || isBaalKuwariMaggiActive || isDay2MorningActive
               ? 'dhaba'
               : isNeelkanthWalkActive
                 ? 'neelkanth'
@@ -1126,7 +1291,7 @@ export default function Experience() {
                   ? 'baalkuwari_stairs'
                   : isBaalKuwariTempleActive
                     ? 'baalkuwari_temple'
-                    : isHotelReturnWalkActive
+                    : isHotelReturnWalkActive || isKitaabiSceneActive || isDay1SceneActive
                       ? 'hotel_evening'
                       : 'off';
 
@@ -1137,13 +1302,18 @@ export default function Experience() {
     });
   }, [
     audioMuted,
+    day1Phase,
     escalatedToFallback,
     isBaalKuwariMaggiActive,
     isBaalKuwariStairsActive,
     isBaalKuwariTempleActive,
+    isDay1SceneActive,
+    isDay2MorningActive,
+    isDepartureSceneActive,
     isDhabaWalkActive,
     isDrivingSceneActive,
     isHotelReturnWalkActive,
+    isKitaabiSceneActive,
     isNeelkanthWalkActive,
     isSimulationPaused,
     isViewpointWalkActive,
@@ -1195,9 +1365,18 @@ export default function Experience() {
     setViewpointPhotoLabel(null);
     setTrailheadEatingActive(false);
     setBaalKuwariToastKind(null);
+    setBookPhotoActive(false);
     setSummitArrivalCinematicActive(committedSceneId === 10);
     setHotelFarewellDone(false);
     setHotelSummaryOpen(false);
+    if (committedSceneId === 1) {
+      setKitaabiStep(0);
+    } else if (committedSceneId === 2) {
+      setDay1Phase('travel_cinematic');
+    } else if (committedSceneId === 3) {
+      setMorningBreakfastActive(false);
+      setMorningBreakfastDone(false);
+    }
     if (captionTimerRef.current !== null) {
       window.clearTimeout(captionTimerRef.current);
       captionTimerRef.current = null;
@@ -1227,13 +1406,24 @@ export default function Experience() {
         (foodCinematicActive ||
           trailheadEatingActive ||
           summitArrivalCinematicActive ||
-          isBaalKuwariStairsActive) &&
+          isBaalKuwariStairsActive ||
+          isDepartureSceneActive ||
+          (isDay2MorningActive && morningBreakfastActive) ||
+          (isDay1SceneActive && day1Phase !== 'stay_explore')) &&
         !userPaused &&
         !anyModalOpen &&
         useProgressStore.getState().transitionPhase === 'idle'
       ) {
         event.preventDefault();
-        if (trailheadEatingActive) {
+        if (isDepartureSceneActive) {
+          handleScooterDepartureComplete();
+        } else if (isDay2MorningActive && morningBreakfastActive) {
+          handleMorningBreakfastComplete();
+        } else if (isDay1SceneActive && day1Phase === 'travel_cinematic') {
+          setDay1Phase('stay_explore');
+        } else if (isDay1SceneActive && day1Phase === 'evening_maggi') {
+          handleDay1Complete();
+        } else if (trailheadEatingActive) {
           handleTrailheadMaggiComplete();
         } else if (isBaalKuwariStairsActive) {
           if (baalKuwariStairDirection === 'descent') {
@@ -1294,14 +1484,22 @@ export default function Experience() {
     chaptersOpen,
     clearAllMovementInputs,
     controlsOpen,
+    day1Phase,
     foodCinematicActive,
+    handleDay1Complete,
     handleDismissControls,
     handleFoodCinematicComplete,
+    handleMorningBreakfastComplete,
+    handleScooterDepartureComplete,
     handleStairAscentComplete,
     handleStairDescentComplete,
     handleSummitArrivalCinematicComplete,
     handleTrailheadMaggiComplete,
     isBaalKuwariStairsActive,
+    isDay1SceneActive,
+    isDay2MorningActive,
+    isDepartureSceneActive,
+    morningBreakfastActive,
     scooterReturnOpen,
     setTabHiddenPaused,
     setUserPaused,
@@ -1432,6 +1630,13 @@ export default function Experience() {
           controller={sceneController}
           inputRef={inputRef}
           walkInputRef={walkInputRef}
+          day1Phase={day1Phase}
+          onAdvanceDay1Phase={setDay1Phase}
+          onDay1Complete={handleDay1Complete}
+          morningBreakfastActive={morningBreakfastActive}
+          morningBreakfastDone={morningBreakfastDone}
+          onMorningBreakfastComplete={handleMorningBreakfastComplete}
+          onScooterDepartureComplete={handleScooterDepartureComplete}
           resetNonce={resetNonce}
           viewpointPullOverNonce={viewpointPullOverNonce}
           telemetryRefs={telemetryRefs}
@@ -1440,6 +1645,7 @@ export default function Experience() {
           capturedDhabaPolaroid={capturedDhabaPolaroid}
           foodCinematicActive={foodCinematicActive}
           onFoodCinematicComplete={handleFoodCinematicComplete}
+          capturedViewpointShree={capturedViewpointShree}
           capturedViewpointSolo={capturedViewpointSolo}
           capturedViewpointGroup={capturedViewpointGroup}
           viewpointPhotoMoment={viewpointPhotoMoment}
@@ -1461,6 +1667,8 @@ export default function Experience() {
           rangBaalKuwariBell={rangBaalKuwariBell}
           baalKuwariBellNonce={baalKuwariBellNonce}
           capturedBaalKuwariPolaroid={capturedBaalKuwariPolaroid}
+          capturedBookPolaroid={capturedBaalKuwariBook}
+          bookPhotoActive={bookPhotoActive}
           hotelFarewellDone={hotelFarewellDone}
           onNearbyHotspotChange={setNearbyHotspot}
           onArrivedChange={setArrived}
@@ -1470,7 +1678,56 @@ export default function Experience() {
         />
       </Canvas>
 
-      {isDrivingSceneActive ? (
+      {isKitaabiSceneActive ||
+      isDay1SceneActive ||
+      isDay2MorningActive ||
+      isDepartureSceneActive ? (
+        <>
+          <PrologueStoryHUD
+            mode={
+              isKitaabiSceneActive
+                ? 'scene01_kitaabi'
+                : isDay1SceneActive
+                  ? 'scene02_day1'
+                  : isDay2MorningActive
+                    ? 'scene03_morning'
+                    : 'scene04_departure'
+            }
+            audioMuted={audioMuted}
+            onToggleAudioMute={toggleAudio}
+            onOpenChapters={handleOpenChapters}
+            onPause={handleOpenPause}
+            polaroidCount={validPolaroidCount}
+            kitaabiStep={kitaabiStep}
+            onAdvanceKitaabi={handleAdvanceKitaabi}
+            day1Phase={day1Phase}
+            onSkipDay1Travel={() => setDay1Phase('stay_explore')}
+            onSkipEveningMaggi={handleDay1Complete}
+            morningBreakfastActive={morningBreakfastActive}
+            morningBreakfastDone={morningBreakfastDone}
+            onSkipBreakfast={handleMorningBreakfastComplete}
+            onSkipDeparture={handleScooterDepartureComplete}
+            touchControlsVisible={touchControlsVisible}
+            nearbyHotspot={nearbyHotspot}
+            onTriggerHotspot={handleWalkInteract}
+          />
+          <MobileWalkControls
+            visible={
+              touchControlsVisible &&
+              ((isDay1SceneActive && day1Phase === 'stay_explore') || isDay2MorningActive) &&
+              !contextLost &&
+              !userPaused &&
+              !anyModalOpen &&
+              !morningBreakfastActive &&
+              transitionPhase === 'idle'
+            }
+            nearbyHotspot={nearbyHotspot}
+            onWalkMoveTouch={setWalkMoveTouch}
+            onInteract={handleWalkInteract}
+            onPhoto={handleWalkPhoto}
+          />
+        </>
+      ) : isDrivingSceneActive ? (
         <>
           <PrototypeHUD
             arrived={arrived}
@@ -1523,6 +1780,7 @@ export default function Experience() {
             touchControlsVisible={touchControlsVisible}
             onOpenChapters={handleOpenChapters}
             onPause={handleOpenPause}
+            capturedShree={capturedViewpointShree}
             capturedSolo={capturedViewpointSolo}
             capturedGroup={capturedViewpointGroup}
             polaroidCount={validPolaroidCount}
@@ -1652,17 +1910,29 @@ export default function Experience() {
             onSkipArrivalCinematic={handleSummitArrivalCinematicComplete}
             rangBell={rangBaalKuwariBell}
             capturedPolaroid={capturedBaalKuwariPolaroid}
+            capturedBookPolaroid={capturedBaalKuwariBook}
+            bookPhotoActive={bookPhotoActive}
             polaroidToastVisible={baalKuwariToastKind !== null}
             polaroidId={
-              baalKuwariToastKind === 'stairs' ? 'scene09_stairs_landing' : 'scene10_baalkuwari'
+              baalKuwariToastKind === 'stairs'
+                ? 'scene09_stairs_landing'
+                : baalKuwariToastKind === 'book'
+                  ? 'scene10_baalkuwari_book'
+                  : 'scene10_baalkuwari'
             }
             toastTitle={
-              baalKuwariToastKind === 'stairs' ? 'Mid-Climb Valley View' : 'Baal Kuwari Temple'
+              baalKuwariToastKind === 'stairs'
+                ? 'Mid-Climb Valley View'
+                : baalKuwariToastKind === 'book'
+                  ? 'With Her Book — Baal Kuwari'
+                  : 'Baal Kuwari Temple'
             }
             toastCaption={
               baalKuwariToastKind === 'stairs'
                 ? '~200 Steps Rest · Valley Overlook'
-                : 'Baal Kuwari Summit · After ~400 Steps'
+                : baalKuwariToastKind === 'book'
+                  ? 'Quiet reading overlook facing the peaks'
+                  : 'Baal Kuwari Summit · After ~400 Steps'
             }
             onDismissPolaroidToast={() => setBaalKuwariToastKind(null)}
             onTriggerHotspot={handleWalkInteract}
@@ -1676,6 +1946,7 @@ export default function Experience() {
               !anyModalOpen &&
               !trailheadEatingActive &&
               !summitArrivalCinematicActive &&
+              !bookPhotoActive &&
               transitionPhase === 'idle'
             }
             nearbyHotspot={nearbyHotspot}

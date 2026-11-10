@@ -716,8 +716,8 @@ export function ScooterPrototypeScene({
     const camTrackHeave = leadBump.heaveY * leadMotionScale;
     scratch.desiredCamPos
       .copy(scratch.camPoint)
-      .addScaledVector(scratch.camRight, followLateralMix)
-      .addScaledVector(scratch.camUp, CAM_HEIGHT_OFFSET + camTrackHeave * 0.45);
+      .addScaledVector(scratch.camRight, followLateralMix + leadBump.rollRad * leadMotionScale * 1.4)
+      .addScaledVector(scratch.camUp, CAM_HEIGHT_OFFSET + camTrackHeave * 0.72);
 
     const lookDist = Math.min(totalLength - 1, sim.leadDist + CAM_LOOK_AHEAD);
     sampleRoadFrame(
@@ -732,7 +732,7 @@ export function ScooterPrototypeScene({
     scratch.desiredLookAt
       .copy(scratch.point)
       .addScaledVector(scratch.right, sim.leadLateral * 0.52)
-      .addScaledVector(scratch.up, CAM_LOOK_HEIGHT + camTrackHeave * 0.25);
+      .addScaledVector(scratch.up, CAM_LOOK_HEIGHT + camTrackHeave * 0.42);
 
     if (!sim.cameraInitialized) {
       camera.position.copy(scratch.desiredCamPos);

@@ -8,7 +8,10 @@ import {
   buildConnectedHillGeometry,
   ConnectedHillTerrain,
 } from '@/components/canvas/environment/ConnectedHillTerrain';
-import { createTerrainMeshSampler } from '@/lib/terrainMeshSampler';
+import {
+  createTerrainMeshSampler,
+  sampleTerrainFootprint,
+} from '@/lib/terrainMeshSampler';
 import {
   DistantHimalayanRidges,
   type HimalayanRidgeSpec,
@@ -176,12 +179,40 @@ const CLEARING_BOULDERS: ReadonlyArray<{
   { pos: [-1.85, -4.05], scale: [0.85, 0.62, 0.72], rot: [0.15, 0.4, 0.1], color: '#6b727a' },
   { pos: [1.95, -4.0], scale: [0.92, 0.68, 0.78], rot: [0.1, -0.5, 0.15], color: '#626971' },
   { pos: [-4.95, 1.35], scale: [1.05, 0.74, 0.88], rot: [0.2, 0.8, -0.1], color: '#5c646d' },
+  { pos: [-5.4, 1.78], scale: [0.68, 0.56, 0.62], rot: [-0.2, 0.3, 0.25], color: '#64748b' },
   { pos: [4.8, 0.75], scale: [0.95, 0.65, 0.82], rot: [-0.1, 1.1, 0.12], color: '#6b727a' },
   { pos: [4.1, -3.5], scale: [1.15, 0.82, 0.95], rot: [0.18, -0.35, 0.08], color: '#5d656e' },
+  { pos: [4.62, -3.82], scale: [0.74, 0.62, 0.68], rot: [0.25, 0.45, -0.15], color: '#525861' },
   { pos: [-3.4, -4.9], scale: [1.3, 0.95, 1.1], rot: [0.12, 0.65, -0.08], color: '#687079' },
   { pos: [3.4, -5.1], scale: [1.25, 0.9, 1.05], rot: [-0.15, 0.95, 0.1], color: '#606870' },
   { pos: [6.2, -1.8], scale: [1.4, 1.05, 1.15], rot: [0.22, -0.7, 0.05], color: '#666e77' },
 ];
+
+function createClearingSignTexture(): THREE.CanvasTexture | null {
+  if (typeof document === 'undefined') return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  ctx.fillStyle = '#7c2d12';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#fbbf24';
+  ctx.lineWidth = 6;
+  ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+  ctx.fillStyle = '#fef3c7';
+  ctx.font = 'bold 31px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('PAHADI CLEARING', 256, 56);
+  ctx.fillStyle = '#fde68a';
+  ctx.font = '600 22px system-ui, sans-serif';
+  ctx.fillText('SECOND MAGGI & CHAI BREAK', 256, 94);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
 
 /**
  * Natural forested mountain roadside Maggi clearing along the Baal Kuwari off-road route.
@@ -198,6 +229,13 @@ export function BaalKuwariMaggiStopEnvironment({
   const densityRatio = QUALITY_PRESETS[qualityProfile].treeDensity / 120;
   const pineCount = Math.min(MAX_PINE_COUNT, Math.round(MAX_PINE_COUNT * densityRatio));
   const dirtTex = useMemo(() => getOffroadDirtTrackTexture(), []);
+  const clearingSignTex = useMemo(() => createClearingSignTexture(), []);
+
+  useEffect(() => {
+    return () => {
+      clearingSignTex?.dispose();
+    };
+  }, [clearingSignTex]);
 
   const steamRef = useRef<THREE.Group>(null);
   const rightArmRef = useRef<THREE.Group>(null);
@@ -244,16 +282,17 @@ export function BaalKuwariMaggiStopEnvironment({
       let z: number;
       if (inBackHill) {
         x = -24 + ((i * 7.8) % 48);
-        // Leave clear opening around winding north footpath center
-        if (Math.abs(x) < 2.6) x += x >= 0 ? 3.2 : -3.2;
-        z = -5.8 - (i % 6) * 3.8;
+        // Leave wide forested flank clear around winding north footpath cut
+        if (Math.abs(x) < 5.0) x += x >= 0 ? 5.2 : -5.2;
+        z = -6.2 - (i % 6) * 3.8;
       } else {
         x = side * (6.8 + (i % 6) * 3.9 + ((i * 3) % 5) * 0.45);
         z = -16 + ((i * 4.5) % 24);
       }
       const scale = 0.85 + ((i * 11) % 7) * 0.08;
-      const surfaceY = terrainSampler.trySampleY(x, z) ?? sampleClearingTerrainY(x, z);
-      items.push([x, surfaceY - 0.12 * scale, z, scale]);
+      const footprint = sampleTerrainFootprint(terrainSampler, x, z, 0.45 * scale);
+      const surfaceY = footprint ? footprint.minY : sampleClearingTerrainY(x, z);
+      items.push([x, surfaceY - 0.3 * scale, z, scale]);
     }
     return items;
   }, [terrainSampler]);
@@ -311,14 +350,14 @@ export function BaalKuwariMaggiStopEnvironment({
 
   return (
     <group>
-      <color attach="background" args={['#b8d8ec']} />
-      <fog attach="fog" args={['#cfe4f4', 32, 120]} />
+      <color attach="background" args={['#c8dce8']} />
+      <fog attach="fog" args={['#ded9cc', 30, 115]} />
 
-      <hemisphereLight args={['#eef7ff', '#4b5b44', 0.96]} />
+      <hemisphereLight args={['#fff5dc', '#4b5b44', 0.98]} />
       <directionalLight
-        position={[18, 28, 14]}
-        intensity={1.72}
-        color="#fff1d1"
+        position={[18, 25, 12]}
+        intensity={1.88}
+        color="#ffdc9c"
         castShadow={shadowsEnabled}
         shadow-mapSize={[1024, 1024]}
         shadow-camera-left={-18}
@@ -401,19 +440,23 @@ export function BaalKuwariMaggiStopEnvironment({
         </mesh>
       </group>
 
-      {/* Hillside pine-ridge boulders & rustic roadside wooden directional marker */}
+      {/* Hillside pine-ridge boulders & painted Pahadi Clearing Maggi signboard */}
       <group position={[0, 0, -4.2]}>
-        <mesh position={[-1.45, 0.88, 0.15]} castShadow={shadowsEnabled}>
-          <cylinderGeometry args={[0.055, 0.07, 1.85, 7]} />
+        <mesh position={[-1.45, 0.92, 0.15]} castShadow={shadowsEnabled}>
+          <cylinderGeometry args={[0.055, 0.072, 1.95, 7]} />
           <meshStandardMaterial color="#5c4033" roughness={0.92} />
         </mesh>
-        <mesh position={[-1.25, 1.52, 0.18]} rotation={[0, 0.2, 0.03]} castShadow={shadowsEnabled}>
-          <boxGeometry args={[1.15, 0.24, 0.06]} />
-          <meshStandardMaterial color="#b45309" roughness={0.82} />
+        <mesh position={[-1.12, 1.58, 0.18]} rotation={[0, 0.18, 0.02]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[1.65, 0.44, 0.07]} />
+          <meshStandardMaterial
+            color="#ffffff"
+            map={clearingSignTex ?? undefined}
+            roughness={0.78}
+          />
         </mesh>
       </group>
 
-      {/* Authentic Mountain Maggi & Chai Tapri Stall (`x = -3.65, z = -2.45`) */}
+      {/* Authentic Mountain Maggi & Chai Tapri Stall (`x = -3.65, z = -2.45`) with weathered amber + blue tarp canopy */}
       <group position={[-3.65, 0, -2.45]} rotation={[0, -0.45, 0]}>
         {[
           [-1.25, -1.0],
@@ -427,14 +470,27 @@ export function BaalKuwariMaggiStopEnvironment({
           </mesh>
         ))}
 
-        {/* Stone counter hearth & timber roof */}
-        <mesh position={[-0.1, 2.75, 0]} rotation={[0, 0, -0.09]} castShadow={shadowsEnabled}>
-          <boxGeometry args={[2.95, 0.1, 2.5]} />
-          <meshStandardMaterial color="#15803d" roughness={0.82} />
+        {/* Weathered terracotta-amber metal roof + draped royal-blue pahadi tarpaulin overhang */}
+        <mesh position={[-0.1, 2.74, 0]} rotation={[0, 0, -0.09]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[2.98, 0.09, 2.55]} />
+          <meshStandardMaterial color="#b45309" roughness={0.84} />
         </mesh>
-        <mesh position={[1.15, 2.38, 0]}>
-          <boxGeometry args={[0.1, 0.26, 2.1]} />
-          <meshStandardMaterial color="#fef3c7" roughness={0.7} />
+        <mesh position={[0.25, 2.71, 0]} rotation={[0, 0, -0.14]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[2.25, 0.06, 2.68]} />
+          <meshStandardMaterial color="#1d4ed8" roughness={0.86} />
+        </mesh>
+        <mesh position={[1.25, 2.5, 0]} rotation={[0, 0, -0.42]}>
+          <boxGeometry args={[0.45, 0.04, 2.66]} />
+          <meshStandardMaterial color="#1e40af" roughness={0.88} />
+        </mesh>
+        {/* Painted signboard fascia along stall eaves */}
+        <mesh position={[1.18, 2.34, 0]}>
+          <boxGeometry args={[0.09, 0.34, 2.15]} />
+          <meshStandardMaterial
+            color="#ffffff"
+            map={clearingSignTex ?? undefined}
+            roughness={0.75}
+          />
         </mesh>
         {[-0.2, 0.08, 0.36].map((my, idx) => (
           <mesh key={idx} position={[1.05, 1.85 - my * 0.9, 0.92]}>

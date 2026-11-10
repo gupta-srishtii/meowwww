@@ -13,12 +13,13 @@ export interface ViewpointHUDProps {
   touchControlsVisible: boolean;
   onOpenChapters: () => void;
   onPause: () => void;
+  capturedShree: boolean;
   capturedSolo: boolean;
   capturedGroup: boolean;
   polaroidCount: number;
   nearbyHotspot: WalkHotspot | null;
   activePhotoLabel: string | null;
-  polaroidToastKind: 'solo' | 'group' | null;
+  polaroidToastKind: 'shree' | 'solo' | 'group' | null;
   onDismissPolaroidToast: () => void;
   onTriggerHotspot: () => void;
   onResumeRiding: () => void;
@@ -30,6 +31,7 @@ export function ViewpointHUD({
   touchControlsVisible,
   onOpenChapters,
   onPause,
+  capturedShree,
   capturedSolo,
   capturedGroup,
   polaroidCount,
@@ -40,7 +42,30 @@ export function ViewpointHUD({
   onTriggerHotspot,
   onResumeRiding,
 }: ViewpointHUDProps) {
-  const readyToContinue = capturedSolo || capturedGroup;
+  const capturedInViewpoint = [capturedShree, capturedSolo, capturedGroup].filter(Boolean).length;
+  const readyToContinue = capturedInViewpoint > 0;
+
+  const toastMeta =
+    polaroidToastKind === 'shree'
+      ? {
+          polaroidId: 'scene05_viewpoint_shree' as const,
+          title: 'Shree — Mountain Overlook',
+          caption: 'Alone by the gorge · Hands behind back facing the river bend',
+          gradientClass: 'from-amber-100 via-emerald-100 to-sky-100',
+        }
+      : polaroidToastKind === 'solo'
+        ? {
+            polaroidId: 'scene05_viewpoint_solo' as const,
+            title: 'Shree & Ishaan — Mountain View',
+            caption: 'Pointing Out Mountains · Cliff Overlook',
+            gradientClass: 'from-sky-200 via-emerald-100 to-amber-100',
+          }
+        : {
+            polaroidId: 'scene05_viewpoint_group' as const,
+            title: 'All Four Together',
+            caption: 'All Four Friends · Overlook Rail',
+            gradientClass: 'from-sky-200 via-emerald-100 to-amber-100',
+          };
 
   return (
     <>
@@ -55,17 +80,23 @@ export function ViewpointHUD({
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
           <span
             className={`rounded-md px-2 py-0.5 font-medium ${
+              capturedShree ? 'bg-emerald-950/80 text-emerald-300' : 'bg-slate-800/80 text-slate-300'
+            }`}
+          >
+            {capturedShree ? '✓ Shree Solo' : '○ Shree Solo'}
+          </span>
+          <span
+            className={`rounded-md px-2 py-0.5 font-medium ${
               capturedSolo ? 'bg-emerald-950/80 text-emerald-300' : 'bg-slate-800/80 text-slate-300'
             }`}
           >
             {capturedSolo ? '✓ Shree & Ishaan' : '○ Shree & Ishaan Spot'}
           </span>
           <span
-            className={`rounded-md px-2 py-0.5 font-medium ${
-              capturedGroup
+            className={`rounded-md px-2 py-0.5 font-medium ${capturedGroup
                 ? 'bg-emerald-950/80 text-emerald-300'
                 : 'bg-slate-800/80 text-slate-300'
-            }`}
+              }`}
           >
             {capturedGroup ? '✓ All Four' : '○ All Four Spot'}
           </span>
@@ -91,20 +122,11 @@ export function ViewpointHUD({
 
       {polaroidToastKind && (
         <PolaroidToastCard
-          polaroidId={
-            polaroidToastKind === 'solo' ? 'scene05_viewpoint_solo' : 'scene05_viewpoint_group'
-          }
-          caption={
-            polaroidToastKind === 'solo'
-              ? 'Pointing Out Mountains · Cliff Overlook'
-              : 'All Four Friends · Overlook Rail'
-          }
-          title={
-            polaroidToastKind === 'solo'
-              ? 'Shree & Ishaan — Mountain View'
-              : 'All Four Together'
-          }
-          gradientClass="from-sky-200 via-emerald-100 to-amber-100"
+          polaroidId={toastMeta.polaroidId}
+          caption={toastMeta.caption}
+          title={toastMeta.title}
+          gradientClass={toastMeta.gradientClass}
+          stackedCount={capturedInViewpoint}
           onDismiss={onDismissPolaroidToast}
         />
       )}

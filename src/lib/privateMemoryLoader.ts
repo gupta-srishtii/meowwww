@@ -13,6 +13,14 @@ export interface PolaroidMemorySpec {
 }
 
 export const POLAROID_MEMORY_SPECS: Record<string, PolaroidMemorySpec> = {
+  scene05_viewpoint_shree: {
+    id: 'scene05_viewpoint_shree',
+    title: 'Shree — Overlook Solo',
+    caption: 'Looking out across the winding Rishikesh gorge and river sandbar',
+    locationTag: 'Rishikesh Overlook',
+    gradientClass: 'from-sky-200 via-emerald-100 to-amber-100',
+    matchedFilename: 'randomview point.jpg',
+  },
   scene05_viewpoint_solo: {
     id: 'scene05_viewpoint_solo',
     title: 'Shree & Ishaan — Mountain View',
@@ -52,6 +60,14 @@ export const POLAROID_MEMORY_SPECS: Record<string, PolaroidMemorySpec> = {
     locationTag: 'Baal Kuwari Shrine',
     gradientClass: 'from-sky-200 via-amber-100 to-emerald-200',
     matchedFilename: 'baalkumari.jpg',
+  },
+  scene10_baalkuwari_book: {
+    id: 'scene10_baalkuwari_book',
+    title: 'With Her Book — Baal Kuwari',
+    caption: 'Quiet moment by the summit overlook, reading facing the hills as Ishaan clicked this',
+    locationTag: 'Summit Backyard',
+    gradientClass: 'from-amber-100 via-sky-100 to-emerald-200',
+    matchedFilename: 'book on baalkumari temple me.jpg',
   },
 };
 

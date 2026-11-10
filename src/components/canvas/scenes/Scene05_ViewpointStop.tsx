@@ -26,13 +26,14 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
 import type { SceneId } from '@/lib/sceneConfig';
 
-export type ViewpointPhotoMoment = 'none' | 'solo' | 'group';
+export type ViewpointPhotoMoment = 'none' | 'shree' | 'solo' | 'group';
 
 export interface Scene05ViewpointStopProps {
   walkInputRef: RefObject<WalkInputState>;
   qualityProfile: QualityProfile;
   paused: boolean;
   transitionToken: number;
+  capturedShree: boolean;
   capturedSolo: boolean;
   capturedGroup: boolean;
   activePhotoMoment: ViewpointPhotoMoment;
@@ -57,6 +58,7 @@ export function Scene05_ViewpointStop({
   qualityProfile,
   paused,
   transitionToken,
+  capturedShree,
   capturedSolo,
   capturedGroup,
   activePhotoMoment,
@@ -82,6 +84,7 @@ export function Scene05_ViewpointStop({
   const srishtiHeadRef = useRef<THREE.Group>(null);
   const srishtiHairRef = useRef<THREE.Group>(null);
   const srishtiBagRef = useRef<THREE.Group>(null);
+  const srishtiLeftArmRef = useRef<THREE.Group>(null);
   const srishtiArmRef = useRef<THREE.Group>(null);
   const srishtiForearmRef = useRef<THREE.Group>(null);
 
@@ -158,8 +161,15 @@ export function Scene05_ViewpointStop({
     let strideRatio = 0;
     let idlePose: CharacterIdlePose = 'default';
 
-    if (activePhotoMoment === 'solo') {
-      sim.posX = THREE.MathUtils.damp(sim.posX, -2.55, 8, delta);
+    if (activePhotoMoment === 'shree') {
+      sim.posX = THREE.MathUtils.damp(sim.posX, -3.38, 8, delta);
+      sim.posZ = THREE.MathUtils.damp(sim.posZ, -2.55, 8, delta);
+      sim.velX = 0;
+      sim.velZ = 0;
+      sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, -0.06, 8, delta);
+      idlePose = 'default';
+    } else if (activePhotoMoment === 'solo') {
+      sim.posX = THREE.MathUtils.damp(sim.posX, -2.15, 8, delta);
       sim.posZ = THREE.MathUtils.damp(sim.posZ, -4.15, 8, delta);
       sim.velX = 0;
       sim.velZ = 0;
@@ -211,11 +221,11 @@ export function Scene05_ViewpointStop({
       reducedMotion,
     });
 
-    // 1b. Raise Ishaan's right arm gently toward mountain valley during Shree & Ishaan overlook moment
+    // 1b. Raise Ishaan's right arm gently toward valley (solo) or hold camera (shree solo)
     if (activePhotoMoment === 'solo' && rightArmRef.current) {
       rightArmRef.current.rotation.x = THREE.MathUtils.damp(
         rightArmRef.current.rotation.x,
-        -1.08 + (reducedMotion ? 0 : Math.sin(t * 1.4) * 0.04),
+        0.88 + (reducedMotion ? 0 : Math.sin(t * 1.4) * 0.04),
         8,
         delta
       );
@@ -225,11 +235,25 @@ export function Scene05_ViewpointStop({
         8,
         delta
       );
+    } else if (activePhotoMoment === 'shree' && rightArmRef.current) {
+      rightArmRef.current.rotation.x = THREE.MathUtils.damp(
+        rightArmRef.current.rotation.x,
+        0.72,
+        8,
+        delta
+      );
+      rightArmRef.current.rotation.z = THREE.MathUtils.damp(
+        rightArmRef.current.rotation.z,
+        -0.22,
+        8,
+        delta
+      );
     }
 
     // 2. Companions (Srishti, Manish & Yash) at overlook rail
     const isGroupPose = activePhotoMoment === 'group';
     const isCoupleOverlookPose = activePhotoMoment === 'solo';
+    const isShreeSoloOverlookPose = activePhotoMoment === 'shree';
     const animateOverlookFriend = (
       group: THREE.Group | null,
       torso: THREE.Group | null,
@@ -276,8 +300,13 @@ export function Scene05_ViewpointStop({
     };
 
     if (srishtiGroupRef.current) {
-      const targetSrishtiX = isCoupleOverlookPose ? -1.9 : SRISHTI_POS[0];
-      const targetSrishtiZ = isCoupleOverlookPose ? -4.18 : SRISHTI_POS[2];
+      const targetSrishtiX = isShreeSoloOverlookPose
+        ? -3.22
+        : isCoupleOverlookPose
+          ? -1.52
+          : SRISHTI_POS[0];
+      const targetSrishtiZ =
+        isShreeSoloOverlookPose || isCoupleOverlookPose ? -4.18 : SRISHTI_POS[2];
       srishtiGroupRef.current.position.x = THREE.MathUtils.damp(
         srishtiGroupRef.current.position.x,
         targetSrishtiX,
@@ -299,19 +328,86 @@ export function Scene05_ViewpointStop({
       srishtiArmRef.current,
       srishtiForearmRef.current,
       0.78,
-      isCoupleOverlookPose ? 0.18 : -0.18,
+      isShreeSoloOverlookPose ? 0.08 : isCoupleOverlookPose ? 0.18 : -0.18,
       Math.PI - 0.04,
       0.2,
       -0.05,
       0.32
     );
-    if (isCoupleOverlookPose && srishtiHeadRef.current) {
-      srishtiHeadRef.current.rotation.y = THREE.MathUtils.damp(
-        srishtiHeadRef.current.rotation.y,
-        0.22,
-        6,
-        delta
-      );
+    if (isShreeSoloOverlookPose) {
+      if (srishtiLeftArmRef.current) {
+        srishtiLeftArmRef.current.rotation.x = THREE.MathUtils.damp(
+          srishtiLeftArmRef.current.rotation.x,
+          -0.28,
+          8,
+          delta
+        );
+        srishtiLeftArmRef.current.rotation.z = THREE.MathUtils.damp(
+          srishtiLeftArmRef.current.rotation.z,
+          0.14,
+          8,
+          delta
+        );
+      }
+      if (srishtiArmRef.current) {
+        srishtiArmRef.current.rotation.x = THREE.MathUtils.damp(
+          srishtiArmRef.current.rotation.x,
+          -0.28,
+          8,
+          delta
+        );
+        srishtiArmRef.current.rotation.z = THREE.MathUtils.damp(
+          srishtiArmRef.current.rotation.z,
+          -0.14,
+          8,
+          delta
+        );
+      }
+      if (srishtiForearmRef.current) {
+        srishtiForearmRef.current.rotation.x = THREE.MathUtils.damp(
+          srishtiForearmRef.current.rotation.x,
+          -0.16,
+          8,
+          delta
+        );
+      }
+      if (srishtiHeadRef.current) {
+        srishtiHeadRef.current.rotation.y = THREE.MathUtils.damp(
+          srishtiHeadRef.current.rotation.y,
+          -0.06,
+          6,
+          delta
+        );
+        srishtiHeadRef.current.rotation.x = THREE.MathUtils.damp(
+          srishtiHeadRef.current.rotation.x,
+          -0.04,
+          6,
+          delta
+        );
+      }
+    } else {
+      if (srishtiLeftArmRef.current) {
+        srishtiLeftArmRef.current.rotation.x = THREE.MathUtils.damp(
+          srishtiLeftArmRef.current.rotation.x,
+          0,
+          8,
+          delta
+        );
+        srishtiLeftArmRef.current.rotation.z = THREE.MathUtils.damp(
+          srishtiLeftArmRef.current.rotation.z,
+          -0.09,
+          8,
+          delta
+        );
+      }
+      if (isCoupleOverlookPose && srishtiHeadRef.current) {
+        srishtiHeadRef.current.rotation.y = THREE.MathUtils.damp(
+          srishtiHeadRef.current.rotation.y,
+          0.22,
+          6,
+          delta
+        );
+      }
     }
     if (srishtiHairRef.current) {
       srishtiHairRef.current.rotation.x = 0.14;
@@ -348,9 +444,12 @@ export function Scene05_ViewpointStop({
       0.42
     );
 
-    if (activePhotoMoment === 'solo') {
-      scratch.desiredCamPos.set(-1.05, 1.54, -1.78);
-      scratch.desiredLookAt.set(-2.3, 1.22, -6.5);
+    if (activePhotoMoment === 'shree') {
+      scratch.desiredCamPos.set(-2.55, 1.48, -1.65);
+      scratch.desiredLookAt.set(-3.2, 1.15, -6.5);
+    } else if (activePhotoMoment === 'solo') {
+      scratch.desiredCamPos.set(-0.85, 1.54, -1.78);
+      scratch.desiredLookAt.set(-1.82, 1.22, -6.5);
     } else if (activePhotoMoment === 'group') {
       scratch.desiredCamPos.set(0.95, 1.48, -1.05);
       scratch.desiredLookAt.set(1.02, 1.16, -4.18);
@@ -412,6 +511,7 @@ export function Scene05_ViewpointStop({
       <ViewpointEnvironment
         qualityProfile={qualityProfile}
         paused={paused}
+        capturedShree={capturedShree}
         capturedSolo={capturedSolo}
         capturedGroup={capturedGroup}
       />
@@ -448,6 +548,7 @@ export function Scene05_ViewpointStop({
         headRef={srishtiHeadRef}
         hairTailRef={srishtiHairRef}
         bagRef={srishtiBagRef}
+        leftArmRef={srishtiLeftArmRef}
         rightArmRef={srishtiArmRef}
         rightForearmRef={srishtiForearmRef}
         position={SRISHTI_POS}

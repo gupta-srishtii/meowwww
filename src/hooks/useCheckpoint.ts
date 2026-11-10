@@ -38,8 +38,8 @@ export function useCheckpoint(requestSceneTransition: (targetId: SceneId) => voi
   const startFreshFromCheckpoint = useCallback(() => {
     clearCheckpoint();
     const currentCommitted = useProgressStore.getState().committedSceneId;
-    if (currentCommitted !== 5) {
-      requestSceneTransition(5);
+    if (currentCommitted !== 1) {
+      requestSceneTransition(1);
     }
   }, [clearCheckpoint, requestSceneTransition]);
 

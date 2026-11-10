@@ -12,6 +12,13 @@ import type { TelemetryRefs } from '@/components/canvas/ScooterPrototypeScene';
 import { CameraDirector } from '@/components/canvas/managers/CameraDirector';
 import { assetManager } from '@/components/canvas/managers/AssetManager';
 import { SceneErrorBoundary } from '@/components/canvas/managers/SceneErrorBoundary';
+import { Scene01_KitaabiDastaan } from '@/components/canvas/scenes/Scene01_KitaabiDastaan';
+import {
+  Scene02_RishikeshDay1,
+  type Day1Phase,
+} from '@/components/canvas/scenes/Scene02_RishikeshDay1';
+import { Scene03_Day2Morning } from '@/components/canvas/scenes/Scene03_Day2Morning';
+import { Scene04_ScooterDeparture } from '@/components/canvas/scenes/Scene04_ScooterDeparture';
 import { Scene05_MountainRoad } from '@/components/canvas/scenes/Scene05_MountainRoad';
 import {
   Scene05_ViewpointStop,
@@ -312,6 +319,13 @@ export interface SceneStageProps {
   controller: SceneManagerController;
   inputRef: RefObject<DrivingInputState>;
   walkInputRef: RefObject<WalkInputState>;
+  day1Phase: Day1Phase;
+  onAdvanceDay1Phase: (next: Day1Phase) => void;
+  onDay1Complete: () => void;
+  morningBreakfastActive: boolean;
+  morningBreakfastDone: boolean;
+  onMorningBreakfastComplete: () => void;
+  onScooterDepartureComplete: () => void;
   resetNonce: number;
   viewpointPullOverNonce: number;
   telemetryRefs: TelemetryRefs;
@@ -320,6 +334,7 @@ export interface SceneStageProps {
   capturedDhabaPolaroid: boolean;
   foodCinematicActive: boolean;
   onFoodCinematicComplete: () => void;
+  capturedViewpointShree: boolean;
   capturedViewpointSolo: boolean;
   capturedViewpointGroup: boolean;
   viewpointPhotoMoment: ViewpointPhotoMoment;
@@ -341,6 +356,8 @@ export interface SceneStageProps {
   rangBaalKuwariBell: boolean;
   baalKuwariBellNonce: number;
   capturedBaalKuwariPolaroid: boolean;
+  capturedBookPolaroid: boolean;
+  bookPhotoActive: boolean;
   hotelFarewellDone: boolean;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onArrivedChange: (arrived: boolean) => void;
@@ -357,6 +374,13 @@ export function SceneStage({
   controller,
   inputRef,
   walkInputRef,
+  day1Phase,
+  onAdvanceDay1Phase,
+  onDay1Complete,
+  morningBreakfastActive,
+  morningBreakfastDone,
+  onMorningBreakfastComplete,
+  onScooterDepartureComplete,
   resetNonce,
   viewpointPullOverNonce,
   telemetryRefs,
@@ -365,6 +389,7 @@ export function SceneStage({
   capturedDhabaPolaroid,
   foodCinematicActive,
   onFoodCinematicComplete,
+  capturedViewpointShree,
   capturedViewpointSolo,
   capturedViewpointGroup,
   viewpointPhotoMoment,
@@ -386,6 +411,8 @@ export function SceneStage({
   rangBaalKuwariBell,
   baalKuwariBellNonce,
   capturedBaalKuwariPolaroid,
+  capturedBookPolaroid,
+  bookPhotoActive,
   hotelFarewellDone,
   onNearbyHotspotChange,
   onArrivedChange,
@@ -413,6 +440,10 @@ export function SceneStage({
   // Warm upcoming scene textures/GLTF preloads silently during gameplay so switches feel instant.
   useEffect(() => {
     const nextMap: Partial<Record<SceneId, readonly SceneId[]>> = {
+      1: [2],
+      2: [3],
+      3: [4, 5],
+      4: [5],
       5: [6, 7],
       6: [5, 7],
       7: [8],
@@ -461,13 +492,57 @@ export function SceneStage({
         onSceneError={controller.onMountedSceneError}
       >
         <Suspense fallback={null}>
-          {mountedSceneId === 5 ? (
+          {mountedSceneId === 1 ? (
+            <Scene01_KitaabiDastaan
+              qualityProfile={qualityProfile}
+              paused={scenePaused}
+              transitionToken={transitionToken}
+              simulateMountFailure={simulateMountFailure}
+              onSceneReady={controller.onMountedSceneReady}
+            />
+          ) : mountedSceneId === 2 ? (
+            <Scene02_RishikeshDay1
+              walkInputRef={walkInputRef}
+              qualityProfile={qualityProfile}
+              paused={scenePaused}
+              transitionToken={transitionToken}
+              day1Phase={day1Phase}
+              onAdvanceDay1Phase={onAdvanceDay1Phase}
+              onDay1Complete={onDay1Complete}
+              onNearbyHotspotChange={onNearbyHotspotChange}
+              onSceneReady={controller.onMountedSceneReady}
+              simulateMountFailure={simulateMountFailure}
+            />
+          ) : mountedSceneId === 3 ? (
+            <Scene03_Day2Morning
+              walkInputRef={walkInputRef}
+              qualityProfile={qualityProfile}
+              paused={scenePaused}
+              transitionToken={transitionToken}
+              breakfastActive={morningBreakfastActive}
+              breakfastDone={morningBreakfastDone}
+              onBreakfastComplete={onMorningBreakfastComplete}
+              onNearbyHotspotChange={onNearbyHotspotChange}
+              onSceneReady={controller.onMountedSceneReady}
+              simulateMountFailure={simulateMountFailure}
+            />
+          ) : mountedSceneId === 4 ? (
+            <Scene04_ScooterDeparture
+              qualityProfile={qualityProfile}
+              paused={scenePaused}
+              transitionToken={transitionToken}
+              onDepartureComplete={onScooterDepartureComplete}
+              onSceneReady={controller.onMountedSceneReady}
+              simulateMountFailure={simulateMountFailure}
+            />
+          ) : mountedSceneId === 5 ? (
             roadSubStage === 'viewpoint_walk' ? (
               <Scene05_ViewpointStop
                 walkInputRef={walkInputRef}
                 qualityProfile={qualityProfile}
                 paused={scenePaused}
                 transitionToken={transitionToken}
+                capturedShree={capturedViewpointShree}
                 capturedSolo={capturedViewpointSolo}
                 capturedGroup={capturedViewpointGroup}
                 activePhotoMoment={viewpointPhotoMoment}
@@ -571,6 +646,8 @@ export function SceneStage({
               rangBell={rangBaalKuwariBell}
               bellImpulseNonce={baalKuwariBellNonce}
               capturedPolaroid={capturedBaalKuwariPolaroid}
+              capturedBookPolaroid={capturedBookPolaroid}
+              bookPhotoActive={bookPhotoActive}
               onNearbyHotspotChange={onNearbyHotspotChange}
               onSceneReady={controller.onMountedSceneReady}
             />

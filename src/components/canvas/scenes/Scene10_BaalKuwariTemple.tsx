@@ -44,6 +44,8 @@ export interface Scene10BaalKuwariTempleProps {
   rangBell: boolean;
   bellImpulseNonce: number;
   capturedPolaroid: boolean;
+  capturedBookPolaroid?: boolean;
+  bookPhotoActive?: boolean;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onSceneReady: (token: number, sceneId: SceneId) => void;
 }
@@ -95,6 +97,8 @@ export function Scene10_BaalKuwariTemple({
   rangBell,
   bellImpulseNonce,
   capturedPolaroid,
+  capturedBookPolaroid = false,
+  bookPhotoActive = false,
   onNearbyHotspotChange,
   onSceneReady,
 }: Scene10BaalKuwariTempleProps) {
@@ -210,6 +214,13 @@ export function Scene10_BaalKuwariTemple({
         sim.arrivalDone = true;
         onArrivalCinematicComplete();
       }
+    } else if (bookPhotoActive) {
+      sim.posX = THREE.MathUtils.damp(sim.posX, 2.45, 8, delta);
+      sim.posZ = THREE.MathUtils.damp(sim.posZ, 0.35, 8, delta);
+      sim.velX = 0;
+      sim.velZ = 0;
+      sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, -0.78, 8, delta);
+      strideRatio = 0;
     } else {
       const moveDist = stepWalkSimulation(
         sim,
@@ -245,27 +256,56 @@ export function Scene10_BaalKuwariTemple({
       reducedMotion,
     });
 
-    stepGroupCompanions({
-      agents: companionStatesRef.current,
-      configs: TEMPLE_COMPANION_CONFIGS,
-      playerX: sim.posX,
-      playerZ: sim.posZ,
-      playerFacingYaw: sim.facingYaw,
-      playerSpeed: walkSpeed,
-      bounds: BAAL_KUWARI_TEMPLE_WALK_BOUNDS,
-      obstacles: BAAL_KUWARI_TEMPLE_OBSTACLES,
-      delta,
-      mode: 'follow',
-    });
+    if (bookPhotoActive && rightArmRef.current) {
+      rightArmRef.current.rotation.x = THREE.MathUtils.damp(
+        rightArmRef.current.rotation.x,
+        0.72,
+        8,
+        delta
+      );
+      rightArmRef.current.rotation.z = THREE.MathUtils.damp(
+        rightArmRef.current.rotation.z,
+        -0.22,
+        8,
+        delta
+      );
+    }
+
+    if (!bookPhotoActive) {
+      stepGroupCompanions({
+        agents: companionStatesRef.current,
+        configs: TEMPLE_COMPANION_CONFIGS,
+        playerX: sim.posX,
+        playerZ: sim.posZ,
+        playerFacingYaw: sim.facingYaw,
+        playerSpeed: walkSpeed,
+        bounds: BAAL_KUWARI_TEMPLE_WALK_BOUNDS,
+        obstacles: BAAL_KUWARI_TEMPLE_OBSTACLES,
+        delta,
+        mode: 'follow',
+      });
+    } else {
+      const shreeAgent = companionStatesRef.current.find((a) => a.id === 'srishti');
+      if (shreeAgent) {
+        shreeAgent.posX = THREE.MathUtils.damp(shreeAgent.posX, 3.95, 7, delta);
+        shreeAgent.posZ = THREE.MathUtils.damp(shreeAgent.posZ, -1.35, 7, delta);
+        shreeAgent.facingYaw = THREE.MathUtils.damp(shreeAgent.facingYaw, -0.45, 7, delta);
+        shreeAgent.velX = 0;
+        shreeAgent.velZ = 0;
+      }
+    }
 
     const rigs = companionRigsRef.current;
     if (rigs) {
       companionStatesRef.current.forEach((agent, i) => {
         const rig = rigs[agent.id as FriendCompanionId];
         if (!rig) return;
+        const isShreeBookPose = bookPhotoActive && agent.id === 'srishti';
         applyCompanionRigFrame({
           agent,
-          config: TEMPLE_COMPANION_CONFIGS[i],
+          config: isShreeBookPose
+            ? { ...TEMPLE_COMPANION_CONFIGS[i], idlePose: 'sit_ready' }
+            : TEMPLE_COMPANION_CONFIGS[i],
           refs: rig,
           lookTargetX: sim.posX,
           lookTargetZ: sim.posZ,
@@ -273,6 +313,14 @@ export function Scene10_BaalKuwariTemple({
           delta,
           reducedMotion,
         });
+        if (isShreeBookPose) {
+          if (rig.leftArm) rig.leftArm.rotation.x = THREE.MathUtils.damp(rig.leftArm.rotation.x, 0.58, 8, delta);
+          if (rig.rightArm) rig.rightArm.rotation.x = THREE.MathUtils.damp(rig.rightArm.rotation.x, 0.58, 8, delta);
+          if (rig.rightForearm) {
+            rig.rightForearm.rotation.x = THREE.MathUtils.damp(rig.rightForearm.rotation.x, 0.36, 8, delta);
+          }
+          if (rig.head) rig.head.rotation.x = THREE.MathUtils.damp(rig.head.rotation.x, -0.22, 8, delta);
+        }
       });
     }
 
@@ -280,15 +328,18 @@ export function Scene10_BaalKuwariTemple({
       const sweepU = Math.min(1, sim.arrivalTimer / 14.5);
       const smoothU = sweepU * sweepU * (3 - 2 * sweepU);
       scratch.camPos.set(
-        THREE.MathUtils.lerp(-4.6, 1.25, smoothU) + Math.sin(smoothU * Math.PI) * 3.1,
-        THREE.MathUtils.lerp(4.75, 2.35, smoothU),
-        THREE.MathUtils.lerp(6.1, 4.9, smoothU)
+        THREE.MathUtils.lerp(-4.6, 1.1, smoothU) + Math.sin(smoothU * Math.PI) * 2.8,
+        THREE.MathUtils.lerp(4.75, 2.25, smoothU),
+        THREE.MathUtils.lerp(5.8, 3.85, smoothU)
       );
       scratch.lookAt.set(
         THREE.MathUtils.lerp(0, sim.posX, smoothU * 0.45),
-        THREE.MathUtils.lerp(2.2, 1.32, smoothU),
-        THREE.MathUtils.lerp(-2.5, 0.2, smoothU)
+        THREE.MathUtils.lerp(2.2, 1.28, smoothU),
+        THREE.MathUtils.lerp(-2.5, 0.0, smoothU)
       );
+    } else if (bookPhotoActive) {
+      scratch.camPos.set(1.22, 1.58, 1.15);
+      scratch.lookAt.set(3.55, 0.92, -1.25);
     } else {
       const hDist = Math.cos(sim.orbitPitch) * CAM_DISTANCE;
       const vOff = 1.2 + Math.sin(sim.orbitPitch) * CAM_DISTANCE;
@@ -314,9 +365,10 @@ export function Scene10_BaalKuwariTemple({
     }
     camera.lookAt(scratch.smoothLook);
 
-    const nearest = arrivalCinematicActive
-      ? null
-      : findNearestWalkHotspot(sim.posX, sim.posZ, BAAL_KUWARI_TEMPLE_HOTSPOTS);
+    const nearest =
+      arrivalCinematicActive || bookPhotoActive
+        ? null
+        : findNearestWalkHotspot(sim.posX, sim.posZ, BAAL_KUWARI_TEMPLE_HOTSPOTS);
     const nextId = nearest?.id ?? null;
     if (nextId !== sim.lastHotspotId) {
       sim.lastHotspotId = nextId;
@@ -332,6 +384,8 @@ export function Scene10_BaalKuwariTemple({
         rangBell={rangBell}
         bellImpulseNonce={bellImpulseNonce}
         capturedPolaroid={capturedPolaroid}
+        capturedBookPolaroid={capturedBookPolaroid}
+        bookPhotoActive={bookPhotoActive}
       />
 
       <StylizedPlaceholderCharacter

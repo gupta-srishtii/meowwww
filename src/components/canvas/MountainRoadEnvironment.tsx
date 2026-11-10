@@ -825,22 +825,23 @@ export function MountainRoadEnvironment({
   }, [curve, totalLength, roadSegment, turnoutA, turnoutB, stopDist]);
 
   const geometries = useMemo(() => {
+    const surfaceHalfWidth = isOffroad ? 2.55 : ROAD_HALF_WIDTH;
     const asphalt = buildSplineRibbonGeometry(curve, totalLength, ROAD_SEGMENTS, {
-      leftOffset: -ROAD_HALF_WIDTH,
+      leftOffset: -surfaceHalfWidth,
       leftY: 0.01,
-      rightOffset: ROAD_HALF_WIDTH,
+      rightOffset: surfaceHalfWidth,
       rightY: 0.01,
     });
 
     const leftShoulder = buildSplineRibbonGeometry(curve, totalLength, ROAD_SEGMENTS, {
       leftOffset: -(ROAD_HALF_WIDTH + 1.35),
       leftY: -0.04,
-      rightOffset: -ROAD_HALF_WIDTH,
+      rightOffset: -surfaceHalfWidth,
       rightY: 0.005,
     });
 
     const rightShoulder = buildSplineRibbonGeometry(curve, totalLength, ROAD_SEGMENTS, {
-      leftOffset: ROAD_HALF_WIDTH,
+      leftOffset: surfaceHalfWidth,
       leftY: 0.005,
       rightOffset: ROAD_HALF_WIDTH + 1.35,
       rightY: -0.04,
@@ -1006,7 +1007,7 @@ export function MountainRoadEnvironment({
       mainTurnoutApron,
       mainTurnoutRetainingSkirt,
     };
-  }, [curve, totalLength, roadSegment, stopDist, turnoutA, turnoutB, roadStations]);
+  }, [curve, totalLength, roadSegment, stopDist, turnoutA, turnoutB, roadStations, isOffroad]);
 
   useEffect(() => {
     return () => {
@@ -1371,6 +1372,15 @@ export function MountainRoadEnvironment({
       .addScaledVector(right, ROAD_HALF_WIDTH + 5.2)
       .addScaledVector(up, 0.0);
 
+    // 3. Explicit right-hand dirt cut signpost near start of Baal Kuwari off-road leg
+    sampleRoadFrame(curve, 14, totalLength, point, tangent, right, up);
+    basis.makeBasis(right, up, tangent.clone().negate());
+    const offroadSignQuat = new THREE.Quaternion().setFromRotationMatrix(basis);
+    const offroadSignPos = point
+      .clone()
+      .addScaledVector(right, -(ROAD_HALF_WIDTH + 0.65))
+      .addScaledVector(up, 0.0);
+
     return {
       viewPos,
       viewQuat,
@@ -1381,6 +1391,8 @@ export function MountainRoadEnvironment({
       companionSlot,
       stallCenter,
       stopQuat,
+      offroadSignPos,
+      offroadSignQuat,
     };
   }, [curve, totalLength, stopDist, turnoutA]);
 
@@ -1901,6 +1913,40 @@ export function MountainRoadEnvironment({
         paused={paused}
         reducedMotion={reducedMotion}
       />
+
+      {/* Explicit right-hand cut signpost when branching onto rugged Baal Kuwari dirt track */}
+      {roadSegment === 'to_baalkuwari' && (
+        <group position={landmarks.offroadSignPos} quaternion={landmarks.offroadSignQuat}>
+          <mesh position={[0, 1.05, 0]} castShadow={shadowsEnabled}>
+            <cylinderGeometry args={[0.06, 0.08, 2.25, 8]} />
+            <meshStandardMaterial color="#5c4033" roughness={0.92} />
+          </mesh>
+          <mesh position={[0.28, 1.78, 0]} rotation={[0, -0.35, 0.04]} castShadow={shadowsEnabled}>
+            <boxGeometry args={[1.38, 0.34, 0.07]} />
+            <meshStandardMaterial color="#d97706" roughness={0.78} />
+          </mesh>
+          <mesh position={[0.88, 1.78, 0.16]} rotation={[0, -0.35, -Math.PI / 2]}>
+            <coneGeometry args={[0.2, 0.34, 3]} />
+            <meshStandardMaterial color="#fef3c7" roughness={0.7} />
+          </mesh>
+          <mesh position={[-0.45, 0.16, 0.3]} castShadow={shadowsEnabled}>
+            <dodecahedronGeometry args={[0.32, 0]} />
+            <meshStandardMaterial color="#64748b" roughness={0.95} flatShading />
+          </mesh>
+        </group>
+      )}
+      {roadSegment === 'to_baalkuwari_stairs' && (
+        <group position={landmarks.offroadSignPos} quaternion={landmarks.offroadSignQuat}>
+          <mesh position={[0, 0.95, 0]} castShadow={shadowsEnabled}>
+            <cylinderGeometry args={[0.055, 0.075, 2.0, 8]} />
+            <meshStandardMaterial color="#5c4033" roughness={0.92} />
+          </mesh>
+          <mesh position={[0.18, 1.65, 0]} rotation={[0, 0.25, 0]} castShadow={shadowsEnabled}>
+            <boxGeometry args={[1.15, 0.28, 0.06]} />
+            <meshStandardMaterial color="#1d4ed8" roughness={0.78} />
+          </mesh>
+        </group>
+      )}
 
       {/* Smooth layered Himalayan mountain ridges framing distant horizons */}
       <DistantHimalayanRidges />

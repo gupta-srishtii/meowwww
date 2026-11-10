@@ -30,6 +30,8 @@ export const BAAL_KUWARI_TEMPLE_OBSTACLES: readonly WalkObstacle[] = [
   { kind: 'box', minX: -2.45, maxX: 2.45, minZ: -5.4, maxZ: -2.95 },
   // Summit diya pillar
   { kind: 'circle', x: -2.15, z: -1.8, radius: 0.45 },
+  // Backyard camera tripod stand near overlook bench
+  { kind: 'circle', x: 2.35, z: 0.15, radius: 0.36 },
   // Summit overlook parapet benches
   { kind: 'box', minX: 3.1, maxX: 4.85, minZ: -1.8, maxZ: -0.95 },
 ];
@@ -46,9 +48,17 @@ export const BAAL_KUWARI_TEMPLE_HOTSPOTS: readonly WalkHotspot[] = [
   {
     id: 'summit_polaroid',
     label: 'Take Summit Mountain Polaroid',
-    x: 3.1,
-    z: -2.6,
-    radius: 1.75,
+    x: 2.1,
+    z: -3.2,
+    radius: 1.55,
+    actionType: 'photo',
+  },
+  {
+    id: 'book_polaroid',
+    label: 'Photograph Shree Reading by the Valley',
+    x: 2.75,
+    z: -0.95,
+    radius: 1.5,
     actionType: 'photo',
   },
   {
@@ -102,6 +112,8 @@ export interface BaalKuwariTempleEnvironmentProps {
   rangBell: boolean;
   bellImpulseNonce: number;
   capturedPolaroid: boolean;
+  capturedBookPolaroid?: boolean;
+  bookPhotoActive?: boolean;
 }
 
 /**
@@ -113,6 +125,8 @@ export function BaalKuwariTempleEnvironment({
   rangBell,
   bellImpulseNonce,
   capturedPolaroid,
+  capturedBookPolaroid = false,
+  bookPhotoActive = false,
 }: BaalKuwariTempleEnvironmentProps) {
   const shadowsEnabled = QUALITY_PRESETS[qualityProfile].shadows;
   const reducedMotion = useReducedMotion();
@@ -465,7 +479,7 @@ export function BaalKuwariTempleEnvironment({
         </mesh>
       ))}
 
-      {/* Wooden Scenic Bench */}
+      {/* Wooden Scenic Bench + Open Book prop overlooking mountain ridges */}
       <group position={[3.95, 0, -1.35]} rotation={[0, -0.45, 0]}>
         <mesh position={[0, 0.42, 0]} castShadow={shadowsEnabled}>
           <boxGeometry args={[1.6, 0.08, 0.5]} />
@@ -477,9 +491,51 @@ export function BaalKuwariTempleEnvironment({
             <meshStandardMaterial color="#57534e" roughness={0.92} />
           </mesh>
         ))}
+        {/* Open book sitting gently on the scenic bench or held forward during book photo moment */}
+        <group
+          position={bookPhotoActive ? [0, 0.9, -0.26] : [0.32, 0.475, -0.02]}
+          rotation={bookPhotoActive ? [-0.55, 0, 0] : [0, 0.2, 0]}
+        >
+          <mesh position={[-0.085, 0.012, 0]} rotation={[0, 0, 0.14]} castShadow={shadowsEnabled}>
+            <boxGeometry args={[0.16, 0.02, 0.22]} />
+            <meshStandardMaterial color="#fbf6ec" roughness={0.78} />
+          </mesh>
+          <mesh position={[0.085, 0.012, 0]} rotation={[0, 0, -0.14]} castShadow={shadowsEnabled}>
+            <boxGeometry args={[0.16, 0.02, 0.22]} />
+            <meshStandardMaterial color="#fbf6ec" roughness={0.78} />
+          </mesh>
+          <mesh position={[0, 0.002, 0]}>
+            <boxGeometry args={[0.34, 0.008, 0.23]} />
+            <meshStandardMaterial color="#78350f" roughness={0.85} />
+          </mesh>
+        </group>
       </group>
 
-      {/* Top of Climbing Staircase Gate (`z = +5.6`) */}
+      {/* Backyard camera tripod stand near overlook bench */}
+      <group position={[2.35, 0, 0.15]} rotation={[0, -0.75, 0]}>
+        {[0, (Math.PI * 2) / 3, (Math.PI * 4) / 3].map((yaw, idx) => (
+          <group key={idx} position={[0, 0.96, 0]} rotation={[0, yaw, 0]}>
+            <mesh position={[0, -0.48, 0.13]} rotation={[-0.25, 0, 0]} castShadow={shadowsEnabled}>
+              <cylinderGeometry args={[0.012, 0.009, 1.05, 8]} />
+              <meshStandardMaterial color="#1f2937" metalness={0.62} roughness={0.36} />
+            </mesh>
+          </group>
+        ))}
+        <mesh position={[0, 1.03, 0]} castShadow={shadowsEnabled}>
+          <cylinderGeometry args={[0.025, 0.028, 0.18, 10]} />
+          <meshStandardMaterial color="#0f172a" roughness={0.45} />
+        </mesh>
+        <mesh position={[0, 1.16, 0]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[0.12, 0.08, 0.07]} />
+          <meshStandardMaterial color="#111827" roughness={0.4} metalness={0.35} />
+        </mesh>
+        <mesh position={[0, 1.16, -0.05]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.024, 0.028, 0.05, 12]} />
+          <meshStandardMaterial color="#475569" metalness={0.7} roughness={0.28} />
+        </mesh>
+      </group>
+
+      {/* Top of Climbing Staircase Carved Toran Gateway (`z = +5.6`) */}
       <group position={[0, 0, 5.6]}>
         <mesh position={[-1.65, 1.35, 0]} castShadow={shadowsEnabled}>
           <boxGeometry args={[0.48, 2.7, 0.48]} />
@@ -493,6 +549,24 @@ export function BaalKuwariTempleEnvironment({
           <boxGeometry args={[3.9, 0.45, 0.56]} />
           <meshStandardMaterial color="#b45309" roughness={0.8} />
         </mesh>
+        {/* Stepped carved sandstone crown & twin brass kalash finials */}
+        <mesh position={[0, 3.16, 0]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[2.8, 0.28, 0.46]} />
+          <meshStandardMaterial color="#d97706" roughness={0.74} />
+        </mesh>
+        {[-1.55, 1.55].map((kx) => (
+          <mesh key={kx} position={[kx, 3.16, 0]}>
+            <sphereGeometry args={[0.16, 12, 10]} />
+            <meshStandardMaterial color="#fbbf24" metalness={0.72} roughness={0.28} />
+          </mesh>
+        ))}
+        {/* Draped marigold-amber toran bunting across archway */}
+        {[-1.1, -0.55, 0, 0.55, 1.1].map((tx, idx) => (
+          <mesh key={idx} position={[tx, 2.66, 0.28]}>
+            <sphereGeometry args={[0.052, 8, 8]} />
+            <meshStandardMaterial color={idx % 2 === 0 ? '#f59e0b' : '#dc2626'} roughness={0.75} />
+          </mesh>
+        ))}
       </group>
 
       {/* Summit Slope Trees */}
@@ -523,7 +597,7 @@ export function BaalKuwariTempleEnvironment({
         reducedMotion={reducedMotion}
       />
       <HotspotBeaconSparkle
-        position={[3.1, 0, -2.6]}
+        position={[2.1, 0, -3.2]}
         visible={!capturedPolaroid}
         color="#38bdf8"
         height={0.95}
@@ -531,8 +605,16 @@ export function BaalKuwariTempleEnvironment({
         reducedMotion={reducedMotion}
       />
       <HotspotBeaconSparkle
+        position={[2.75, 0, -0.95]}
+        visible={!capturedBookPolaroid}
+        color="#f59e0b"
+        height={0.95}
+        paused={paused}
+        reducedMotion={reducedMotion}
+      />
+      <HotspotBeaconSparkle
         position={[0, 0, 4.65]}
-        visible={rangBell || capturedPolaroid}
+        visible={rangBell || capturedPolaroid || capturedBookPolaroid}
         color="#fbbf24"
         height={0.9}
         paused={paused}

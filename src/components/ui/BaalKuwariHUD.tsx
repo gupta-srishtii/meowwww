@@ -31,6 +31,8 @@ export interface BaalKuwariHUDProps {
   onSkipArrivalCinematic?: () => void;
   rangBell?: boolean;
   capturedPolaroid?: boolean;
+  capturedBookPolaroid?: boolean;
+  bookPhotoActive?: boolean;
   polaroidToastVisible?: boolean;
   polaroidId?: string;
   toastTitle?: string;
@@ -62,6 +64,8 @@ export function BaalKuwariHUD({
   onSkipArrivalCinematic,
   rangBell = false,
   capturedPolaroid = false,
+  capturedBookPolaroid = false,
+  bookPhotoActive = false,
   polaroidToastVisible = false,
   polaroidId = 'scene10_baalkuwari',
   toastTitle = 'Baal Kuwari Temple',
@@ -186,6 +190,13 @@ export function BaalKuwariHUD({
             >
               {capturedPolaroid ? '✓ Polaroid' : '○ Summit Photo'}
             </span>
+            <span
+              className={`rounded-md px-2 py-0.5 font-medium ${
+                capturedBookPolaroid ? 'bg-amber-950/80 text-amber-300' : 'bg-slate-800/80 text-slate-300'
+              }`}
+            >
+              {capturedBookPolaroid ? '✓ Book Photo' : '○ Book Overlook'}
+            </span>
           </div>
         )}
       </MinimalTopBar>
@@ -220,6 +231,7 @@ export function BaalKuwariHUD({
           caption={toastCaption}
           title={toastTitle}
           gradientClass="from-sky-100 via-amber-100 to-emerald-100"
+          stackedCount={(capturedPolaroid ? 1 : 0) + (capturedBookPolaroid ? 1 : 0)}
           onDismiss={onDismissPolaroidToast}
         />
       )}
@@ -229,6 +241,7 @@ export function BaalKuwariHUD({
         visible={
           !hasActiveNarration &&
           !eatingActive &&
+          !bookPhotoActive &&
           !isStairCinematic &&
           !arrivalCinematicActive
         }

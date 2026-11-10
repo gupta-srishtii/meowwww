@@ -91,6 +91,7 @@ export interface PolaroidToastCardProps {
   caption: string;
   title: string;
   gradientClass: string;
+  stackedCount?: number;
   onDismiss: () => void;
 }
 
@@ -99,6 +100,7 @@ export function PolaroidToastCard({
   caption,
   title,
   gradientClass,
+  stackedCount = 0,
   onDismiss,
 }: PolaroidToastCardProps) {
   usePolaroidMemoryRevision();
@@ -106,37 +108,52 @@ export function PolaroidToastCard({
   const resolvedUrl = resolvedMem?.resolvedUrl ?? null;
 
   return (
-    <div className="pointer-events-none fixed top-24 right-4 z-20 transition-all duration-300 ease-out">
-      <div className="group pointer-events-auto w-56 rounded-xl border border-amber-200/75 bg-[#faf6ed] p-2.5 text-slate-900 shadow-2xl">
-        <div
-          className={`relative flex h-28 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br px-3 text-center ${gradientClass}`}
-        >
-          {resolvedUrl ? (
-            <img
-              src={resolvedUrl}
-              alt={title}
-              style={{ imageOrientation: 'from-image' }}
-              className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-            />
-          ) : (
-            <span className="text-[11px] font-medium text-slate-800 transition-transform duration-500 ease-out group-hover:scale-[1.03]">
-              {caption}
-            </span>
-          )}
-        </div>
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <div>
-            <p className="text-[11px] font-semibold text-slate-900">{title}</p>
-            <p className="text-[10px] text-emerald-700">Saved to Yaadein</p>
-          </div>
-          <button
-            type="button"
-            onClick={onDismiss}
-            aria-label="Close memory preview"
-            className="rounded px-1.5 py-0.5 text-xs text-slate-500 hover:bg-slate-200"
+    <div className="pointer-events-none fixed top-20 right-4 z-20 transition-all duration-500 ease-out">
+      <div className="relative">
+        {stackedCount > 1 && (
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 -translate-x-1.5 translate-y-1.5 -rotate-3 rounded-xl border border-amber-200/60 bg-[#f3ede0] shadow-lg"
+          />
+        )}
+        <div className="group pointer-events-auto relative w-64 rotate-[1.4deg] rounded-xl border border-amber-200/85 bg-[#faf6ed] p-3 pb-3.5 text-slate-900 shadow-[0_18px_40px_rgba(2,6,23,0.48)] transition-transform duration-500 ease-out hover:rotate-0 sm:w-72">
+          <div
+            className={`relative flex h-36 items-center justify-center overflow-hidden rounded-lg border border-amber-900/10 bg-gradient-to-br px-3 text-center sm:h-40 ${gradientClass}`}
           >
-            ✕
-          </button>
+            {resolvedUrl ? (
+              <img
+                src={resolvedUrl}
+                alt={title}
+                style={{ imageOrientation: 'from-image' }}
+                className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+              />
+            ) : (
+              <span className="text-xs font-medium text-slate-800 transition-transform duration-500 ease-out group-hover:scale-[1.03]">
+                {caption}
+              </span>
+            )}
+          </div>
+          <div className="mt-2.5 flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate font-serif text-xs font-semibold text-slate-900 italic">
+                {title}
+              </p>
+              <p className="mt-0.5 font-serif text-[11px] leading-snug text-slate-600 italic">
+                {resolvedMem?.caption ?? caption}
+              </p>
+              <p className="mt-1 text-[10px] font-medium text-emerald-700">
+                ✓ Saved to Yaadein{stackedCount > 1 ? ` · ${stackedCount} captured` : ''}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onDismiss}
+              aria-label="Close memory preview"
+              className="rounded px-1.5 py-0.5 text-xs text-slate-500 hover:bg-slate-200"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       </div>
     </div>

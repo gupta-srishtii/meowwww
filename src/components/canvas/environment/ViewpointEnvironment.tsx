@@ -33,6 +33,8 @@ export const VIEWPOINT_OBSTACLES: readonly WalkObstacle[] = [
   { kind: 'box', minX: -2.15, maxX: -0.25, minZ: 2.75, maxZ: 3.65 },
   // Wooden overlook marker post & boulder cluster on left edge
   { kind: 'box', minX: -5.85, maxX: -4.55, minZ: -4.75, maxZ: -3.75 },
+  // Camera tripod stand set beside the scenic overlook
+  { kind: 'circle', x: -4.12, z: -3.72, radius: 0.38 },
   // Friends standing along the scenic valley overlook fence
   { kind: 'circle', x: 0.65, z: -4.15, radius: 0.34 },
   { kind: 'circle', x: 1.45, z: -4.22, radius: 0.34 },
@@ -41,19 +43,27 @@ export const VIEWPOINT_OBSTACLES: readonly WalkObstacle[] = [
 
 export const VIEWPOINT_HOTSPOTS: readonly WalkHotspot[] = [
   {
+    id: 'viewpoint_shree',
+    label: "Take Shree's Mountain View Photo",
+    x: -3.25,
+    z: -3.45,
+    radius: 1.55,
+    actionType: 'photo',
+  },
+  {
     id: 'viewpoint_solo',
     label: 'Take Shree & Ishaan Photo',
-    x: -2.55,
+    x: -1.85,
     z: -3.6,
-    radius: 1.65,
+    radius: 1.55,
     actionType: 'photo',
   },
   {
     id: 'viewpoint_group',
     label: 'Take 4-Friend Group Photo',
-    x: 0.15,
-    z: -3.3,
-    radius: 1.8,
+    x: 0.35,
+    z: -3.35,
+    radius: 1.65,
     actionType: 'photo',
   },
   {
@@ -69,6 +79,7 @@ export const VIEWPOINT_HOTSPOTS: readonly WalkHotspot[] = [
 export interface ViewpointEnvironmentProps {
   qualityProfile: QualityProfile;
   paused: boolean;
+  capturedShree: boolean;
   capturedSolo: boolean;
   capturedGroup: boolean;
 }
@@ -178,6 +189,7 @@ const VIEWPOINT_SLOPE_BOULDERS: readonly [number, number, number][] = [
 export function ViewpointEnvironment({
   qualityProfile,
   paused,
+  capturedShree,
   capturedSolo,
   capturedGroup,
 }: ViewpointEnvironmentProps) {
@@ -258,6 +270,9 @@ export function ViewpointEnvironment({
     const trunks = trunkRef.current;
     const crowns = crownRef.current;
     if (!trunks || !crowns) return;
+
+    trunks.count = pineCount;
+    crowns.count = pineCount;
 
     const dummy = new THREE.Object3D();
     for (let i = 0; i < pineCount; i++) {
@@ -541,17 +556,53 @@ export function ViewpointEnvironment({
         <meshStandardMaterial color="#275036" roughness={0.88} />
       </instancedMesh>
 
+      {/* Camera tripod stand set beside the scenic overlook rail */}
+      <group position={[-4.12, 0, -3.72]} rotation={[0, -0.26, 0]}>
+        {[
+          [0, 0.26],
+          [(Math.PI * 2) / 3, 0.26],
+          [(Math.PI * 4) / 3, 0.26],
+        ].map(([yaw, tilt], idx) => (
+          <group key={idx} position={[0, 1.02, 0]} rotation={[0, yaw, 0]}>
+            <mesh position={[0, -0.52, 0.14]} rotation={[-tilt, 0, 0]} castShadow={shadowsEnabled}>
+              <cylinderGeometry args={[0.013, 0.01, 1.12, 8]} />
+              <meshStandardMaterial color="#1f2937" metalness={0.65} roughness={0.35} />
+            </mesh>
+          </group>
+        ))}
+        <mesh position={[0, 1.09, 0]} castShadow={shadowsEnabled}>
+          <cylinderGeometry args={[0.028, 0.032, 0.22, 10]} />
+          <meshStandardMaterial color="#0f172a" metalness={0.55} roughness={0.4} />
+        </mesh>
+        <mesh position={[0, 1.24, 0]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[0.13, 0.085, 0.075]} />
+          <meshStandardMaterial color="#111827" roughness={0.42} metalness={0.35} />
+        </mesh>
+        <mesh position={[0, 1.24, -0.055]} rotation={[Math.PI / 2, 0, 0]} castShadow={shadowsEnabled}>
+          <cylinderGeometry args={[0.026, 0.03, 0.055, 12]} />
+          <meshStandardMaterial color="#334155" metalness={0.7} roughness={0.28} />
+        </mesh>
+      </group>
+
       {/* Subtle floating sparkle motes replacing large floor circles */}
       <HotspotBeaconSparkle
-        position={[-2.55, 0, -3.6]}
-        visible={!capturedSolo}
+        position={[-3.25, 0, -3.45]}
+        visible={!capturedShree}
         color="#f59e0b"
         height={0.9}
         paused={paused}
         reducedMotion={reducedMotion}
       />
       <HotspotBeaconSparkle
-        position={[0.15, 0, -3.3]}
+        position={[-1.85, 0, -3.6]}
+        visible={!capturedSolo}
+        color="#f59e0b"
+        height={0.92}
+        paused={paused}
+        reducedMotion={reducedMotion}
+      />
+      <HotspotBeaconSparkle
+        position={[0.35, 0, -3.35]}
         visible={!capturedGroup}
         color="#f59e0b"
         height={0.95}
@@ -560,7 +611,7 @@ export function ViewpointEnvironment({
       />
       <HotspotBeaconSparkle
         position={[0.2, 0, 1.95]}
-        visible={capturedSolo || capturedGroup}
+        visible={capturedShree || capturedSolo || capturedGroup}
         color="#38bdf8"
         height={0.85}
         paused={paused}
