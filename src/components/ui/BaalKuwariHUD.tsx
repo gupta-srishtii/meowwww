@@ -8,7 +8,7 @@ import {
 import type { WalkHotspot } from '@/hooks/useWalkController';
 
 export interface BaalKuwariHUDProps {
-  mode: 'maggi_stop' | 'stairs' | 'temple';
+  mode: 'maggi_stop' | 'footpath' | 'stairs' | 'temple';
   audioMuted?: boolean;
   onToggleAudioMute?: () => void;
   touchControlsVisible: boolean;
@@ -74,19 +74,23 @@ export function BaalKuwariHUD({
 
   const title =
     mode === 'maggi_stop'
-      ? 'Baal Kuwari Trailhead Maggi Stop'
-      : mode === 'stairs'
-        ? 'Baal Kuwari: The ~400 Stairs'
-        : 'Baal Kuwari Temple';
+      ? 'Roadside Maggi Clearing'
+      : mode === 'footpath'
+        ? 'Forest Path to Baal Kuwari'
+        : mode === 'stairs'
+          ? 'Baal Kuwari: The ~400 Stairs'
+          : 'Baal Kuwari Temple';
 
   const subtitle =
     mode === 'maggi_stop'
       ? ateMaggi
-        ? 'Walk through the base archway when ready to start the climb'
-        : 'Pre-climb Maggi stop before facing the ~400 steps'
-      : mode === 'stairs'
-        ? `Flight ${flightNumber} of 4 · Climb together step by step`
-        : 'Serene summit sanctuary above the pines';
+        ? 'Follow the north forest path toward the Baal Kuwari staircase'
+        : 'Pre-climb Maggi clearing along the mountain route'
+      : mode === 'footpath'
+        ? 'Walk uphill along the forested mountain path to reach the staircase gate'
+        : mode === 'stairs'
+          ? `Flight ${flightNumber} of 4 · Winding hillside steps together`
+          : 'Serene summit sanctuary above the pines';
 
   if (mode === 'temple' && arrivalCinematicActive) {
     return (
@@ -127,7 +131,7 @@ export function BaalKuwariHUD({
                 ateMaggi ? 'bg-emerald-950/80 text-emerald-300' : 'bg-slate-800/80 text-slate-300'
               }`}
             >
-              {ateMaggi ? '✓ Pre-Climb Maggi' : eatingActive ? 'Eating Maggi...' : '○ Trailhead Maggi'}
+              {ateMaggi ? '✓ Pre-Climb Maggi' : eatingActive ? 'Eating Maggi...' : '○ Clearing Maggi'}
             </span>
             {ateMaggi && onBeginClimbFromMaggi && (
               <button
@@ -135,7 +139,7 @@ export function BaalKuwariHUD({
                 onClick={onBeginClimbFromMaggi}
                 className="rounded-md bg-amber-400 px-2.5 py-0.5 font-semibold text-slate-950 transition hover:bg-amber-300"
               >
-                Start ~400 Stairs →
+                Walk Forest Path →
               </button>
             )}
           </div>

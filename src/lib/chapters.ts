@@ -13,6 +13,7 @@ export type ChapterKey =
   | 'neelkanth_temple'
   | 'baal_kuwari_road'
   | 'baal_kuwari_maggi'
+  | 'baal_kuwari_footpath'
   | 'baal_kuwari_stairs'
   | 'baal_kuwari_temple'
   | 'evening_return'
@@ -80,8 +81,8 @@ export const PHASE2_STORY_CHAPTERS: readonly StoryChapterItem[] = [
   {
     key: 'baal_kuwari_road',
     rank: 5,
-    title: 'Mountain Route to Baal Kuwari',
-    subtitle: 'Riding onward from Neelkanth along quiet cedar ridges toward the climb',
+    title: 'Off-Road Track to Baal Kuwari',
+    subtitle: 'Riding the rugged rocky dirt trail onward from Neelkanth toward the hills',
     targetSceneId: 8,
     targetSegment: 'to_baalkuwari',
     targetBaalSubStage: 'driving',
@@ -90,23 +91,32 @@ export const PHASE2_STORY_CHAPTERS: readonly StoryChapterItem[] = [
   {
     key: 'baal_kuwari_maggi',
     rank: 6,
-    title: 'Trailhead Pre-Climb Maggi Stop',
-    subtitle: 'Pausing together for hot Maggi at the base before starting the climb',
+    title: 'Roadside Maggi Clearing',
+    subtitle: 'Gathering around the rustic forest tapri before walking onto the temple path',
     targetSceneId: 8,
     targetBaalSubStage: 'maggi_stop',
     polaroidIds: [],
   },
   {
-    key: 'baal_kuwari_stairs',
+    key: 'baal_kuwari_footpath',
     rank: 7,
+    title: 'Forest Path to the Stairs',
+    subtitle: 'Walking together through pines and boulders toward the Baal Kuwari staircase gate',
+    targetSceneId: 8,
+    targetBaalSubStage: 'forest_footpath',
+    polaroidIds: [],
+  },
+  {
+    key: 'baal_kuwari_stairs',
+    rank: 8,
     title: 'Baal Kuwari: The ~400 Stairs',
-    subtitle: 'Climbing forested steps together as Ishaan helps along the steep flights',
+    subtitle: 'Climbing winding hillside steps together as Ishaan helps along steeper turns',
     targetSceneId: 9,
     polaroidIds: ['scene09_stairs_landing'],
   },
   {
     key: 'baal_kuwari_temple',
-    rank: 8,
+    rank: 9,
     title: 'Baal Kuwari Summit Temple',
     subtitle: 'Quiet summit courtyard overlooking the distant Himalayan hills',
     targetSceneId: 10,
@@ -114,7 +124,7 @@ export const PHASE2_STORY_CHAPTERS: readonly StoryChapterItem[] = [
   },
   {
     key: 'evening_return',
-    rank: 9,
+    rank: 10,
     title: 'Evening Safe Return to Rishikesh',
     subtitle: 'Cruising down cleanly & safely in golden-hour light before the evening bus',
     targetSceneId: 11,
@@ -123,7 +133,7 @@ export const PHASE2_STORY_CHAPTERS: readonly StoryChapterItem[] = [
   },
   {
     key: 'hotel_farewell',
-    rank: 10,
+    rank: 11,
     title: 'Hotel Return & Gentle Farewell',
     subtitle: 'Returning to the shared Rishikesh hotel courtyard as Srishti rejoins her group',
     targetSceneId: 12,
@@ -145,12 +155,14 @@ export function inferChapterRank(
 ): number {
   let rank = 0;
   if (sceneId === 12 || polaroids.includes('scene12_hotel_farewell')) {
-    rank = 10;
+    rank = 11;
   } else if (sceneId === 11 || (sceneId === 5 && segment === 'to_hotel_return')) {
-    rank = 9;
+    rank = 10;
   } else if (sceneId === 10 || polaroids.includes('scene10_baalkuwari')) {
-    rank = 8;
+    rank = 9;
   } else if (sceneId === 9 || polaroids.includes('scene09_stairs_landing')) {
+    rank = 8;
+  } else if (sceneId === 8 && baalKuwariSubStage === 'forest_footpath') {
     rank = 7;
   } else if (sceneId === 8 && baalKuwariSubStage === 'maggi_stop') {
     rank = 6;
@@ -183,6 +195,7 @@ export function getActiveChapterKey(
   if (sceneId === 10) return 'baal_kuwari_temple';
   if (sceneId === 9) return 'baal_kuwari_stairs';
   if (sceneId === 8) {
+    if (baalKuwariSubStage === 'forest_footpath') return 'baal_kuwari_footpath';
     return baalKuwariSubStage === 'maggi_stop' ? 'baal_kuwari_maggi' : 'baal_kuwari_road';
   }
   if (sceneId === 7) return 'neelkanth_temple';

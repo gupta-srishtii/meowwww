@@ -256,10 +256,10 @@ export const SCENE_REGISTRY: Record<SceneId, SceneDefinition> = {
   8: {
     id: 8,
     slug: 'ride-to-baal-kuwari',
-    title: 'Ride to Baal Kuwari & Trailhead Maggi Stop',
+    title: 'Off-Road Track, Maggi Clearing & Forest Trail',
     type: 'GAMEPLAY',
     act: 'Act 2',
-    estDuration: '2–3 min',
+    estDuration: '3–4 min',
     cameraMode: 'follow',
     checkpointPolicy: 'on_commit',
     phase1BStage: 'phase3_playable',
@@ -267,7 +267,7 @@ export const SCENE_REGISTRY: Record<SceneId, SceneDefinition> = {
     sceneOwnedAssets: [
       {
         id: 'baal-kuwari-approach-env',
-        label: 'Forest Route to Baal Kuwari & Trailhead Maggi Stop',
+        label: 'Off-Road Mountain Track, Maggi Clearing & Forest Footpath',
         url: 'procedural://baal-kuwari-approach',
         ownership: 'scene_owned',
         loadedKind: 'procedural',

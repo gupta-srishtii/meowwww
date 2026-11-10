@@ -129,7 +129,7 @@ export function PrototypeHUD({
           roadSegment === 'to_dhaba'
             ? 'Rishikesh Mountain Highway'
             : roadSegment === 'to_baalkuwari'
-              ? 'Mountain Route to Baal Kuwari'
+              ? 'Off-Road Track to Baal Kuwari'
               : roadSegment === 'to_hotel_return'
                 ? 'Evening Safe Return to Rishikesh'
                 : 'Forest Road to Neelkanth'
@@ -137,7 +137,9 @@ export function PrototypeHUD({
         subtitle={
           roadSegment === 'to_hotel_return'
             ? 'Evening bus schedule · Steady & safe return with Scooter 2'
-            : undefined
+            : roadSegment === 'to_baalkuwari'
+              ? 'Rugged mountain dirt track · Keep steady alongside Scooter 2'
+              : undefined
         }
         polaroidCount={polaroidCount}
         audioMuted={audioMuted}
@@ -269,10 +271,10 @@ export function PrototypeHUD({
             ) : roadSegment === 'to_baalkuwari' ? (
               <>
                 <p className="text-xs font-semibold tracking-[0.16em] text-amber-300 uppercase">
-                  Baal Kuwari Trailhead Base
+                  Roadside Maggi Clearing
                 </p>
                 <p className="text-xs text-slate-300">
-                  Scooters parked beneath the forest stairhead. Stop at the base Maggi stall before starting the ~400-step climb.
+                  Scooters parked off the rocky dirt track. Share hot Maggi here before walking the forest footpath to the stairs.
                 </p>
                 <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
                   {onEnterBaalKuwariMaggi && (
@@ -281,7 +283,7 @@ export function PrototypeHUD({
                       onClick={onEnterBaalKuwariMaggi}
                       className="rounded-xl bg-amber-400 px-4 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-amber-300"
                     >
-                      Stop for Pre-Climb Maggi (E) →
+                      Stop at Maggi Clearing (E) →
                     </button>
                   )}
                   <button

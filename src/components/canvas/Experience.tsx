@@ -147,6 +147,8 @@ export default function Experience() {
 
   const isBaalKuwariDriveActive = committedSceneId === 8 && baalKuwariSubStage === 'driving';
   const isBaalKuwariMaggiActive = committedSceneId === 8 && baalKuwariSubStage === 'maggi_stop';
+  const isBaalKuwariFootpathActive =
+    committedSceneId === 8 && baalKuwariSubStage === 'forest_footpath';
   const isBaalKuwariStairsActive = committedSceneId === 9;
   const isBaalKuwariTempleActive = committedSceneId === 10;
   const isSafeReturnDriveActive = committedSceneId === 11;
@@ -164,6 +166,7 @@ export default function Experience() {
     isViewpointWalkActive ||
     isNeelkanthWalkActive ||
     isBaalKuwariMaggiActive ||
+    isBaalKuwariFootpathActive ||
     isBaalKuwariStairsActive ||
     isBaalKuwariTempleActive ||
     isHotelReturnWalkActive;
@@ -460,9 +463,9 @@ export default function Experience() {
     setAteTrailheadMaggi(true);
     showNarration({
       id: 'scene08-maggi-complete',
-      speaker: 'Baal Kuwari Trailhead',
+      speaker: 'Roadside Maggi Clearing',
       lines: [
-        'Hot Maggi before the staircase — ready to face the ~400 stairs together.',
+        'Finished hot Maggi together — walk north onto the forest footpath when ready to head toward Baal Kuwari stairs.',
       ],
     });
   }, [showNarration]);
@@ -546,21 +549,31 @@ export default function Experience() {
         } else {
           showNarration({
             id: 'scene08-maggi-done',
-            speaker: 'Trailhead Maggi Stop',
-            lines: ['Pre-climb Maggi finished — head through the stone arch to start the climb.'],
+            speaker: 'Roadside Maggi Clearing',
+            lines: ['Pre-climb Maggi finished — head north onto the forest footpath toward the stairs.'],
           });
         }
-      } else if (nearbyHotspot.id === 'start_climb') {
+      } else if (nearbyHotspot.id === 'begin_footpath') {
         clearInputsRef.current();
-        setStairStepCount(0);
-        setLiveStairSteps(0);
-        sceneController.requestSceneTransition(9, { clearInputs: clearInputsRef.current });
+        sceneController.requestBaalKuwariSubStageTransition('forest_footpath', {
+          clearInputs: clearInputsRef.current,
+        });
       } else if (nearbyHotspot.id === 'back_to_road') {
         clearInputsRef.current();
         sceneController.requestBaalKuwariSubStageTransition('driving', {
           resumeDistance: LEAD_START_DISTANCE,
           clearInputs: clearInputsRef.current,
         });
+      }
+      return;
+    }
+    if (isBaalKuwariFootpathActive) {
+      if (!nearbyHotspot || useProgressStore.getState().activeNarration !== null) return;
+      if (nearbyHotspot.id === 'enter_stairs') {
+        clearInputsRef.current();
+        setStairStepCount(0);
+        setLiveStairSteps(0);
+        sceneController.requestSceneTransition(9, { clearInputs: clearInputsRef.current });
       }
       return;
     }
@@ -638,6 +651,7 @@ export default function Experience() {
     handleNeelkanthInteract,
     handleResumeRidingFromViewpoint,
     hotelSummaryOpen,
+    isBaalKuwariFootpathActive,
     isBaalKuwariMaggiActive,
     isBaalKuwariStairsActive,
     isBaalKuwariTempleActive,
@@ -801,12 +815,10 @@ export default function Experience() {
 
   const handleBeginClimbFromMaggi = useCallback(() => {
     clearInputsRef.current();
-    setStairStepCount(0);
-    setLiveStairSteps(0);
-    sceneController.requestSceneTransition(9, {
+    sceneController.requestBaalKuwariSubStageTransition('forest_footpath', {
       clearInputs: clearInputsRef.current,
     });
-  }, [sceneController, setStairStepCount]);
+  }, [sceneController]);
 
   const handleEnterHotelCourtyard = useCallback(() => {
     clearInputsRef.current();
@@ -1086,7 +1098,7 @@ export default function Experience() {
               ? 'dhaba'
               : isNeelkanthWalkActive
                 ? 'neelkanth'
-                : isBaalKuwariStairsActive
+                : isBaalKuwariStairsActive || isBaalKuwariFootpathActive
                   ? 'baalkuwari_stairs'
                   : isBaalKuwariTempleActive
                     ? 'baalkuwari_temple'
@@ -1102,6 +1114,7 @@ export default function Experience() {
   }, [
     audioMuted,
     escalatedToFallback,
+    isBaalKuwariFootpathActive,
     isBaalKuwariMaggiActive,
     isBaalKuwariStairsActive,
     isBaalKuwariTempleActive,
@@ -1553,15 +1566,20 @@ export default function Experience() {
             onPhoto={handleWalkPhoto}
           />
         </>
-      ) : isBaalKuwariMaggiActive || isBaalKuwariStairsActive || isBaalKuwariTempleActive ? (
+      ) : isBaalKuwariMaggiActive ||
+        isBaalKuwariFootpathActive ||
+        isBaalKuwariStairsActive ||
+        isBaalKuwariTempleActive ? (
         <>
           <BaalKuwariHUD
             mode={
               isBaalKuwariMaggiActive
                 ? 'maggi_stop'
-                : isBaalKuwariStairsActive
-                  ? 'stairs'
-                  : 'temple'
+                : isBaalKuwariFootpathActive
+                  ? 'footpath'
+                  : isBaalKuwariStairsActive
+                    ? 'stairs'
+                    : 'temple'
             }
             audioMuted={audioMuted}
             onToggleAudioMute={toggleAudio}

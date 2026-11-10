@@ -51,14 +51,54 @@ export interface ParkedShoulderVehicleSpec {
 }
 
 export function buildRoadTrafficFleet(segment: MountainRoadSegmentId): TrafficVehicleSpec[] {
+  if (segment === 'to_baalkuwari') {
+    // Rugged dirt track carries sparse calm local bikes & mountain hill SUVs instead of city highway cars
+    return [
+      {
+        id: 'offroad-onc-moto-1',
+        kind: 'moto',
+        vehicleStyle: 'commuter_bike',
+        hasPillion: false,
+        jacketColor: '#334155',
+        helmetColor: '#dc2626',
+        direction: -1,
+        initialDist: 108,
+        baseLateral: -1.8,
+        speedMps: 6.8,
+        color: '#b91c1c',
+      },
+      {
+        id: 'offroad-onc-suv-1',
+        kind: 'car',
+        vehicleStyle: 'hill_suv',
+        direction: -1,
+        initialDist: 224,
+        baseLateral: -1.95,
+        speedMps: 6.2,
+        color: '#d97706',
+      },
+      {
+        id: 'offroad-fwd-moto-1',
+        kind: 'moto',
+        vehicleStyle: 'commuter_bike',
+        hasPillion: true,
+        jacketColor: '#78350f',
+        helmetColor: '#0f172a',
+        direction: 1,
+        initialDist: 64,
+        baseLateral: 1.65,
+        speedMps: 6.6,
+        color: '#0f766e',
+      },
+    ];
+  }
+
   const seedShift =
     segment === 'to_dhaba'
       ? 0
       : segment === 'to_neelkanth'
         ? 12
-        : segment === 'to_baalkuwari'
-          ? 20
-          : 28;
+        : 28;
   return [
     // Oncoming outer-left mountain traffic (`-Z` direction -> coming toward scooters)
     {
@@ -180,7 +220,7 @@ export function buildParkedShoulderVehicles(
     {
       id: 'parked-2',
       kind: 'car',
-      vehicleStyle: 'hatchback',
+      vehicleStyle: segment === 'to_baalkuwari' ? 'hill_suv' : 'hatchback',
       dist:
         segment === 'to_dhaba'
           ? 196

@@ -184,6 +184,50 @@ export function getAsphaltRoadTexture(): THREE.CanvasTexture | null {
 }
 
 /**
+ * Rugged mountain dirt-and-gravel off-road track texture with compacted tire ruts & stones.
+ */
+export function getOffroadDirtTrackTexture(): THREE.CanvasTexture | null {
+  return createCachedCanvasTexture(
+    'baal_kuwari_offroad_dirt',
+    256,
+    (ctx, s) => {
+      ctx.fillStyle = '#755f47';
+      ctx.fillRect(0, 0, s, s);
+
+      // Darker compacted wheel ruts + raised stony center ridge
+      const grad = ctx.createLinearGradient(0, 0, s, 0);
+      grad.addColorStop(0.0, 'rgba(72, 60, 44, 0.45)');
+      grad.addColorStop(0.24, 'rgba(58, 46, 33, 0.34)');
+      grad.addColorStop(0.45, 'rgba(136, 114, 88, 0.25)');
+      grad.addColorStop(0.55, 'rgba(136, 114, 88, 0.25)');
+      grad.addColorStop(0.76, 'rgba(58, 46, 33, 0.34)');
+      grad.addColorStop(1.0, 'rgba(72, 60, 44, 0.45)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, s, s);
+
+      // Scattered pebbles, gravel flecks, and transverse washboard ruts
+      for (let y = 0; y < s; y += 16) {
+        ctx.fillStyle = y % 32 === 0 ? 'rgba(48, 38, 28, 0.14)' : 'rgba(156, 134, 108, 0.1)';
+        ctx.fillRect(14, y, s - 28, 3);
+      }
+      for (let i = 0; i < 1600; i++) {
+        const x = (i * 89) % s;
+        const y = (i * 151) % s;
+        const stoneSize = i % 11 === 0 ? 3.5 : 2;
+        ctx.fillStyle =
+          i % 4 === 0
+            ? 'rgba(168, 152, 130, 0.28)'
+            : i % 4 === 1
+              ? 'rgba(54, 43, 32, 0.26)'
+              : 'rgba(120, 102, 82, 0.22)';
+        ctx.fillRect(x, y, stoneSize, stoneSize);
+      }
+    },
+    { repeatX: 1, repeatY: 48 }
+  );
+}
+
+/**
  * Warm Himalayan sandstone flagstone texture for temple courtyards.
  */
 export function getStoneCourtyardTexture(): THREE.CanvasTexture | null {

@@ -78,6 +78,19 @@ function sampleSummitTerrainY(x: number, z: number): number {
   return -0.24 - smoothStep01(edgeDrop / 7.5) * Math.min(15.0, edgeDrop * 0.55) + wave * smoothStep01(edgeDrop / 4.0);
 }
 
+const _summitRock = new THREE.Color('#6f675b');
+const _summitMoss = new THREE.Color('#3b5e38');
+const _summitPine = new THREE.Color('#2a482d');
+
+function sampleSummitTerrainColor(wx: number, wz: number, h: number, out: THREE.Color): void {
+  const edge = Math.max(Math.abs(wx) - 7.5, Math.abs(wz) - 6.5, 0);
+  const rockMask = 1 - smoothStep01(edge / 3.5);
+  const mottle = Math.sin(wx * 0.35 + wz * 0.3) * 0.5 + 0.5;
+  out.copy(_summitMoss).lerp(_summitPine, mottle * 0.55);
+  if (h < -3.0) out.lerp(_summitPine, 0.35);
+  out.lerp(_summitRock, rockMask * 0.85);
+}
+
 export interface BaalKuwariTempleEnvironmentProps {
   qualityProfile: QualityProfile;
   paused: boolean;
@@ -121,7 +134,7 @@ export function BaalKuwariTempleEnvironment({
       const x = side * (9.2 + (i % 6) * 4.5);
       const z = -18 + ((i * 5.2) % 36);
       const scale = 0.82 + ((i * 7) % 6) * 0.08;
-      items.push([x, sampleSummitTerrainY(x, z) - 0.2, z, scale]);
+      items.push([x, sampleSummitTerrainY(x, z) - 0.56 * scale, z, scale]);
     }
     return items;
   }, []);
@@ -133,13 +146,13 @@ export function BaalKuwariTempleEnvironment({
     const dummy = new THREE.Object3D();
     for (let i = 0; i < MAX_PINES; i += 1) {
       const [x, y, z, s] = pinePositions[i];
-      dummy.position.set(x, y + 0.85 * s, z);
+      dummy.position.set(x, y + 0.92 * s, z);
       dummy.rotation.set(0, (i * 0.9) % (Math.PI * 2), 0);
       dummy.scale.set(s, s, s);
       dummy.updateMatrix();
       trunkInstRef.current.setMatrixAt(i, dummy.matrix);
 
-      dummy.position.set(x, y + 2.35 * s, z);
+      dummy.position.set(x, y + 2.55 * s, z);
       dummy.updateMatrix();
       crownInstRef.current.setMatrixAt(i, dummy.matrix);
     }
@@ -204,12 +217,33 @@ export function BaalKuwariTempleEnvironment({
         depth={140}
         centerX={0}
         centerZ={-8}
-        segX={64}
-        segZ={64}
+        segX={72}
+        segZ={72}
         heightFn={sampleSummitTerrainY}
+        colorFn={sampleSummitTerrainColor}
         receiveShadow={shadowsEnabled}
       />
       <DistantHimalayanRidges ridges={SUMMIT_RIDGES} />
+
+      {/* Natural Granite Outcrops Nestling Sanctuary Courtyard into Summit Ridge */}
+      {[
+        { pos: [-7.2, -0.35, -5.6] as const, s: [1.5, 1.0, 1.3] as const, rot: 0.4 },
+        { pos: [7.4, -0.35, -5.2] as const, s: [1.6, 1.1, 1.4] as const, rot: -0.5 },
+        { pos: [-7.9, -0.45, 2.2] as const, s: [1.3, 0.9, 1.2] as const, rot: 0.9 },
+        { pos: [7.8, -0.45, 2.8] as const, s: [1.4, 0.95, 1.3] as const, rot: -0.8 },
+      ].map((rock, idx) => (
+        <mesh
+          key={`summit-rock-${idx}`}
+          position={rock.pos}
+          scale={rock.s}
+          rotation={[0.12, rock.rot, 0.08]}
+          castShadow={shadowsEnabled}
+          receiveShadow={shadowsEnabled}
+        >
+          <dodecahedronGeometry args={[0.85, 0]} />
+          <meshStandardMaterial color="#676f78" roughness={0.95} flatShading />
+        </mesh>
+      ))}
 
       {/* Peaceful Hilltop Sanctuary Pavilion (`z = -4.0`) */}
       <group position={[0, 0, -4.0]}>
@@ -341,7 +375,7 @@ export function BaalKuwariTempleEnvironment({
         args={[undefined, undefined, MAX_PINES]}
         castShadow={shadowsEnabled}
       >
-        <cylinderGeometry args={[0.14, 0.22, 1.75, 7]} />
+        <cylinderGeometry args={[0.14, 0.22, 2.2, 7]} />
         <meshStandardMaterial color="#5c4033" roughness={0.94} />
       </instancedMesh>
       <instancedMesh

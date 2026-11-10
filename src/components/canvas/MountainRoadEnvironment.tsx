@@ -18,7 +18,11 @@ import {
   type MountainRoadSegmentId,
 } from '@/lib/mountainSpline';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { getAsphaltRoadTexture, getGopuramDetailTexture } from '@/lib/proceduralTextures';
+import {
+  getAsphaltRoadTexture,
+  getGopuramDetailTexture,
+  getOffroadDirtTrackTexture,
+} from '@/lib/proceduralTextures';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
 import { DistantHimalayanRidges } from '@/components/canvas/environment/DistantHimalayanRidges';
 import { RoadsideRoadLife } from '@/components/canvas/environment/RoadsideRoadLife';
@@ -115,10 +119,11 @@ function sampleHillsideY(distance: number, lateral: number, segment: MountainRoa
   );
   const toeY = alcove * smoothStep01(distOut / 1.5) * 0.26 + (alcove > 0 ? stallBermsBase - (-0.04) : 0);
 
+  const hillSlopeGain = segment === 'to_baalkuwari' ? 0.72 : 0.6;
   return (
     -0.04 +
     toeY * 0.45 +
-    Math.pow(climb, 0.92) * 0.6 +
+    Math.pow(climb, 0.92) * hillSlopeGain +
     Math.sin(climb * 0.24) * 0.28 +
     wave * smoothStep01(climb / 4.2)
   );
@@ -383,7 +388,9 @@ export function MountainRoadEnvironment({
   const shrubCount = Math.min(MAX_ROADSIDE_SHRUBS, Math.round(MAX_ROADSIDE_SHRUBS * densityRatio));
   const rockCount = Math.min(MAX_CLIFF_ROCKS, Math.round(MAX_CLIFF_ROCKS * densityRatio));
 
+  const isOffroad = roadSegment === 'to_baalkuwari';
   const asphaltTex = useMemo(() => getAsphaltRoadTexture(), []);
+  const offroadDirtTex = useMemo(() => getOffroadDirtTrackTexture(), []);
   const gopuramTex = useMemo(() => getGopuramDetailTexture(), []);
 
   const dirLightRef = useRef<THREE.DirectionalLight>(null);
@@ -742,7 +749,7 @@ export function MountainRoadEnvironment({
         const stallShelfClear = alcove * 2.8;
         lateral = -(ROAD_HALF_WIDTH + 2.3 + stallShelfClear + u * 16.5);
         lateral = Math.max(-28.0, lateral);
-        yOffset = sampleHillsideY(d, lateral, roadSegment) - 0.24 * scale;
+        yOffset = sampleHillsideY(d, lateral, roadSegment) - 0.46 * scale;
       } else {
         const u = rand();
         const apronEdge = getApronOuterOffset(d, roadSegment, turnoutA, turnoutB, stopDist);
@@ -751,7 +758,7 @@ export function MountainRoadEnvironment({
         const valleyClear = nearArrivalTemple ? Math.max(apronEdge + 2.5, ROAD_HALF_WIDTH + 16.0) : apronEdge + 1.8;
         lateral = Math.min(31.5, valleyClear + u * 14.0);
         yOffset =
-          sampleValleyY(d, lateral, roadSegment, turnoutA, turnoutB, stopDist) - 0.24 * scale;
+          sampleValleyY(d, lateral, roadSegment, turnoutA, turnoutB, stopDist) - 0.46 * scale;
       }
 
       const yaw = rand() * Math.PI * 2;
@@ -816,25 +823,36 @@ export function MountainRoadEnvironment({
       const d = 10 + rand() * (totalLength - 22);
       sampleRoadFrame(curve, d, totalLength, point, tangent, right, up);
       const alcove = getStallAlcoveBlend(d, roadSegment);
-      const placeOnHillside = rand() < 0.76;
-      const scaleX = 0.75 + rand() * 1.15;
-      const scaleY = 0.55 + rand() * 0.9;
+      const inTurnoutB = d >= turnoutB.start - 4 && d <= turnoutB.end + 4;
+      const onOffroadEdge = isOffroad && !inTurnoutB && i % 2 === 0;
+      const placeOnHillside = rand() < 0.72;
+      const scaleX = onOffroadEdge ? 0.45 + rand() * 0.55 : 0.75 + rand() * 1.15;
+      const scaleY = onOffroadEdge ? 0.3 + rand() * 0.35 : 0.55 + rand() * 0.9;
       let lateral: number;
       let slopeY: number;
 
-      if (placeOnHillside) {
+      if (onOffroadEdge) {
+        if (placeOnHillside) {
+          lateral = -(ROAD_HALF_WIDTH + 0.35 + alcove * 2.1 + rand() * 1.45);
+          slopeY = sampleHillsideY(d, lateral, roadSegment) - 0.08;
+        } else {
+          const apronEdge = getApronOuterOffset(d, roadSegment, turnoutA, turnoutB, stopDist);
+          lateral = Math.min(apronEdge + 1.2, ROAD_HALF_WIDTH + 0.3 + rand() * 1.15);
+          slopeY = sampleValleyY(d, lateral, roadSegment, turnoutA, turnoutB, stopDist) - 0.08;
+        }
+      } else if (placeOnHillside) {
         lateral = -(ROAD_HALF_WIDTH + 1.7 + alcove * 2.6 + rand() * 3.8);
-        slopeY = sampleHillsideY(d, lateral, roadSegment);
+        slopeY = sampleHillsideY(d, lateral, roadSegment) - 0.12;
       } else {
         const apronEdge = getApronOuterOffset(d, roadSegment, turnoutA, turnoutB, stopDist);
         lateral = Math.min(30.0, apronEdge + 1.0 + rand() * 4.5);
-        slopeY = sampleValleyY(d, lateral, roadSegment, turnoutA, turnoutB, stopDist);
+        slopeY = sampleValleyY(d, lateral, roadSegment, turnoutA, turnoutB, stopDist) - 0.12;
       }
 
       basePos
         .copy(point)
         .addScaledVector(right, lateral)
-        .addScaledVector(up, slopeY + scaleY * 0.12);
+        .addScaledVector(up, slopeY + scaleY * 0.1);
 
       dummy.position.copy(basePos);
       dummy.rotation.set(rand() * 0.6, rand() * Math.PI * 2, rand() * 0.6);
@@ -857,7 +875,7 @@ export function MountainRoadEnvironment({
     if (shrubMeshRef.current.instanceColor) {
       shrubMeshRef.current.instanceColor.needsUpdate = true;
     }
-  }, [curve, totalLength, treeCount, shrubCount, rockCount, roadSegment, stopDist, turnoutA, turnoutB]);
+  }, [curve, totalLength, treeCount, shrubCount, rockCount, roadSegment, isOffroad, stopDist, turnoutA, turnoutB]);
 
   // Turnout structures: viewpoint rail + roadside dhaba placeholder / Neelkanth turnout post
   const landmarks = useMemo(() => {
@@ -998,39 +1016,43 @@ export function MountainRoadEnvironment({
         shadow-bias={-0.0005}
       />
 
-      {/* Main continuous asphalt highway w/ textured grain + clean edge lane stripes */}
+      {/* Main continuous track: rocky mountain dirt track on `to_baalkuwari`, asphalt highway elsewhere */}
       <mesh geometry={geometries.asphalt} receiveShadow={shadowsEnabled}>
         <meshStandardMaterial
-          color="#3b4454"
-          map={asphaltTex ?? undefined}
-          roughness={0.9}
-          metalness={0.05}
+          color={isOffroad ? '#9f8365' : '#3b4454'}
+          map={(isOffroad ? offroadDirtTex : asphaltTex) ?? undefined}
+          roughness={isOffroad ? 0.98 : 0.9}
+          metalness={isOffroad ? 0.01 : 0.05}
         />
       </mesh>
-      <mesh geometry={geometries.leftEdgeStripe}>
-        <meshStandardMaterial color="#e2e8f0" roughness={0.78} />
-      </mesh>
-      <mesh geometry={geometries.rightEdgeStripe}>
-        <meshStandardMaterial color="#e2e8f0" roughness={0.78} />
-      </mesh>
+      {!isOffroad && (
+        <>
+          <mesh geometry={geometries.leftEdgeStripe}>
+            <meshStandardMaterial color="#e2e8f0" roughness={0.78} />
+          </mesh>
+          <mesh geometry={geometries.rightEdgeStripe}>
+            <meshStandardMaterial color="#e2e8f0" roughness={0.78} />
+          </mesh>
+        </>
+      )}
 
       {/* Road shoulders */}
       <mesh geometry={geometries.leftShoulder} receiveShadow={shadowsEnabled}>
-        <meshStandardMaterial color="#8d8374" roughness={0.95} />
+        <meshStandardMaterial color={isOffroad ? '#6d5c48' : '#8d8374'} roughness={0.95} />
       </mesh>
       <mesh geometry={geometries.rightShoulder} receiveShadow={shadowsEnabled}>
-        <meshStandardMaterial color="#8d8374" roughness={0.95} />
+        <meshStandardMaterial color={isOffroad ? '#6d5c48' : '#8d8374'} roughness={0.95} />
       </mesh>
 
       {/* Widened roadside pull-off aprons & stone embankment retaining walls */}
       <mesh geometry={geometries.viewpointApron} receiveShadow={shadowsEnabled}>
-        <meshStandardMaterial color="#7b7163" roughness={0.94} />
+        <meshStandardMaterial color={isOffroad ? '#6c5a46' : '#7b7163'} roughness={0.94} />
       </mesh>
       <mesh geometry={geometries.viewpointRetainingSkirt} receiveShadow={shadowsEnabled}>
         <meshStandardMaterial color="#5d5447" roughness={0.95} side={THREE.DoubleSide} />
       </mesh>
       <mesh geometry={geometries.mainTurnoutApron} receiveShadow={shadowsEnabled}>
-        <meshStandardMaterial color="#585f6b" roughness={0.9} />
+        <meshStandardMaterial color={isOffroad ? '#766149' : '#585f6b'} roughness={0.94} />
       </mesh>
       <mesh geometry={geometries.mainTurnoutRetainingSkirt} receiveShadow={shadowsEnabled}>
         <meshStandardMaterial color="#5d5447" roughness={0.95} side={THREE.DoubleSide} />
@@ -1144,7 +1166,7 @@ export function MountainRoadEnvironment({
         </group>
       ) : roadSegment === 'to_baalkuwari' ? (
         <group position={landmarks.stallCenter} quaternion={landmarks.stopQuat}>
-          {/* Baal Kuwari Forest Trailhead Base Maggi Tapri & Rising Stone Steps Portal */}
+          {/* Separate Roadside Forest Maggi Clearing Pull-Off (No Temple Staircase Attached Here) */}
           <RoadsideTapriAssembly
             sideOfRoad="right"
             stallVariant="maggi_snacks"
@@ -1159,34 +1181,24 @@ export function MountainRoadEnvironment({
             reducedMotion={reducedMotion}
             phaseOffset={1.5}
           />
-          {/* Trailhead Stone Arch & Visible First Steps Up the Mountain */}
-          <group position={[3.6, 0, -4.6]}>
-            <mesh position={[0, -2.5, 0]} receiveShadow={shadowsEnabled}>
-              <boxGeometry args={[6.4, 5.0, 5.2]} />
-              <meshStandardMaterial color="#675c4d" roughness={0.95} />
+          {/* Natural mountain clearing stone embankment & rustic trail signpost */}
+          <group position={[3.2, 0, -4.4]}>
+            <mesh position={[0, -1.6, 0]} receiveShadow={shadowsEnabled}>
+              <boxGeometry args={[5.8, 3.2, 4.8]} />
+              <meshStandardMaterial color="#584f3f" roughness={0.96} />
             </mesh>
-            <mesh position={[-1.4, 1.45, 0]} castShadow={shadowsEnabled}>
-              <boxGeometry args={[0.42, 2.9, 0.42]} />
-              <meshStandardMaterial color="#8c7b67" roughness={0.9} />
+            <mesh position={[-1.1, 0.25, 0.4]} rotation={[0.2, 0.5, 0]} castShadow={shadowsEnabled}>
+              <dodecahedronGeometry args={[0.75, 0]} />
+              <meshStandardMaterial color="#68707c" roughness={0.95} flatShading />
             </mesh>
-            <mesh position={[1.4, 1.45, 0]} castShadow={shadowsEnabled}>
-              <boxGeometry args={[0.42, 2.9, 0.42]} />
-              <meshStandardMaterial color="#8c7b67" roughness={0.9} />
+            <mesh position={[0.4, 0.95, 0]} castShadow={shadowsEnabled}>
+              <cylinderGeometry args={[0.07, 0.08, 1.9, 6]} />
+              <meshStandardMaterial color="#5c4033" roughness={0.92} />
             </mesh>
-            <mesh position={[0, 2.95, 0]} castShadow={shadowsEnabled}>
-              <boxGeometry args={[3.5, 0.48, 0.56]} />
-              <meshStandardMaterial color="#b45309" roughness={0.78} />
+            <mesh position={[0.4, 1.65, 0]} rotation={[0, 0.25, 0]} castShadow={shadowsEnabled}>
+              <boxGeometry args={[1.35, 0.28, 0.08]} />
+              <meshStandardMaterial color="#8c5e42" roughness={0.86} />
             </mesh>
-            {[0, 1, 2, 3, 4, 5].map((stepIdx) => (
-              <mesh
-                key={stepIdx}
-                position={[0.6 + stepIdx * 0.48, 0.14 + stepIdx * 0.24, 0]}
-                receiveShadow={shadowsEnabled}
-              >
-                <boxGeometry args={[0.56, 0.28, 2.2]} />
-                <meshStandardMaterial color="#948977" roughness={0.92} />
-              </mesh>
-            ))}
           </group>
         </group>
       ) : roadSegment === 'to_hotel_return' ? (
@@ -1317,33 +1329,37 @@ export function MountainRoadEnvironment({
         <meshStandardMaterial color="#6793b0" roughness={0.4} metalness={0.12} />
       </mesh>
 
-      {/* Valley-side steel guardrails segmented cleanly around pull-offs */}
-      <mesh geometry={geometries.guardrail1}>
-        <meshStandardMaterial color="#cbd5e1" roughness={0.45} metalness={0.35} side={THREE.DoubleSide} />
-      </mesh>
-      <mesh geometry={geometries.guardrail2}>
-        <meshStandardMaterial color="#cbd5e1" roughness={0.45} metalness={0.35} side={THREE.DoubleSide} />
-      </mesh>
-      <mesh geometry={geometries.guardrail3}>
-        <meshStandardMaterial color="#cbd5e1" roughness={0.45} metalness={0.35} side={THREE.DoubleSide} />
-      </mesh>
+      {/* Valley-side steel guardrails & painted dashes segmented cleanly around pull-offs (paved roads only) */}
+      {!isOffroad && (
+        <>
+          <mesh geometry={geometries.guardrail1}>
+            <meshStandardMaterial color="#cbd5e1" roughness={0.45} metalness={0.35} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh geometry={geometries.guardrail2}>
+            <meshStandardMaterial color="#cbd5e1" roughness={0.45} metalness={0.35} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh geometry={geometries.guardrail3}>
+            <meshStandardMaterial color="#cbd5e1" roughness={0.45} metalness={0.35} side={THREE.DoubleSide} />
+          </mesh>
 
-      {/* Instanced dashed centerline markings */}
-      <instancedMesh ref={dashMeshRef} args={[undefined, undefined, dashCount]}>
-        <boxGeometry args={[0.14, 0.02, 2.3]} />
-        <meshStandardMaterial color="#fde68a" roughness={0.8} />
-      </instancedMesh>
+          {/* Instanced dashed centerline markings */}
+          <instancedMesh ref={dashMeshRef} args={[undefined, undefined, dashCount]}>
+            <boxGeometry args={[0.14, 0.02, 2.3]} />
+            <meshStandardMaterial color="#fde68a" roughness={0.8} />
+          </instancedMesh>
 
-      {/* Instanced guardrail posts */}
+          {/* Instanced yellow kilometer stones along hillside edge */}
+          <instancedMesh ref={milestoneMeshRef} args={[undefined, undefined, 24]}>
+            <boxGeometry args={[0.26, 0.58, 0.18]} />
+            <meshStandardMaterial color="#eab308" roughness={0.6} />
+          </instancedMesh>
+        </>
+      )}
+
+      {/* Instanced shoulder marker posts (timber trail bollards on off-road track, steel on highway) */}
       <instancedMesh ref={postMeshRef} args={[undefined, undefined, 120]}>
-        <boxGeometry args={[0.1, 0.74, 0.1]} />
-        <meshStandardMaterial color="#64748b" roughness={0.7} />
-      </instancedMesh>
-
-      {/* Instanced yellow kilometer stones along hillside edge */}
-      <instancedMesh ref={milestoneMeshRef} args={[undefined, undefined, 24]}>
-        <boxGeometry args={[0.26, 0.58, 0.18]} />
-        <meshStandardMaterial color="#eab308" roughness={0.6} />
+        <boxGeometry args={isOffroad ? [0.14, 0.62, 0.14] : [0.1, 0.74, 0.1]} />
+        <meshStandardMaterial color={isOffroad ? '#6b4e38' : '#64748b'} roughness={isOffroad ? 0.92 : 0.7} />
       </instancedMesh>
 
       {/* Instanced hillside shrubs */}
@@ -1362,13 +1378,13 @@ export function MountainRoadEnvironment({
         <meshStandardMaterial color="#646d7a" roughness={0.95} flatShading />
       </instancedMesh>
 
-      {/* Instanced stylized pine trees */}
+      {/* Instanced stylized pine trees (deeper trunk anchor prevents slope gaps) */}
       <instancedMesh
         ref={trunkMeshRef}
         args={[undefined, undefined, MAX_PINE_TREES]}
         castShadow={shadowsEnabled}
       >
-        <cylinderGeometry args={[0.12, 0.18, 1.7, 6]} />
+        <cylinderGeometry args={[0.12, 0.19, 2.2, 6]} />
         <meshStandardMaterial color="#5c4033" roughness={0.95} />
       </instancedMesh>
       <instancedMesh

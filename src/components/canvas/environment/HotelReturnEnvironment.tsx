@@ -108,7 +108,7 @@ export function HotelReturnEnvironment({
       const x = side * (9.5 + (i % 6) * 4.4);
       const z = -16 + ((i * 5.2) % 32);
       const s = 0.85 + ((i * 9) % 6) * 0.07;
-      items.push([x, sampleHotelTerrainY(x, z) - 0.2, z, s]);
+      items.push([x, sampleHotelTerrainY(x, z) - 0.55 * s, z, s]);
     }
     return items;
   }, []);
@@ -120,13 +120,13 @@ export function HotelReturnEnvironment({
     const dummy = new THREE.Object3D();
     for (let i = 0; i < MAX_PINES; i += 1) {
       const [x, y, z, s] = pinePositions[i];
-      dummy.position.set(x, y + 0.85 * s, z);
+      dummy.position.set(x, y + 0.92 * s, z);
       dummy.rotation.set(0, (i * 1.1) % (Math.PI * 2), 0);
       dummy.scale.set(s, s, s);
       dummy.updateMatrix();
       trunkInstRef.current.setMatrixAt(i, dummy.matrix);
 
-      dummy.position.set(x, y + 2.35 * s, z);
+      dummy.position.set(x, y + 2.55 * s, z);
       dummy.updateMatrix();
       crownInstRef.current.setMatrixAt(i, dummy.matrix);
     }
@@ -313,7 +313,7 @@ export function HotelReturnEnvironment({
         args={[undefined, undefined, MAX_PINES]}
         castShadow={shadowsEnabled}
       >
-        <cylinderGeometry args={[0.14, 0.22, 1.75, 7]} />
+        <cylinderGeometry args={[0.14, 0.22, 2.2, 7]} />
         <meshStandardMaterial color="#5c4033" roughness={0.94} />
       </instancedMesh>
       <instancedMesh

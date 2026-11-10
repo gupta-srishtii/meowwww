@@ -485,8 +485,9 @@ export function RoadsideRoadLife({
         />
       ))}
 
-      {/* Yellow/Black hill road curve warning chevrons */}
-      {chevronTransforms.map(({ id, pos, quat }) => (
+      {/* Yellow/Black hill road curve warning chevrons (highway/paved segments only) */}
+      {roadSegment !== 'to_baalkuwari' &&
+        chevronTransforms.map(({ id, pos, quat }) => (
         <group key={id} position={pos} quaternion={quat}>
           <mesh position={[0, 0.68, 0]}>
             <cylinderGeometry args={[0.04, 0.045, 1.36, 6]} />
@@ -502,6 +503,7 @@ export function RoadsideRoadLife({
           </mesh>
         </group>
       ))}
+      {/* close conditional */}
     </>
   );
 }

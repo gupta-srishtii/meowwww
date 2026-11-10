@@ -1,10 +1,10 @@
 # The Road That Made Us Family
-## MASTER_PLAN.md — v2.4 (Phase 3 Story Timeline Update & Baal Kuwari Plan)
+## MASTER_PLAN.md — v2.5 (Phase 3 Realism Correction & Story Alignment)
 
-**Status:** ACTIVE — Phase 3 Planning & Implementation  
+**Status:** ACTIVE — Phase 3 Corrective Refinement (Do Not Start Phase 4)  
 **Option Selected:** Option B — Full Cinematic Experience, Phased Development (Quality-First, No Fixed Deadline)  
 **Last Updated:** 2026-11-10  
-**Revision:** v2.4 — Recorded full confirmed Rishikesh trip chronology (Kitaabi Dastaan chats & phone calls, Lucknow train vs. Delhi bus, shared hotel 1st/ground floor rooms, Day 1 evening scooter Maggi, Day 2 bun maska & chai + Kumbhkaran delay, Neelkanth, pre-climb Maggi before Baal Kuwari, ~400 stairs with Ishaan helping, evening-bus safe quick return, hotel reunion with Srishti's original group without bus-stand dropoff, separate later Bhai Dooj epilogue), added Phase 3 implementation & two-commit boundaries, and logged the known deferred floating mountain geometry / tree polish item.
+**Revision:** v2.5 — Corrected Day 2 historical beat (morning bun maska and chai were eaten **with Ishaan**, not with Srishti's original friends) and recorded the Baal Kuwari Phase 3 realism correction (rugged off-road dirt track approach, separate roadside Maggi clearing with stool/seat fixes, playable forest footpath transition before the staircase, natural hillside winding ~400 stairs, and Phase 3 terrain/tree grounding).
 
 ---
 
@@ -83,7 +83,7 @@ Srishti plays through the journey that turned Ishaan — whom she met online in 
 2. **The ~2-minute Mahakumbh meeting** — they also shared a brief ~2-minute in-person meeting at Mahakumbh amidst a huge crowd.
 3. **Travel to Rishikesh & Shared Hotel Stay** — Ishaan traveled from **Lucknow by train** with his friends; Srishti traveled from **Delhi by bus**. They stayed at the same Rishikesh hotel — **Srishti on the first floor**, and **Ishaan and his friend on the ground floor**.
 4. **Day 1 — Group Time & Evening Scooter Maggi** — Srishti initially spent time with her original group; in the evening she went roaming on scooters with Ishaan and his friend and ate Maggi.
-5. **Day 2 Morning — Bun Maska, Chai & Kumbhkaran Delay** — Morning included **bun maska and chai** on a lively Rishikesh road. Ishaan and his friend woke up late (earning the playful **"Kumbhkaran"** memory), delaying their departure.
+5. **Day 2 Morning — Bun Maska & Chai with Ishaan + Kumbhkaran Delay** — Morning included **bun maska and chai with Ishaan** *(not with Srishti's original friends)* on a lively Rishikesh road. Ishaan and his friend woke up late (earning the playful **"Kumbhkaran"** memory), delaying their departure.
 6. **Two scooters on mountain roads + Maggi/chai stop (`Scenes 5–6`)** — Four friends on two scooters (Ishaan driving with Srishti pillion on Scooter 1; Manish and Yash on Scooter 2) riding through scenic Rishikesh mountain roads, viewpoint pull-off, and roadside Maggi & chai tapri.
 7. **Neelkanth Mahadev Temple (`Scene 7`)** — Visiting Neelkanth Mahadev Temple courtyard for darshan, brass bell, and oil diya.
 8. **Route to Baal Kuwari & Pre-Climb Maggi Stop (`Scene 8`)** — Riding onward along mountain forest roads toward **Baal Kuwari Temple**, stopping for a dedicated **Maggi stop** at the base before beginning the steep climb.
@@ -246,14 +246,14 @@ Despite Kumbhkaran's late morning delay, the group reaches **Neelkanth Mahadev T
 
 ---
 
-### Scene 8 — Ride to Baal Kuwari & Pre-Climb Maggi Stop (GAMEPLAY · Act 2)
+### Scene 8 — Off-Road Route to Baal Kuwari, Maggi Clearing & Forest Approach (GAMEPLAY · Act 2)
 
-**Camera:** Third-person scooter follow on shadowed forest mountain curves → third-person walk mode at the trailhead base clearing  
+**Camera:** Third-person scooter follow along a rugged mountain dirt track → third-person walk mode at a separate roadside Maggi clearing → forested uphill footpath camera arriving below the Baal Kuwari staircase  
 **What happens:**  
-Leaving **Neelkanth Mahadev Temple** back on their parked scooters, all four friends ride along a scenic forest mountain route (`segment: 'to_baalkuwari'`) toward the **Baal Kuwari** trailhead `[CORE]`. At the trailhead clearing beneath tall trees and the stone staircase gate, the group pauses at a distinct **pre-climb roadside Maggi stall** before beginning the ~400-step ascent `[CORE]`. *(Visually separate from Scene 6's valley overlook dhaba.)*
+Leaving **Neelkanth Mahadev Temple** back on their parked scooters, all four friends navigate a rugged, uneven mountain off-road dirt track (`segment: 'to_baalkuwari'`) toward the Baal Kuwari region `[CORE]`. Along the route, they stop at a separate natural forested roadside clearing with an authentic Maggi tapri to gather, sit cleanly around a wooden table, and eat before moving on (`subStage: 'maggi_stop'`) `[CORE]`. From there, the group walks along a winding forested mountain footpath (`subStage: 'forest_footpath'`) with rocks, pines, and gradual elevation change to reach the stone entrance of the ~400-step Baal Kuwari climb `[CORE]`. *(The staircase is geographically separated from the Maggi stall rather than attached directly behind the table.)*
 
-**Director's note:** Neelkanth Mahadev and Baal Kuwari Temple are **two separate destinations** connected by this scooter journey, and eating Maggi before starting the stairs preserves the real sequence without invented dialogue.  
-**Transition out:** Gather at the base archway & step onto the stone steps (`Press E`) → Scene 9
+**Director's note:** Neelkanth Mahadev and Baal Kuwari Temple are **two separate destinations** connected by this adventurous off-road scooter journey, followed by a separate pre-climb Maggi clearing and forest approach footpath before the ~400 stairs begin.  
+**Transition out:** Reach the staircase gate at the end of the forest footpath (`Press E`) → Scene 9
 
 ---
 
@@ -1147,9 +1147,15 @@ A self-contained playable demo proving the core 3D driving loop, attachment seat
    - Scene 11 (`Evening Safe Return` downhill scooter segment `'to_hotel_return'` with calm pacing & Scooter 2 escort — zero reckless driving)
    - Scene 12 (`Rishikesh Hotel Return`: ground/1st floor hotel courtyard context, Srishti rejoining her original friends without depicting a bus-stand dropoff, gentle farewell wave + Trip Complete card)
    - Passing `npm.cmd run typecheck` and `npm.cmd run build`, committed & pushed to `origin/main`
+3. **Commit 3 — Baal Kuwari Realism Correction (Post-Review Corrective Commit):**
+   - Corrected `MASTER_PLAN.md` Day 2 note: morning bun maska and chai were eaten **with Ishaan**, not with Srishti's original friends
+   - Upgraded `'to_baalkuwari'` into a rugged, controllable mountain off-road dirt track with ruts, stones, hill traffic, subtle scooter suspension heave, and damped camera reaction
+   - Separated the roadside Maggi clearing from the temple staircase, replaced the flat brown platform with contoured forested clearing terrain, fixed stool collisions & Srishti stand-up placement, and improved companion radial gathering
+   - Added playable `forest_footpath` approach (`Scene 8` sub-stage) leading from the Maggi stop through trees, rocks, and rising grade to the Baal Kuwari staircase entrance without inventing real-world distances
+   - Rebuilt Scene 9's ~400-step staircase into winding multi-turn hillside flights with angled landings & grounded mountain slopes across Phase 3 scenes
 
-**Known Deferred Issue (Intentional Exclusion from Phase 3 Fix):**
-- Some hillside mountain geometry and trees across road/temple segments still appear to float visually in rendered builds; recorded as an open visual-polish item for dedicated environment inspection rather than claimed fixed in Phase 3.
+**Known Deferred Issue (Earlier Phase 1–2 Scope):**
+- Some outer mountain slope geometry / foliage edges in earlier Phase 1–2 road and temple scenes remain recorded as an open visual-polish item, while affected Phase 3 scenes received direct terrain, rock, stool, and tree grounding fixes.
 
 ### Known Deferred Visual Issues Log
 | Issue | Scope | Status |

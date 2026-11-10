@@ -84,7 +84,8 @@ export function validateCheckpointData(raw: unknown): CheckpointData | null {
   if (
     candidate.baalKuwariSubStage !== undefined &&
     candidate.baalKuwariSubStage !== 'driving' &&
-    candidate.baalKuwariSubStage !== 'maggi_stop'
+    candidate.baalKuwariSubStage !== 'maggi_stop' &&
+    candidate.baalKuwariSubStage !== 'forest_footpath'
   ) {
     return null;
   }

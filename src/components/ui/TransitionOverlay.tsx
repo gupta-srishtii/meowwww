@@ -28,9 +28,9 @@ function getFriendlyStopTitle(
   if (sceneId === 6) return 'Maggi & Chai Tapri';
   if (sceneId === 7) return 'Neelkanth Mahadev Temple';
   if (sceneId === 8) {
-    return baalKuwariSubStage === 'maggi_stop'
-      ? 'Baal Kuwari Trailhead Maggi Stop'
-      : 'Mountain Route to Baal Kuwari';
+    if (baalKuwariSubStage === 'maggi_stop') return 'Roadside Maggi Clearing';
+    if (baalKuwariSubStage === 'forest_footpath') return 'Forest Trail to Baal Kuwari Stairs';
+    return 'Off-Road Track to Baal Kuwari';
   }
   if (sceneId === 9) return 'Baal Kuwari: The ~400 Stairs';
   if (sceneId === 10) return 'Baal Kuwari Summit Temple';

@@ -43,6 +43,7 @@ import {
   VIEWPOINT_TURNOUT_START,
   createMountainRoadCurve,
   getSegmentStopDistance,
+  sampleOffroadTrackBump,
   sampleRoadFrame,
   type MountainRoadSegmentId,
 } from '@/lib/mountainSpline';
@@ -438,6 +439,8 @@ export function ScooterPrototypeScene({
         }
       } else {
         // Normal manual cruise driving along mountain highway
+        const segmentMaxSpeed =
+          roadSegment === 'to_baalkuwari' ? SCOOTER_MAX_SPEED * 0.88 : SCOOTER_MAX_SPEED;
         if (input.throttle > 0) {
           sim.leadSpeed += SCOOTER_ACCEL * input.throttle * delta;
         }
@@ -449,7 +452,7 @@ export function ScooterPrototypeScene({
             sim.leadSpeed = 0;
           }
         }
-        sim.leadSpeed = THREE.MathUtils.clamp(sim.leadSpeed, 0, SCOOTER_MAX_SPEED);
+        sim.leadSpeed = THREE.MathUtils.clamp(sim.leadSpeed, 0, segmentMaxSpeed);
 
         const steerAuthority = THREE.MathUtils.clamp(sim.leadSpeed / 4.0, 0.25, 1.0);
         sim.leadLateral += input.steer * SCOOTER_STEER_SPEED * steerAuthority * delta;
@@ -580,6 +583,12 @@ export function ScooterPrototypeScene({
       delta
     );
 
+    const isOffroadSegment = roadSegment === 'to_baalkuwari';
+    const leadBump = isOffroadSegment
+      ? sampleOffroadTrackBump(sim.leadDist, sim.leadLateral, stopDist)
+      : { heaveY: 0, pitchRad: 0, rollRad: 0 };
+    const leadMotionScale = THREE.MathUtils.clamp(sim.leadSpeed / 3.0, 0, 1);
+
     // 3. Apply spline frame transform + lean/wheel/fork motion to Scooter 1
     if (leadGroupRef.current) {
       sampleRoadFrame(
@@ -597,12 +606,17 @@ export function ScooterPrototypeScene({
 
       const leadSpeedRatio = sim.leadSpeed / SCOOTER_MAX_SPEED;
       const leanAngle = -sim.leadSteerSmoothed * 0.14 * leadSpeedRatio;
-      scratch.leanEuler.set(0, -sim.leadSteerSmoothed * 0.08 * leadSpeedRatio, leanAngle);
+      scratch.leanEuler.set(
+        leadBump.pitchRad * leadMotionScale,
+        -sim.leadSteerSmoothed * 0.08 * leadSpeedRatio,
+        leanAngle + leadBump.rollRad * leadMotionScale
+      );
       scratch.leanQuat.setFromEuler(scratch.leanEuler);
 
       leadGroupRef.current.position
         .copy(scratch.point)
-        .addScaledVector(scratch.right, sim.leadLateral);
+        .addScaledVector(scratch.right, sim.leadLateral)
+        .addScaledVector(scratch.up, leadBump.heaveY * leadMotionScale);
       leadGroupRef.current.quaternion.multiplyQuaternions(scratch.roadQuat, scratch.leanQuat);
 
       if (leadForkRef.current) {
@@ -631,13 +645,22 @@ export function ScooterPrototypeScene({
 
       const compMoveDelta = sim.compDist - prevCompDist;
       const compSpeedRatio = THREE.MathUtils.clamp(compMoveDelta / delta / SCOOTER_MAX_SPEED, 0, 1);
+      const compBump = isOffroadSegment
+        ? sampleOffroadTrackBump(sim.compDist, sim.compLateral, stopDist)
+        : { heaveY: 0, pitchRad: 0, rollRad: 0 };
+      const compMotionScale = THREE.MathUtils.clamp(compSpeedRatio * 3.5, 0, 1);
       const compLeanAngle = -sim.compSteerSmoothed * 0.1 * compSpeedRatio;
-      scratch.leanEuler.set(0, -sim.compSteerSmoothed * 0.05 * compSpeedRatio, compLeanAngle);
+      scratch.leanEuler.set(
+        compBump.pitchRad * compMotionScale,
+        -sim.compSteerSmoothed * 0.05 * compSpeedRatio,
+        compLeanAngle + compBump.rollRad * compMotionScale
+      );
       scratch.leanQuat.setFromEuler(scratch.leanEuler);
 
       compGroupRef.current.position
         .copy(scratch.point)
-        .addScaledVector(scratch.right, sim.compLateral);
+        .addScaledVector(scratch.right, sim.compLateral)
+        .addScaledVector(scratch.up, compBump.heaveY * compMotionScale);
       compGroupRef.current.quaternion.multiplyQuaternions(scratch.roadQuat, scratch.leanQuat);
 
       if (compForkRef.current) {
@@ -664,10 +687,11 @@ export function ScooterPrototypeScene({
     }
 
     const followLateralMix = sim.leadLateral * 0.42;
+    const camTrackHeave = leadBump.heaveY * leadMotionScale;
     scratch.desiredCamPos
       .copy(scratch.camPoint)
       .addScaledVector(scratch.camRight, followLateralMix)
-      .addScaledVector(scratch.camUp, CAM_HEIGHT_OFFSET);
+      .addScaledVector(scratch.camUp, CAM_HEIGHT_OFFSET + camTrackHeave * 0.45);
 
     const lookDist = Math.min(totalLength - 1, sim.leadDist + CAM_LOOK_AHEAD);
     sampleRoadFrame(
@@ -682,7 +706,7 @@ export function ScooterPrototypeScene({
     scratch.desiredLookAt
       .copy(scratch.point)
       .addScaledVector(scratch.right, sim.leadLateral * 0.52)
-      .addScaledVector(scratch.up, CAM_LOOK_HEIGHT);
+      .addScaledVector(scratch.up, CAM_LOOK_HEIGHT + camTrackHeave * 0.25);
 
     if (!sim.cameraInitialized) {
       camera.position.copy(scratch.desiredCamPos);
