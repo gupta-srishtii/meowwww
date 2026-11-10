@@ -32,6 +32,7 @@ export interface BaalKuwariHUDProps {
   rangBell?: boolean;
   capturedPolaroid?: boolean;
   polaroidToastVisible?: boolean;
+  polaroidId?: string;
   toastTitle?: string;
   toastCaption?: string;
   onDismissPolaroidToast?: () => void;
@@ -62,6 +63,7 @@ export function BaalKuwariHUD({
   rangBell = false,
   capturedPolaroid = false,
   polaroidToastVisible = false,
+  polaroidId = 'scene10_baalkuwari',
   toastTitle = 'Baal Kuwari Temple',
   toastCaption = 'Baal Kuwari Summit · After ~400 Steps',
   onDismissPolaroidToast,
@@ -218,6 +220,7 @@ export function BaalKuwariHUD({
 
       {polaroidToastVisible && onDismissPolaroidToast && (
         <PolaroidToastCard
+          polaroidId={polaroidId}
           caption={toastCaption}
           title={toastTitle}
           gradientClass="from-sky-100 via-amber-100 to-emerald-100"

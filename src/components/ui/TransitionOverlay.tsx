@@ -86,10 +86,10 @@ export function TransitionOverlay({
 
   return (
     <>
-      {/* 350ms Cinematic Fade Curtain */}
+      {/* Smooth Cinematic Fade Curtain */}
       <div
         aria-hidden={!curtainOpaque}
-        className={`fixed inset-0 z-30 flex items-center justify-center bg-[#060913] transition-opacity duration-[350ms] ease-in-out ${
+        className={`fixed inset-0 z-30 flex items-center justify-center bg-[#060913] transition-opacity duration-[380ms] ease-out ${
           curtainOpaque
             ? 'pointer-events-auto opacity-100'
             : 'pointer-events-none opacity-0'

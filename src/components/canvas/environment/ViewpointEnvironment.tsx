@@ -164,13 +164,14 @@ export function ViewpointEnvironment({
         x = sideSign * (8 + ((i * 7.1) % 38));
         z = i % 4 === 0 ? -36 - (i % 8) * 1.4 : -10.4 - (i % 5) * 1.3;
       }
-      // Embed trunk base ~18cm directly into contoured hillside terrain
-      const y = sampleViewpointTerrainY(x, z) - 0.18;
+      const scale = 0.78 + ((i * 19) % 10) * 0.055;
+      // Deep-ground trunk base directly into sloped mountain gorge terrain so zero roots float
+      const y = sampleViewpointTerrainY(x, z) - 0.56 * scale;
       list.push({
         x,
         y,
         z,
-        scale: 0.78 + ((i * 19) % 10) * 0.055,
+        scale,
         rotY: (i * 1.13) % (Math.PI * 2),
       });
     }
@@ -185,13 +186,13 @@ export function ViewpointEnvironment({
     const dummy = new THREE.Object3D();
     for (let i = 0; i < pineCount; i++) {
       const t = pineTransforms[i];
-      dummy.position.set(t.x, t.y + 0.9 * t.scale, t.z);
+      dummy.position.set(t.x, t.y + 0.92 * t.scale, t.z);
       dummy.rotation.set(0, t.rotY, 0);
       dummy.scale.set(t.scale, t.scale, t.scale);
       dummy.updateMatrix();
       trunks.setMatrixAt(i, dummy.matrix);
 
-      dummy.position.set(t.x, t.y + 2.6 * t.scale, t.z);
+      dummy.position.set(t.x, t.y + 2.55 * t.scale, t.z);
       dummy.updateMatrix();
       crowns.setMatrixAt(i, dummy.matrix);
     }
@@ -436,7 +437,7 @@ export function ViewpointEnvironment({
 
       {/* Warm hillside pine instancing */}
       <instancedMesh ref={trunkRef} args={[undefined, undefined, MAX_PINE_COUNT]}>
-        <cylinderGeometry args={[0.16, 0.24, 1.8, 6]} />
+        <cylinderGeometry args={[0.15, 0.22, 2.2, 7]} />
         <meshStandardMaterial color="#5b3e28" roughness={0.92} />
       </instancedMesh>
       <instancedMesh

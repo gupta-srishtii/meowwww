@@ -91,12 +91,15 @@ export function ViewpointHUD({
 
       {polaroidToastKind && (
         <PolaroidToastCard
+          polaroidId={
+            polaroidToastKind === 'solo' ? 'scene05_viewpoint_solo' : 'scene05_viewpoint_group'
+          }
           caption={
             polaroidToastKind === 'solo'
-              ? 'Valley Gorge · Solo Moment'
+              ? 'Valley Gorge · Mountain Viewpoint'
               : 'All Four Friends · Overlook Rail'
           }
-          title={polaroidToastKind === 'solo' ? 'Overlook Solitude' : 'Together Above the Gorge'}
+          title={polaroidToastKind === 'solo' ? 'Mountain Overlook' : 'Hum Chaar Saath Mein'}
           gradientClass="from-sky-200 via-emerald-100 to-amber-100"
           onDismiss={onDismissPolaroidToast}
         />

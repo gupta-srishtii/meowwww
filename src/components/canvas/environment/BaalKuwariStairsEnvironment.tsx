@@ -322,6 +322,9 @@ const STAIRS_RIDGES: readonly HimalayanRidgeSpec[] = [
 ];
 
 const MAX_PINE_TREES = 115;
+const MAX_STAIR_BOULDERS = STAIR_SEGMENTS.length * 2;
+const MAX_STAIR_POSTS = 24;
+const MAX_STAIR_TREADS = 4 * 42;
 const FLAG_COLORS = ['#ef4444', '#f59e0b', '#f8fafc', '#22c55e', '#3b82f6'];
 
 export interface BaalKuwariStairsEnvironmentProps {
@@ -350,6 +353,9 @@ export function BaalKuwariStairsEnvironment({
 
   const trunkInstRef = useRef<THREE.InstancedMesh>(null);
   const crownInstRef = useRef<THREE.InstancedMesh>(null);
+  const boulderInstRef = useRef<THREE.InstancedMesh>(null);
+  const postInstRef = useRef<THREE.InstancedMesh>(null);
+  const treadInstRef = useRef<THREE.InstancedMesh>(null);
   const flagRefs = useRef<(THREE.Mesh | null)[]>([]);
   const phaseRef = useRef(0);
 
@@ -434,6 +440,71 @@ export function BaalKuwariStairsEnvironment({
     crownInstRef.current.instanceMatrix.needsUpdate = true;
   }, [pineCount, pinePlacements]);
 
+  useEffect(() => {
+    const dummy = new THREE.Object3D();
+
+    if (boulderInstRef.current) {
+      const count = Math.min(MAX_STAIR_BOULDERS, landingBoulders.length);
+      boulderInstRef.current.count = count;
+      for (let i = 0; i < count; i += 1) {
+        const rock = landingBoulders[i];
+        dummy.position.set(rock.pos[0], rock.pos[1], rock.pos[2]);
+        dummy.rotation.set(0.1, rock.yaw, 0.08);
+        dummy.scale.set(rock.scale[0], rock.scale[1], rock.scale[2]);
+        dummy.updateMatrix();
+        boulderInstRef.current.setMatrixAt(i, dummy.matrix);
+      }
+      boulderInstRef.current.instanceMatrix.needsUpdate = true;
+    }
+
+    if (postInstRef.current && treadInstRef.current) {
+      const flightMat = new THREE.Matrix4();
+      const pitchMat = new THREE.Matrix4();
+      const localMat = new THREE.Matrix4();
+      const composedMat = new THREE.Matrix4();
+      const lightStone = new THREE.Color('#9e9280');
+      const darkStone = new THREE.Color('#918573');
+
+      let postIdx = 0;
+      let treadIdx = 0;
+      for (let f = 0; f < flightMeshes.length; f += 1) {
+        const { seg, hyp, pitch, midX, midY, midZ, treads } = flightMeshes[f];
+        flightMat.makeRotationY(seg.yaw);
+        flightMat.setPosition(midX, midY, midZ);
+        pitchMat.makeRotationX(pitch);
+
+        const uStops = [-0.38, 0, 0.38];
+        const rxStops = [-1.5, 1.5];
+        for (let ui = 0; ui < uStops.length; ui += 1) {
+          for (let ri = 0; ri < rxStops.length; ri += 1) {
+            if (postIdx >= MAX_STAIR_POSTS) break;
+            localMat.makeTranslation(rxStops[ri], 0.45, uStops[ui] * hyp);
+            composedMat.multiplyMatrices(flightMat, pitchMat).multiply(localMat);
+            postInstRef.current.setMatrixAt(postIdx, composedMat);
+            postIdx += 1;
+          }
+        }
+
+        for (let tIdx = 0; tIdx < treads.length; tIdx += 1) {
+          if (treadIdx >= MAX_STAIR_TREADS) break;
+          const tread = treads[tIdx];
+          localMat.makeTranslation(0, tread.localY - 0.05, tread.localZ);
+          composedMat.multiplyMatrices(flightMat, localMat);
+          treadInstRef.current.setMatrixAt(treadIdx, composedMat);
+          treadInstRef.current.setColorAt(treadIdx, tIdx % 2 === 0 ? lightStone : darkStone);
+          treadIdx += 1;
+        }
+      }
+      postInstRef.current.count = postIdx;
+      postInstRef.current.instanceMatrix.needsUpdate = true;
+      treadInstRef.current.count = treadIdx;
+      treadInstRef.current.instanceMatrix.needsUpdate = true;
+      if (treadInstRef.current.instanceColor) {
+        treadInstRef.current.instanceColor.needsUpdate = true;
+      }
+    }
+  }, [flightMeshes, landingBoulders]);
+
   useFrame((_, rawDelta) => {
     if (paused || reducedMotion || (typeof document !== 'undefined' && document.hidden)) return;
     phaseRef.current += Math.min(rawDelta, 0.05);
@@ -484,23 +555,37 @@ export function BaalKuwariStairsEnvironment({
       />
       <DistantHimalayanRidges ridges={STAIRS_RIDGES} />
 
-      {/* Natural Boulders Anchoring Turn Landings */}
-      {landingBoulders.map((rock, idx) => (
-        <mesh
-          key={`stair-rock-${idx}`}
-          position={rock.pos}
-          scale={rock.scale}
-          rotation={[0.1, rock.yaw, 0.08]}
-          castShadow={shadowsEnabled}
-          receiveShadow={shadowsEnabled}
-        >
-          <dodecahedronGeometry args={[0.75, 0]} />
-          <meshStandardMaterial color="#676f78" roughness={0.95} flatShading />
-        </mesh>
-      ))}
+      {/* Instanced Natural Boulders Anchoring Turn Landings */}
+      <instancedMesh
+        ref={boulderInstRef}
+        args={[undefined, undefined, MAX_STAIR_BOULDERS]}
+        castShadow={shadowsEnabled}
+        receiveShadow={shadowsEnabled}
+      >
+        <dodecahedronGeometry args={[0.75, 0]} />
+        <meshStandardMaterial color="#676f78" roughness={0.95} flatShading />
+      </instancedMesh>
 
-      {/* Winding Angled Flights with Deep Hillside Masonry Skirts & Individual Stone Treads */}
-      {flightMeshes.map(({ seg, hyp, pitch, midX, midY, midZ, treads }, idx) => (
+      {/* Instanced Railing Posts & 168 Stone Treads Across All 4 Flights */}
+      <instancedMesh
+        ref={postInstRef}
+        args={[undefined, undefined, MAX_STAIR_POSTS]}
+        castShadow={shadowsEnabled}
+      >
+        <boxGeometry args={[0.1, 0.95, 0.1]} />
+        <meshStandardMaterial color="#78716c" roughness={0.85} />
+      </instancedMesh>
+      <instancedMesh
+        ref={treadInstRef}
+        args={[undefined, undefined, MAX_STAIR_TREADS]}
+        receiveShadow={shadowsEnabled}
+      >
+        <boxGeometry args={[2.95, 0.18, 0.58]} />
+        <meshStandardMaterial color="#ffffff" roughness={0.93} />
+      </instancedMesh>
+
+      {/* Winding Angled Flights with Deep Hillside Masonry Skirts & Handrails */}
+      {flightMeshes.map(({ seg, hyp, pitch, midX, midY, midZ }, idx) => (
         <group key={`flight-${idx}`} position={[midX, midY, midZ]} rotation={[0, seg.yaw, 0]}>
           {/* Solid pitched masonry stringer & deep foundation embedding cleanly into mountain slope */}
           <group rotation={[pitch, 0, 0]}>
@@ -514,31 +599,7 @@ export function BaalKuwariStairsEnvironment({
                 <meshStandardMaterial color="#b45309" roughness={0.75} />
               </mesh>
             ))}
-            {[-0.38, 0, 0.38].map((u) =>
-              [-1.5, 1.5].map((rx) => (
-                <mesh
-                  key={`post-${u}-${rx}`}
-                  position={[rx, 0.45, u * hyp]}
-                  castShadow={shadowsEnabled}
-                >
-                  <boxGeometry args={[0.1, 0.95, 0.1]} />
-                  <meshStandardMaterial color="#78716c" roughness={0.85} />
-                </mesh>
-              ))
-            )}
           </group>
-
-          {/* Horizontal Stone Treads along Flight */}
-          {treads.map((tread, tIdx) => (
-            <mesh
-              key={`tread-${idx}-${tIdx}`}
-              position={[0, tread.localY - 0.05, tread.localZ]}
-              receiveShadow={shadowsEnabled}
-            >
-              <boxGeometry args={[2.95, 0.18, 0.58]} />
-              <meshStandardMaterial color={tIdx % 2 === 0 ? '#9e9280' : '#918573'} roughness={0.93} />
-            </mesh>
-          ))}
         </group>
       ))}
 

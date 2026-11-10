@@ -341,8 +341,8 @@ export function DhabaEnvironment({
     ];
     return coords.map(([x, z, s]): [number, number, number, number] => [
       x,
-      // Embed trunk base ~20cm cleanly into sloped hillside terrain
-      sampleDhabaTerrainY(x, z) - 0.2,
+      // Deep-ground trunk base directly into sloped mountain ridge terrain
+      sampleDhabaTerrainY(x, z) - 0.56 * s,
       z,
       s,
     ]);
@@ -357,12 +357,12 @@ export function DhabaEnvironment({
     const dummy = new THREE.Object3D();
     for (let i = 0; i < active; i += 1) {
       const [x, y, z, s] = pinePlacements[i];
-      dummy.position.set(x, y + 0.8 * s, z);
+      dummy.position.set(x, y + 0.92 * s, z);
       dummy.scale.set(s, s, s);
       dummy.updateMatrix();
       trunkInstRef.current.setMatrixAt(i, dummy.matrix);
 
-      dummy.position.set(x, y + 2.35 * s, z);
+      dummy.position.set(x, y + 2.55 * s, z);
       dummy.updateMatrix();
       crownInstRef.current.setMatrixAt(i, dummy.matrix);
     }
@@ -988,7 +988,7 @@ export function DhabaEnvironment({
 
       {/* Stylized Instanced Pines framing terrace & continuing highway */}
       <instancedMesh ref={trunkInstRef} args={[undefined, undefined, MAX_PINE_COUNT]}>
-        <cylinderGeometry args={[0.14, 0.2, 1.6, 6]} />
+        <cylinderGeometry args={[0.14, 0.22, 2.2, 7]} />
         <meshStandardMaterial color="#5c4033" roughness={0.95} />
       </instancedMesh>
       <instancedMesh ref={crownInstRef} args={[undefined, undefined, MAX_PINE_COUNT]}>

@@ -40,13 +40,13 @@ export function ControlsTutorialOverlay({
     >
       <div className="w-full max-w-md rounded-2xl border border-amber-300/40 bg-slate-900/95 p-5 text-slate-100 shadow-2xl">
         <p className="text-[11px] font-semibold tracking-[0.2em] text-amber-300 uppercase">
-          Quick Guide
+          Chalo Chalein
         </p>
         <h2 className="mt-1 text-base font-semibold text-white">
-          Riding Together Toward Neelkanth
+          Rishikesh Scooty Ride · For You, Ishaan
         </h2>
         <p className="mt-1 text-xs leading-relaxed text-slate-300">
-          Steer down the hills at your own pace, pull over at scenic stops, and explore with Ishaan and friends.
+          Kitaabi Dastaan chats aur calls ke baad finally Rishikesh — apni scooty chalaao, Maggi &amp; chai stops pe ruko, aur hum sabke saath Neelkanth aur Baal Kuwari tak chalo.
         </p>
 
         {isTouchDevice ? (

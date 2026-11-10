@@ -110,6 +110,8 @@ export function BaalKuwariFootpathEnvironment({
 
   const trunkInstRef = useRef<THREE.InstancedMesh>(null);
   const crownInstRef = useRef<THREE.InstancedMesh>(null);
+  const boulderInstRef = useRef<THREE.InstancedMesh>(null);
+  const stoneInstRef = useRef<THREE.InstancedMesh>(null);
 
   const pinePlacements = useMemo(() => {
     const items: Array<[number, number, number, number]> = [];
@@ -172,6 +174,41 @@ export function BaalKuwariFootpathEnvironment({
     return stones;
   }, []);
 
+  useEffect(() => {
+    const dummy = new THREE.Object3D();
+    if (boulderInstRef.current) {
+      const colorA = new THREE.Color('#68717a');
+      const colorB = new THREE.Color('#5b636b');
+      boulderInstRef.current.count = pathBouldersAndLogs.length;
+      for (let i = 0; i < pathBouldersAndLogs.length; i += 1) {
+        const rock = pathBouldersAndLogs[i];
+        dummy.position.set(rock.pos[0], rock.pos[1], rock.pos[2]);
+        dummy.rotation.set(0.1, rock.yaw, 0.08);
+        dummy.scale.set(rock.scale[0], rock.scale[1], rock.scale[2]);
+        dummy.updateMatrix();
+        boulderInstRef.current.setMatrixAt(i, dummy.matrix);
+        boulderInstRef.current.setColorAt(i, i % 2 === 0 ? colorA : colorB);
+      }
+      boulderInstRef.current.instanceMatrix.needsUpdate = true;
+      if (boulderInstRef.current.instanceColor) {
+        boulderInstRef.current.instanceColor.needsUpdate = true;
+      }
+    }
+
+    if (stoneInstRef.current) {
+      stoneInstRef.current.count = steppingStones.length;
+      for (let i = 0; i < steppingStones.length; i += 1) {
+        const stone = steppingStones[i];
+        dummy.position.set(stone.pos[0], stone.pos[1], stone.pos[2]);
+        dummy.rotation.set(0, stone.yaw, 0);
+        dummy.scale.set(1, 1, 1);
+        dummy.updateMatrix();
+        stoneInstRef.current.setMatrixAt(i, dummy.matrix);
+      }
+      stoneInstRef.current.instanceMatrix.needsUpdate = true;
+    }
+  }, [pathBouldersAndLogs, steppingStones]);
+
   const gateCenterX = sampleFootpathCenterX(-60.4);
   const gateY = sampleFootpathY(-60.4);
 
@@ -206,33 +243,25 @@ export function BaalKuwariFootpathEnvironment({
       />
       <DistantHimalayanRidges ridges={FOOTPATH_RIDGES} />
 
-      {/* Natural Pathside Boulders & Trailside Shrubs */}
-      {pathBouldersAndLogs.map((rock, idx) => (
-        <mesh
-          key={`trail-rock-${idx}`}
-          position={rock.pos}
-          scale={rock.scale}
-          rotation={[0.1, rock.yaw, 0.08]}
-          castShadow={shadowsEnabled}
-          receiveShadow={shadowsEnabled}
-        >
-          <dodecahedronGeometry args={[0.72, 0]} />
-          <meshStandardMaterial color={idx % 2 === 0 ? '#68717a' : '#5b636b'} roughness={0.95} flatShading />
-        </mesh>
-      ))}
+      {/* Instanced Pathside Boulders & Trail Stones */}
+      <instancedMesh
+        ref={boulderInstRef}
+        args={[undefined, undefined, pathBouldersAndLogs.length]}
+        castShadow={shadowsEnabled}
+        receiveShadow={shadowsEnabled}
+      >
+        <dodecahedronGeometry args={[0.72, 0]} />
+        <meshStandardMaterial color="#ffffff" roughness={0.95} flatShading />
+      </instancedMesh>
 
-      {/* Flat Embedded Trail Stones Guiding Walk Up the Forest Path */}
-      {steppingStones.map((stone, idx) => (
-        <mesh
-          key={`stone-${idx}`}
-          position={stone.pos}
-          rotation={[0, stone.yaw, 0]}
-          receiveShadow={shadowsEnabled}
-        >
-          <cylinderGeometry args={[0.38, 0.42, 0.06, 8]} />
-          <meshStandardMaterial color="#837867" roughness={0.94} />
-        </mesh>
-      ))}
+      <instancedMesh
+        ref={stoneInstRef}
+        args={[undefined, undefined, steppingStones.length]}
+        receiveShadow={shadowsEnabled}
+      >
+        <cylinderGeometry args={[0.38, 0.42, 0.06, 8]} />
+        <meshStandardMaterial color="#837867" roughness={0.94} />
+      </instancedMesh>
 
       {/* Arrival Sightline: First View of the Baal Kuwari Staircase Entrance Arch (`z = -60.4`) */}
       <group position={[gateCenterX, gateY, -60.4]}>

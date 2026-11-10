@@ -42,7 +42,7 @@ import {
   type DevFailureMode,
 } from '@/store/progressStore';
 
-export const FADE_DURATION_MS = 350;
+export const FADE_DURATION_MS = 380;
 
 export interface RequestTransitionOptions {
   simulateFailureMode?: DevFailureMode;
@@ -76,6 +76,7 @@ export function useSceneTransitionController(): SceneManagerController {
   const transitionTokenRef = useRef<number>(0);
   const fadeOutTimerRef = useRef<number | null>(null);
   const fadeInTimerRef = useRef<number | null>(null);
+  const fadeInRafRef = useRef<number | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const cancelPendingAsync = useCallback(() => {
@@ -86,6 +87,10 @@ export function useSceneTransitionController(): SceneManagerController {
     if (fadeInTimerRef.current !== null) {
       window.clearTimeout(fadeInTimerRef.current);
       fadeInTimerRef.current = null;
+    }
+    if (fadeInRafRef.current !== null) {
+      window.cancelAnimationFrame(fadeInRafRef.current);
+      fadeInRafRef.current = null;
     }
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -240,11 +245,19 @@ export function useSceneTransitionController(): SceneManagerController {
       });
     }
 
-    fadeInTimerRef.current = window.setTimeout(() => {
-      fadeInTimerRef.current = null;
+    // Wait two render frames behind the curtain so WebGL geometry & procedural textures settle before fading in.
+    fadeInRafRef.current = window.requestAnimationFrame(() => {
       if (token !== transitionTokenRef.current) return;
-      useProgressStore.getState().finishFadeIn(token);
-    }, FADE_DURATION_MS);
+      fadeInRafRef.current = window.requestAnimationFrame(() => {
+        fadeInRafRef.current = null;
+        if (token !== transitionTokenRef.current) return;
+        fadeInTimerRef.current = window.setTimeout(() => {
+          fadeInTimerRef.current = null;
+          if (token !== transitionTokenRef.current) return;
+          useProgressStore.getState().finishFadeIn(token);
+        }, FADE_DURATION_MS);
+      });
+    });
   }, []);
 
   const onMountedSceneError = useCallback(

@@ -35,7 +35,7 @@ export const HOTEL_OBSTACLES: readonly WalkObstacle[] = [
 export const HOTEL_HOTSPOTS: readonly WalkHotspot[] = [
   {
     id: 'rejoin_farewell',
-    label: 'Rejoin Original Friends & Gentle Farewell',
+    label: 'Drop Srishti to Her Friends & Wave Goodbye',
     x: 2.15,
     z: -0.85,
     radius: 2.25,
@@ -256,14 +256,14 @@ export function HotelReturnEnvironment({
           </mesh>
         ))}
 
-        {/* Warm Hotel Lanterns Lighting Evening Courtyard */}
+        {/* Warm Hotel Lanterns Lighting Evening Courtyard (1 key fill light + emissive globes) */}
+        <pointLight position={[0.4, 2.35, 2.95]} intensity={2.1} color="#fbbf24" distance={14} />
         {[-3.2, 0.4, 3.8].map((lx) => (
           <group key={lx} position={[lx, 2.42, 2.7]}>
             <mesh>
               <sphereGeometry args={[0.11, 10, 10]} />
               <meshBasicMaterial color="#fde047" />
             </mesh>
-            <pointLight position={[0, -0.1, 0.2]} intensity={1.35} color="#fbbf24" distance={8.5} />
           </group>
         ))}
       </group>

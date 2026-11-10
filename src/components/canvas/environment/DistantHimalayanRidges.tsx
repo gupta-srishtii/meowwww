@@ -1,11 +1,15 @@
 'use client';
 
+import * as THREE from 'three';
+
 export interface HimalayanRidgeSpec {
   position: readonly [number, number, number];
   scale: readonly [number, number, number];
   rotationY?: number;
   color: string;
 }
+
+const SHARED_RIDGE_SPHERE_GEOMETRY = new THREE.SphereGeometry(1, 18, 10);
 
 const DEFAULT_HIGHWAY_RIDGES: readonly HimalayanRidgeSpec[] = [
   { position: [-165, -8, -110], scale: [120, 62, 95], rotationY: 0.35, color: '#6b8ba4' },
@@ -37,11 +41,11 @@ export function DistantHimalayanRidges({
       {ridges.map((ridge, index) => (
         <mesh
           key={index}
+          geometry={SHARED_RIDGE_SPHERE_GEOMETRY}
           position={[ridge.position[0], ridge.position[1], ridge.position[2]]}
           rotation={[0, ridge.rotationY ?? 0, 0]}
           scale={[ridge.scale[0], ridge.scale[1], ridge.scale[2]]}
         >
-          <sphereGeometry args={[1, 24, 14]} />
           <meshStandardMaterial color={ridge.color} roughness={0.96} metalness={0.02} />
         </mesh>
       ))}

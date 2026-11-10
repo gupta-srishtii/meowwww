@@ -99,7 +99,8 @@ export function NeelkanthHUD({
 
       {polaroidToastVisible && (
         <PolaroidToastCard
-          caption="Neelkanth Temple · Courtyard Memory"
+          polaroidId="scene07_neelkanth"
+          caption="Neelkanth Temple · Darshan ke Baad"
           title="Neelkanth Mahadev"
           gradientClass="from-amber-100 via-orange-100 to-sky-200"
           onDismiss={onDismissPolaroidToast}

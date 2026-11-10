@@ -11,6 +11,7 @@ import {
 import { HotspotBeaconSparkle } from '@/components/canvas/environment/HotspotBeaconSparkle';
 import type { WalkBounds, WalkHotspot, WalkObstacle } from '@/hooks/useWalkController';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { getStoneCourtyardTexture } from '@/lib/proceduralTextures';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
 
 export const BAAL_KUWARI_TEMPLE_WALK_BOUNDS: WalkBounds = {
@@ -111,6 +112,7 @@ export function BaalKuwariTempleEnvironment({
 }: BaalKuwariTempleEnvironmentProps) {
   const shadowsEnabled = QUALITY_PRESETS[qualityProfile].shadows;
   const reducedMotion = useReducedMotion();
+  const courtyardTex = useMemo(() => getStoneCourtyardTexture(), []);
 
   const bellPivotRef = useRef<THREE.Group>(null);
   const flagRefs = useRef<(THREE.Mesh | null)[]>([]);
@@ -201,15 +203,27 @@ export function BaalKuwariTempleEnvironment({
         shadow-camera-bottom={-18}
       />
 
-      {/* Hilltop Sanctuary Stone Terrace & Steep Mountain Plinth */}
+      {/* Hilltop Sanctuary Stone Terrace, Flagstone Pavement & Steep Mountain Plinth */}
       <mesh position={[0, -3.5, 0.2]} receiveShadow={shadowsEnabled}>
         <boxGeometry args={[16.8, 6.8, 13.6]} />
         <meshStandardMaterial color="#6e6353" roughness={0.95} />
       </mesh>
       <mesh position={[0, -0.05, 0.2]} receiveShadow={shadowsEnabled}>
         <boxGeometry args={[16.6, 0.14, 13.4]} />
-        <meshStandardMaterial color="#aba08e" roughness={0.88} />
+        <meshStandardMaterial
+          color="#cbc0ae"
+          map={courtyardTex ?? undefined}
+          roughness={0.88}
+        />
       </mesh>
+
+      {/* Low Carved Sandstone Courtyard Parapet Rim Along West & East Cliffs */}
+      {[-8.05, 8.05].map((wx) => (
+        <mesh key={wx} position={[wx, 0.26, -0.4]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+          <boxGeometry args={[0.42, 0.56, 11.4]} />
+          <meshStandardMaterial color="#7e7262" roughness={0.92} />
+        </mesh>
+      ))}
 
       {/* Panoramic Summit Hillside Skirt & Distant Blue Himalayan Horizon */}
       <ConnectedHillTerrain
@@ -245,43 +259,90 @@ export function BaalKuwariTempleEnvironment({
         </mesh>
       ))}
 
-      {/* Peaceful Hilltop Sanctuary Pavilion (`z = -4.0`) */}
+      {/* Peaceful Pahadi / Katyuri Hilltop Sanctuary Pavilion (`z = -4.0`) */}
       <group position={[0, 0, -4.0]}>
-        {/* Carved Sandstone Jagati Plinth */}
+        {/* Carved Sandstone Jagati Plinth + Front Entrance Steps */}
         <mesh position={[0, 0.22, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
-          <boxGeometry args={[4.9, 0.44, 3.2]} />
+          <boxGeometry args={[4.95, 0.44, 3.2]} />
           <meshStandardMaterial color="#8c7d6b" roughness={0.9} />
         </mesh>
-        {/* Sanctum Walls & Warm Timber Door Frame */}
-        <mesh position={[0, 1.55, -0.25]} castShadow={shadowsEnabled}>
-          <boxGeometry args={[3.6, 2.25, 2.1]} />
+        <mesh position={[0, 0.11, 1.48]} receiveShadow={shadowsEnabled}>
+          <boxGeometry args={[2.35, 0.22, 0.48]} />
+          <meshStandardMaterial color="#9c8d7a" roughness={0.9} />
+        </mesh>
+        {/* Sanctum Stone Masonry & Cream Stucco Walls */}
+        <mesh position={[0, 1.55, -0.25]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+          <boxGeometry args={[3.7, 2.28, 2.15]} />
           <meshStandardMaterial color="#efe5d1" roughness={0.84} />
         </mesh>
-        <mesh position={[0, 1.25, 0.81]}>
-          <boxGeometry args={[1.05, 1.75, 0.08]} />
-          <meshStandardMaterial color="#78350f" roughness={0.86} />
+        {/* Carved Deodar Corner Pilasters & Dark Timber Chhajja Cornice */}
+        {[-1.82, 1.82].map((cx) => (
+          <mesh key={cx} position={[cx, 1.55, 0.8]} castShadow={shadowsEnabled}>
+            <boxGeometry args={[0.24, 2.28, 0.22]} />
+            <meshStandardMaterial color="#5c3a21" roughness={0.88} />
+          </mesh>
+        ))}
+        {/* Carved Sanctum Doorway, Garbhagriha Glow & Marigold Toran Accent */}
+        <mesh position={[0, 1.28, 0.83]}>
+          <boxGeometry args={[1.18, 1.78, 0.1]} />
+          <meshStandardMaterial color="#522710" roughness={0.86} />
         </mesh>
-        {/* Pahadi Slate & Brass Tiered Shikhara Roof */}
-        <mesh position={[0, 2.95, -0.15]} castShadow={shadowsEnabled}>
-          <boxGeometry args={[4.4, 0.55, 2.9]} />
-          <meshStandardMaterial color="#c2410c" roughness={0.78} />
+        <mesh position={[0, 1.24, 0.89]}>
+          <planeGeometry args={[0.82, 1.48]} />
+          <meshBasicMaterial color="#9a3412" />
         </mesh>
-        <mesh position={[0, 3.85, -0.15]} castShadow={shadowsEnabled}>
-          <coneGeometry args={[1.95, 1.35, 4]} />
-          <meshStandardMaterial color="#d97706" roughness={0.72} />
+        <mesh position={[0, 2.08, 0.9]}>
+          <boxGeometry args={[1.28, 0.14, 0.08]} />
+          <meshStandardMaterial color="#f59e0b" roughness={0.68} />
         </mesh>
-        <mesh position={[0, 4.75, -0.15]}>
-          <coneGeometry args={[0.2, 0.65, 8]} />
-          <meshStandardMaterial color="#fbbf24" metalness={0.65} roughness={0.28} />
+
+        {/* Pahadi Slate Overhanging Roof Tiers, Sandstone Amalaka & Brass Kalash Spire */}
+        <mesh position={[0, 2.74, -0.1]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[4.6, 0.18, 3.1]} />
+          <meshStandardMaterial color="#4b2e1e" roughness={0.88} />
         </mesh>
-        {/* Portico Timber Columns */}
+        <mesh position={[0, 3.06, -0.15]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[4.3, 0.42, 2.8]} />
+          <meshStandardMaterial color="#3f4a59" roughness={0.82} />
+        </mesh>
+        <mesh position={[0, 3.82, -0.15]} rotation={[0, Math.PI / 4, 0]} castShadow={shadowsEnabled}>
+          <coneGeometry args={[2.15, 1.25, 4]} />
+          <meshStandardMaterial color="#475569" roughness={0.8} />
+        </mesh>
+        <mesh position={[0, 4.42, -0.15]}>
+          <cylinderGeometry args={[0.38, 0.44, 0.16, 12]} />
+          <meshStandardMaterial color="#b45309" roughness={0.72} />
+        </mesh>
+        <mesh position={[0, 4.82, -0.15]}>
+          <coneGeometry args={[0.18, 0.68, 10]} />
+          <meshStandardMaterial color="#fbbf24" metalness={0.68} roughness={0.25} />
+        </mesh>
+
+        {/* Carved Portico Timber Columns & Multi-Bell Crossbeam Rack */}
         {[-1.55, 1.55].map((px) => (
           <mesh key={px} position={[px, 1.5, 1.15]} castShadow={shadowsEnabled}>
             <cylinderGeometry args={[0.12, 0.14, 2.2, 8]} />
-            <meshStandardMaterial color="#654321" roughness={0.88} />
+            <meshStandardMaterial color="#5c3a21" roughness={0.88} />
           </mesh>
         ))}
-        {/* Hanging Brass Bell at Portico Center (`world z = -2.65`) */}
+        <mesh position={[0, 2.66, 1.15]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[3.3, 0.12, 0.14]} />
+          <meshStandardMaterial color="#654321" roughness={0.86} />
+        </mesh>
+        {[-0.64, 0.64].map((bx) => (
+          <group key={bx} position={[bx, 2.62, 1.15]}>
+            <mesh position={[0, -0.22, 0]}>
+              <cylinderGeometry args={[0.01, 0.01, 0.44, 6]} />
+              <meshStandardMaterial color="#d97706" metalness={0.7} roughness={0.3} />
+            </mesh>
+            <mesh position={[0, -0.48, 0]}>
+              <cylinderGeometry args={[0.055, 0.12, 0.2, 10]} />
+              <meshStandardMaterial color="#eab308" metalness={0.76} roughness={0.26} />
+            </mesh>
+          </group>
+        ))}
+
+        {/* Interactive Central Hanging Brass Bell (`world z = -2.85`) */}
         <group position={[0, 2.65, 1.15]}>
           <group ref={bellPivotRef}>
             <mesh position={[0, -0.32, 0]}>
@@ -294,7 +355,31 @@ export function BaalKuwariTempleEnvironment({
             </mesh>
           </group>
         </group>
-        <pointLight position={[0, 2.2, 1.4]} intensity={1.1} color="#fde68a" distance={7} />
+
+        {/* Sacred Brass Trishul Pedestal Beside Sanctum Plinth */}
+        <group position={[2.08, 0.44, 0.85]}>
+          <mesh position={[0, 0.16, 0]} castShadow={shadowsEnabled}>
+            <cylinderGeometry args={[0.24, 0.3, 0.32, 8]} />
+            <meshStandardMaterial color="#8c7d6b" roughness={0.9} />
+          </mesh>
+          <mesh position={[0, 1.18, 0]}>
+            <cylinderGeometry args={[0.032, 0.04, 1.85, 8]} />
+            <meshStandardMaterial color="#f59e0b" metalness={0.76} roughness={0.24} />
+          </mesh>
+          <mesh position={[0, 1.88, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.22, 0.026, 8, 16, Math.PI]} />
+            <meshStandardMaterial color="#f59e0b" metalness={0.76} roughness={0.24} />
+          </mesh>
+          {[-0.22, 0, 0.22].map((tx, tidx) => (
+            <mesh key={tidx} position={[tx, 2.15 + (tx === 0 ? 0.14 : 0), 0]}>
+              <coneGeometry args={[0.04, tx === 0 ? 0.42 : 0.28, 6]} />
+              <meshStandardMaterial color="#fbbf24" metalness={0.78} roughness={0.22} />
+            </mesh>
+          ))}
+        </group>
+
+        {/* Consolidated Warm Sanctuary Key Light (replaces duplicate point lights) */}
+        <pointLight position={[-0.65, 2.2, 1.75]} intensity={1.75} color="#fed7aa" distance={9.5} />
       </group>
 
       {/* Stone Deepstambh Diya Lamp Stand (`x = -2.15, z = -1.8`) */}
@@ -307,7 +392,10 @@ export function BaalKuwariTempleEnvironment({
           <cylinderGeometry args={[0.28, 0.18, 0.12, 12]} />
           <meshStandardMaterial color="#d97706" metalness={0.6} roughness={0.3} />
         </mesh>
-        <pointLight position={[0, 1.35, 0]} intensity={1.3} color="#fb923c" distance={5} />
+        <mesh position={[0, 1.18, 0]}>
+          <sphereGeometry args={[0.09, 8, 8]} />
+          <meshBasicMaterial color="#fdba74" />
+        </mesh>
       </group>
 
       {/* Panoramic Scenic Summit Lookout Rail & Prayer Flags */}

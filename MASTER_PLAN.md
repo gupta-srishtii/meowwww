@@ -1,10 +1,10 @@
 # The Road That Made Us Family
 ## MASTER_PLAN.md — v2.5 (Phase 3 Realism Correction & Story Alignment)
 
-**Status:** ACTIVE — Phase 3 Corrective Refinement (Do Not Start Phase 4)  
+**Status:** ACTIVE — Phase 3 Experience & Story Polish (Do Not Start Phase 4)  
 **Option Selected:** Option B — Full Cinematic Experience, Phased Development (Quality-First, No Fixed Deadline)  
 **Last Updated:** 2026-11-10  
-**Revision:** v2.5 — Corrected Day 2 historical beat (morning bun maska and chai were eaten **with Ishaan**, not with Srishti's original friends) and recorded the Baal Kuwari Phase 3 realism correction (rugged off-road dirt track approach, separate roadside Maggi clearing with stool/seat fixes, playable forest footpath transition before the staircase, natural hillside winding ~400 stairs, and Phase 3 terrain/tree grounding).
+**Revision:** v2.6 — Updated Phase 3 gameplay so **Ishaan** is the default third-person playable protagonist (bhai Dooj gift for Ishaan), converted Baal Kuwari ~400 stairs ascent & downhill return into automatic third-person cinematics with two connected hand-assists on steeper pitches and playful downhill jogging after darshan, corrected India LHT lanes across all road segments, and polished warm Hinglish personal story copy.
 
 ---
 
@@ -59,7 +59,7 @@ To prevent accidental scope creep or silent feature stripping, every feature in 
 ## Section 1: Creative Concept & Emotional Direction
 
 ### The Story in One Line
-Srishti plays through the journey that turned Ishaan — whom she met online in a book community and began calling "Bhai" — into real family, ending with an interactive Bhai Dooj tilak ceremony.
+Created as a Bhai Dooj gift for **Ishaan**: you play in third-person as **Ishaan** (with Srishti, Manish, and Yash alongside) reliving how online book-club chats in Kitaabi Dastaan turned into family — from Rishikesh's two-scooter ride to Neelkanth, Baal Kuwari, and a later Bhai Dooj tilak ceremony.
 
 ### Approved Creative Decisions (Recorded)
 - **Characters & Names:** The sister is **Srishti**; the brother's real name is **Ishaan** (affectionately called **"Bhai"**, and nicknamed **"Kumbhkaran"** after sleeping very late). His two friends on the second scooter are **Manish** and **Yash** *(the plan does not assume which of the two drove vs. rode pillion)*.

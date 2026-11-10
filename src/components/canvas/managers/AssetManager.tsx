@@ -4,6 +4,15 @@ import type { ReactNode } from 'react';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import {
+  getAsphaltRoadTexture,
+  getDenimTexture,
+  getGopuramDetailTexture,
+  getOffroadDirtTrackTexture,
+  getPlaidShirtTexture,
+  getSrishtiFloralPeplumTexture,
+  getStoneCourtyardTexture,
+} from '@/lib/proceduralTextures';
+import {
   PERSISTENT_SHARED_ASSETS,
   getSceneDefinition,
   type SceneId,
@@ -40,10 +49,31 @@ class AssetManagerRegistry {
   private sceneOwnedEvictions = 0;
   private lastDisposedSceneId: SceneId | null = null;
   private lastClearedFailedSceneId: SceneId | null = null;
+  private proceduralTexturesWarmed = false;
 
   constructor() {
     // Seed session-owned shared asset keys up front so they are protected session-wide.
     this.sharedRetentionChecks = this.persistentSharedSet.size;
+  }
+
+  warmUpProceduralTextures(): void {
+    if (this.proceduralTexturesWarmed || typeof document === 'undefined') return;
+    this.proceduralTexturesWarmed = true;
+    const generators = [
+      getSrishtiFloralPeplumTexture,
+      getPlaidShirtTexture,
+      getDenimTexture,
+      getAsphaltRoadTexture,
+      getOffroadDirtTrackTexture,
+      getStoneCourtyardTexture,
+      getGopuramDetailTexture,
+    ];
+    for (const makeTex of generators) {
+      const tex = makeTex();
+      if (tex) {
+        this.registerSharedTexture(tex);
+      }
+    }
   }
 
   subscribe(listener: () => void): () => void {
@@ -81,6 +111,7 @@ class AssetManagerRegistry {
   }
 
   preloadScene(sceneId: SceneId): void {
+    this.warmUpProceduralTextures();
     const def = getSceneDefinition(sceneId);
     def.sharedAssets.forEach((key) => {
       if (this.persistentSharedSet.has(key)) {
@@ -100,6 +131,7 @@ class AssetManagerRegistry {
     sceneId: SceneId,
     options: EnsureSceneLoadedOptions = {}
   ): Promise<void> {
+    this.warmUpProceduralTextures();
     const { simulateFailure = false, signal, timeoutMs = 10_000 } = options;
     const def = getSceneDefinition(sceneId);
 

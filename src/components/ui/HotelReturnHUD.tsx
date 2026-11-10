@@ -51,8 +51,8 @@ export function HotelReturnHUD({
         title="Rishikesh Hotel Courtyard"
         subtitle={
           farewellDone
-            ? 'Srishti rejoined her group before heading toward her evening bus'
-            : 'Shared stay courtyard · Rejoin your original friends & wave goodbye'
+            ? 'Shaam ki bus se pehle Srishti apne group se mili — safely wapas!'
+            : 'Apna shared hotel · Srishti ko unke doston ke paas drop karke wave karo'
         }
         polaroidCount={polaroidCount}
         audioMuted={audioMuted}
@@ -80,7 +80,8 @@ export function HotelReturnHUD({
 
       {polaroidToastVisible && (
         <PolaroidToastCard
-          caption="Hotel Courtyard · Evening Farewell"
+          polaroidId="scene12_hotel_farewell"
+          caption="Hotel Courtyard · Safe Wapsi"
           title="Rishikesh Evening"
           gradientClass="from-amber-200 via-orange-100 to-slate-300"
           onDismiss={onDismissPolaroidToast}
@@ -94,17 +95,17 @@ export function HotelReturnHUD({
               Rishikesh Trip Complete
             </p>
             <h2 className="mt-1 text-lg font-semibold text-white">
-              Until Next Time
+              Until Next Time, Ishaan
             </h2>
             <p className="mt-2 text-xs leading-relaxed text-slate-300">
-              Back safely from Baal Kuwari before the evening bus — Srishti rejoined her original group at the hotel courtyard with a quiet wave goodbye to Ishaan, Manish, and Yash.
+              Baal Kuwari se shaam ki bus se pehle safely wapas — Lucknow ki train aur Delhi ki bus ke beech yeh Rishikesh trip hamari sabse pyaari yaadon mein se ek ban gaya. Srishti apne friends ke paas wapas chali gayi aur tum, Manish aur Yash apni side wave karte rahe.
             </p>
             <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/70 px-3.5 py-2.5 text-[11px] text-slate-300">
               <p className="font-medium text-amber-200">
-                Memories Collected: {polaroidCount} Polaroid{polaroidCount === 1 ? '' : 's'}
+                Collected Memories: {polaroidCount} Polaroid{polaroidCount === 1 ? '' : 's'}
               </p>
               <p className="mt-1 text-slate-400">
-                Up next in a later chapter: the separate Bhai Dooj epilogue.
+                Aage aane wala chapter: hamara alag se Bhai Dooj epilogue.
               </p>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">

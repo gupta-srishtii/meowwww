@@ -1005,14 +1005,14 @@ export function MountainRoadEnvironment({
                 : '#ffeacc'
         }
         castShadow={shadowsEnabled}
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-        shadow-camera-near={10}
-        shadow-camera-far={480}
-        shadow-camera-left={-220}
-        shadow-camera-right={220}
-        shadow-camera-top={240}
-        shadow-camera-bottom={-240}
+        shadow-mapSize-width={qualityProfile === 'high' ? 1024 : 512}
+        shadow-mapSize-height={qualityProfile === 'high' ? 1024 : 512}
+        shadow-camera-near={15}
+        shadow-camera-far={340}
+        shadow-camera-left={-135}
+        shadow-camera-right={135}
+        shadow-camera-top={135}
+        shadow-camera-bottom={-135}
         shadow-bias={-0.0005}
       />
 
@@ -1372,7 +1372,6 @@ export function MountainRoadEnvironment({
       <instancedMesh
         ref={rockMeshRef}
         args={[undefined, undefined, MAX_CLIFF_ROCKS]}
-        castShadow={shadowsEnabled}
       >
         <dodecahedronGeometry args={[0.8, 0]} />
         <meshStandardMaterial color="#646d7a" roughness={0.95} flatShading />
@@ -1382,7 +1381,6 @@ export function MountainRoadEnvironment({
       <instancedMesh
         ref={trunkMeshRef}
         args={[undefined, undefined, MAX_PINE_TREES]}
-        castShadow={shadowsEnabled}
       >
         <cylinderGeometry args={[0.12, 0.19, 2.2, 6]} />
         <meshStandardMaterial color="#5c4033" roughness={0.95} />
@@ -1390,7 +1388,7 @@ export function MountainRoadEnvironment({
       <instancedMesh
         ref={foliageLowerMeshRef}
         args={[undefined, undefined, MAX_PINE_TREES]}
-        castShadow={shadowsEnabled}
+        castShadow={shadowsEnabled && qualityProfile === 'high'}
       >
         <coneGeometry args={[1.15, 2.1, 7]} />
         <meshStandardMaterial roughness={0.9} flatShading />
@@ -1398,7 +1396,7 @@ export function MountainRoadEnvironment({
       <instancedMesh
         ref={foliageUpperMeshRef}
         args={[undefined, undefined, MAX_PINE_TREES]}
-        castShadow={shadowsEnabled}
+        castShadow={shadowsEnabled && qualityProfile === 'high'}
       >
         <coneGeometry args={[0.85, 1.85, 7]} />
         <meshStandardMaterial roughness={0.9} flatShading />

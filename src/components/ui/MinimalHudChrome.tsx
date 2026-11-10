@@ -1,6 +1,10 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import {
+  getResolvedPolaroidMemory,
+  usePolaroidMemoryRevision,
+} from '@/lib/privateMemoryLoader';
 import type { WalkHotspot } from '@/hooks/useWalkController';
 
 export interface MinimalTopBarProps {
@@ -83,6 +87,7 @@ export function MinimalTopBar({
 }
 
 export interface PolaroidToastCardProps {
+  polaroidId?: string;
   caption: string;
   title: string;
   gradientClass: string;
@@ -90,23 +95,38 @@ export interface PolaroidToastCardProps {
 }
 
 export function PolaroidToastCard({
+  polaroidId,
   caption,
   title,
   gradientClass,
   onDismiss,
 }: PolaroidToastCardProps) {
+  usePolaroidMemoryRevision();
+  const resolvedMem = polaroidId ? getResolvedPolaroidMemory(polaroidId) : null;
+  const resolvedUrl = resolvedMem?.resolvedUrl ?? null;
+
   return (
-    <div className="pointer-events-none fixed top-24 right-4 z-20">
-      <div className="pointer-events-auto w-52 rounded-xl border border-amber-200/70 bg-[#faf6ed] p-2.5 text-slate-900 shadow-2xl">
+    <div className="pointer-events-none fixed top-24 right-4 z-20 transition-all duration-300 ease-out">
+      <div className="group pointer-events-auto w-56 rounded-xl border border-amber-200/75 bg-[#faf6ed] p-2.5 text-slate-900 shadow-2xl">
         <div
-          className={`flex h-24 items-center justify-center rounded-lg bg-gradient-to-br px-3 text-center ${gradientClass}`}
+          className={`relative flex h-28 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br px-3 text-center ${gradientClass}`}
         >
-          <span className="text-[11px] font-medium text-slate-800">{caption}</span>
+          {resolvedUrl ? (
+            <img
+              src={resolvedUrl}
+              alt={title}
+              className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+            />
+          ) : (
+            <span className="text-[11px] font-medium text-slate-800 transition-transform duration-500 ease-out group-hover:scale-[1.03]">
+              {caption}
+            </span>
+          )}
         </div>
         <div className="mt-2 flex items-center justify-between gap-2">
           <div>
             <p className="text-[11px] font-semibold text-slate-900">{title}</p>
-            <p className="text-[10px] text-emerald-700">Saved to Memories</p>
+            <p className="text-[10px] text-emerald-700">Saved to Yaadein</p>
           </div>
           <button
             type="button"

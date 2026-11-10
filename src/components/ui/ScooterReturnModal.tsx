@@ -11,7 +11,7 @@ export interface ScooterReturnModalProps {
 }
 
 /**
- * Shown when Srishti physically walks back to the parked scooters outside Neelkanth Temple.
+ * Shown when Ishaan physically walks back to the parked scooters outside Neelkanth Temple.
  * Offers real functional road continuation onward toward Baal Kuwari or replay/chapter navigation.
  */
 export function ScooterReturnModal({
@@ -35,10 +35,10 @@ export function ScooterReturnModal({
           Scooters Ready
         </p>
         <h2 className="mt-1 text-base font-semibold text-white">
-          Continue Toward Baal Kuwari?
+          Aage Baal Kuwari Chalein?
         </h2>
         <p className="mt-1 text-xs leading-relaxed text-slate-300">
-          Both scooters are parked outside Neelkanth Mahadev Temple. Ride onward through the forest mountain route toward Baal Kuwari, or revisit an earlier stop.
+          Dono scooties Neelkanth gate ke bahar khadi hain — chal, ab off-road raaste se Baal Kuwari ki taraf nikalte hain!
         </p>
 
         <div className="mt-4 space-y-2">

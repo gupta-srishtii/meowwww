@@ -105,7 +105,8 @@ export function WalkHUD({
 
       {polaroidToastVisible && (
         <PolaroidToastCard
-          caption="Valley Tapri · Hot Maggi & Chai"
+          polaroidId="scene06_dhaba"
+          caption="Pahadi Tapri · Garam Maggi aur Chai"
           title="Maggi & Chai Stop"
           gradientClass="from-sky-200 via-amber-100 to-amber-300"
           onDismiss={onDismissPolaroidToast}

@@ -232,9 +232,9 @@ export default function Experience() {
     if (isNew) {
       showNarration({
         id: 'scene06-polaroid',
-        speaker: 'Dhaba Memory',
+        speaker: 'Maggi Tapri Yaad',
         lines: [
-          'Snapped a valley dhaba Polaroid! Saved to your memories.',
+          'Pahadi tapri waali Polaroid Yaadein mein save ho gayi!',
         ],
       });
     }
@@ -266,8 +266,8 @@ export default function Experience() {
       setViewpointPhotoMoment(kind);
       setViewpointPhotoLabel(
         kind === 'solo'
-          ? 'Pausing quietly above the Rishikesh hills...'
-          : 'Everyone squeezed in together by the overlook rail...'
+          ? 'Neeche ghaati ka nazara dekh kar ek second rukna...'
+          : 'Sab log rail ke paas saath mein khade hokar photo ke liye!'
       );
 
       const snapDelay = reducedMotion ? 140 : 900;
@@ -314,7 +314,7 @@ export default function Experience() {
       id: 'scene06-maggi-complete',
       speaker: 'Maggi & Chai Stop',
       lines: [
-        'Pahaadon ki thandi hawa, garma-garam Maggi aur chai... aur saath mein apne log.',
+        'Late uthne ("Kumbhkaran"!) ke baad bhi garma-garam Maggi aur chai saath mein mil hi gayi — ab aage Neelkanth chalein?',
       ],
     });
   }, [showNarration]);
@@ -333,7 +333,7 @@ export default function Experience() {
           id: 'scene06-maggi-recheck',
           speaker: 'Maggi & Chai Stop',
           lines: [
-            'Steaming bowls and kulhad chai finished together — head back to the parked scooters when ready to ride on.',
+            'Maggi aur kulhad chai ho chuki — jab ready ho, wapas scooty pe chalte hain!',
           ],
         });
       }
@@ -387,9 +387,9 @@ export default function Experience() {
     if (isNew) {
       showNarration({
         id: 'scene07-polaroid',
-        speaker: 'Temple Memory',
+        speaker: 'Neelkanth Yaad',
         lines: [
-          'Captured a Polaroid at Neelkanth Mahadev Temple courtyard! Saved to your memories.',
+          'Neelkanth Mandir ke courtyard ki Polaroid Yaadein mein save ho gayi!',
         ],
       });
     }
@@ -405,9 +405,9 @@ export default function Experience() {
       ambientAudio.playTempleBell();
       showNarration({
         id: 'scene07-bell',
-        speaker: 'Brass Temple Bell',
+        speaker: 'Mandir ki Ghanti',
         lines: [
-          'The deep chime of the brass bell echoes gently across the mountain valley courtyard.',
+          'Neelkanth aangan mein peetal ki ghanti ki aawaaz goonj uthi.',
         ],
       });
       return;
@@ -420,7 +420,7 @@ export default function Experience() {
         id: 'scene07-diya',
         speaker: 'Diya Stand',
         lines: [
-          'You light an oil diya at the stand — warm golden light glows beneath the mandapa.',
+          'Tumne diya jalaya — mandap ke neeche halki si warmth aur roshni.',
         ],
       });
       return;
@@ -442,7 +442,7 @@ export default function Experience() {
             id: 'scene07-darshan',
             speaker: 'Neelkanth Darshan',
             lines: [
-              'Der se hi sahi, par Neelkanth Mahadev ke darshan ho hi gaye — Kumbhkaran ki neend ke baad bhi.',
+              'Kumbhkaran ki neend ke baad der se hi sahi, par hum sabne Mahadev ke darshan saath mein kiye!',
             ],
           });
         },
@@ -475,7 +475,7 @@ export default function Experience() {
       id: 'scene08-maggi-complete',
       speaker: 'Roadside Maggi Clearing',
       lines: [
-        'Finished hot Maggi together — walk north onto the forest footpath when ready to head toward Baal Kuwari stairs.',
+        'Seedhiyon se pehle Maggi break ho gaya — ab jungle ki pagdandi se upar Baal Kuwari stairs ki taraf chalo!',
       ],
     });
   }, [showNarration]);
@@ -532,7 +532,7 @@ export default function Experience() {
       showNarration({
         id: 'scene12-hotel-polaroid',
         speaker: 'Rishikesh Hotel Courtyard',
-        lines: ['Captured the evening courtyard Polaroid before parting ways!'],
+        lines: ['Wapas hotel pahunch kar aakhri Rishikesh shaam ki Polaroid save kar li!'],
       });
     }
   }, [capturePolaroidAndSave, showNarration]);
@@ -846,7 +846,7 @@ export default function Experience() {
       id: 'scene10-evening-bus-cue',
       speaker: 'Baal Kuwari Temple',
       lines: [
-        'Explore the quiet hilltop shrine, ring the temple bell, or head back down the steps together when ready.',
+        '400 seedhiyon ke baad upar ki thandi hawa — ghanti bajao, valley dekho, aur jab ready ho neeche bhaagte hue wapas chalein!',
       ],
     });
   }, [showNarration]);
@@ -1634,12 +1634,15 @@ export default function Experience() {
             rangBell={rangBaalKuwariBell}
             capturedPolaroid={capturedBaalKuwariPolaroid}
             polaroidToastVisible={baalKuwariToastKind !== null}
+            polaroidId={
+              baalKuwariToastKind === 'stairs' ? 'scene09_stairs_landing' : 'scene10_baalkuwari'
+            }
             toastTitle={
               baalKuwariToastKind === 'stairs' ? 'Mid-Climb Valley View' : 'Baal Kuwari Temple'
             }
             toastCaption={
               baalKuwariToastKind === 'stairs'
-                ? 'Forest Stairs · Mid-Climb Overlook'
+                ? '~200 Steps Rest · Valley Overlook'
                 : 'Baal Kuwari Summit · After ~400 Steps'
             }
             onDismissPolaroidToast={() => setBaalKuwariToastKind(null)}

@@ -211,7 +211,7 @@ export function PrototypeHUD({
               Scenic Mountain Viewpoint
             </p>
             <p className="text-xs text-slate-300">
-              Both scooters pulled onto the cliffside terrace. Step off for valley photos or keep riding.
+              Both scooters are parked overlooking the gorge. Hop off for a group photo or keep riding!
             </p>
             <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
               {onEnterViewpoint && (
@@ -247,7 +247,7 @@ export function PrototypeHUD({
                   Maggi &amp; Chai Tapri Pull-Off
                 </p>
                 <p className="text-xs text-slate-300">
-                  Both scooters parked off the main road. Grab hot Maggi and chai before riding onward.
+                  Dono scooties side mein lag gayi — garam Maggi aur bun maska chai ke baad aage chalenge!
                 </p>
                 <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
                   {onContinueToDhaba && (
@@ -274,7 +274,7 @@ export function PrototypeHUD({
                   Roadside Maggi Clearing
                 </p>
                 <p className="text-xs text-slate-300">
-                  Scooters parked off the rocky dirt track. Share hot Maggi here before walking the forest footpath to the stairs.
+                  Pattharon waala off-road raasta khatam! Chhoti tapri pe garam Maggi khaa ke ~400 seedhiyon pe chalte hain.
                 </p>
                 <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
                   {onEnterBaalKuwariMaggi && (
@@ -301,7 +301,7 @@ export function PrototypeHUD({
                   Rishikesh Hotel Forecourt
                 </p>
                 <p className="text-xs text-slate-300">
-                  Made it back smoothly before dusk. Park beside the entrance to rejoin your group.
+                  Shaam se pehle safely Rishikesh hotel pahunch gaye! Andar chalo, Srishti ke friends wait kar rahe honge.
                 </p>
                 <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
                   {onEnterHotelCourtyard && (
