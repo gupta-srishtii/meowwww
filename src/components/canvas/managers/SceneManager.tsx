@@ -354,6 +354,7 @@ export interface SceneStageProps {
   litDiya: boolean;
   hadDarshan: boolean;
   capturedNeelkanthFood: boolean;
+  ateNeelkanthCafe: boolean;
   neelkanthCafeActive?: boolean;
   activeDarshanPan: boolean;
   ateTrailheadMaggi: boolean;
@@ -428,6 +429,7 @@ export function SceneStage({
   litDiya,
   hadDarshan,
   capturedNeelkanthFood,
+  ateNeelkanthCafe,
   neelkanthCafeActive = false,
   activeDarshanPan,
   ateTrailheadMaggi,
@@ -659,6 +661,7 @@ export function SceneStage({
               litDiya={litDiya}
               hadDarshan={hadDarshan}
               capturedFood={capturedNeelkanthFood}
+              ateCafe={ateNeelkanthCafe}
               eatingCafeActive={neelkanthCafeActive}
               activeDarshanPan={activeDarshanPan}
               autoPlayMode={autoPlayMode}

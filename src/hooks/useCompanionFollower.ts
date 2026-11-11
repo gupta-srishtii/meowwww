@@ -134,6 +134,16 @@ export function stepGroupCompanions({
     const dx = goal.x - agent.posX;
     const dz = goal.z - agent.posZ;
     const dist = Math.hypot(dx, dz);
+    // Stop the spring before its minimum walking speed oscillates around a dining seat.
+    if (mode === 'sit_dine' && dist < 0.12) {
+      agent.posX = goal.x;
+      agent.posZ = goal.z;
+      agent.velX = 0;
+      agent.velZ = 0;
+      agent.isMovingToTarget = false;
+      if (goal.yaw !== undefined) agent.facingYaw = goal.yaw;
+      continue;
+    }
 
     const startThreshold = mode === 'follow' ? 0.56 : 0.14;
     const stopThreshold = mode === 'follow' ? 0.2 : 0.05;

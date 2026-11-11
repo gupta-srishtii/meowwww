@@ -136,12 +136,14 @@ function smoothStepLocal(val: number, edge0: number, edge1: number): number {
  */
 export function DistantHimalayanRidges({
   ridges,
-  centerZ = -190,
+  centerZ,
   baseY = -20.5,
 }: DistantHimalayanRidgesProps) {
+  // Local environments are centered at their plaza, not at the long road's -180m corridor.
+  const rangeCenterZ = centerZ ?? (ridges?.length ? 0 : -190);
   const geometry = useMemo(
-    () => buildContinuousMountainRangeGeometry(ridges, centerZ, baseY),
-    [ridges, centerZ, baseY]
+    () => buildContinuousMountainRangeGeometry(ridges, rangeCenterZ, baseY),
+    [ridges, rangeCenterZ, baseY]
   );
 
   useEffect(() => {

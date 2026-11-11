@@ -72,7 +72,7 @@ export interface Scene02RishikeshDay1Props {
 const STAY_HOLD_BEFORE_WALK_SEC = 2.2;
 const WATERFALL_RIDE_DURATION_SEC = 4.6;
 const WATERFALL_WALK_IN_DURATION_SEC = 3.0;
-const WATERFALL_TOTAL_DURATION_SEC = 13.0;
+const WATERFALL_TOTAL_DURATION_SEC = 17.0;
 const EVENING_MAGGI_DURATION_SEC = 5.8;
 const RETURN_ROLLOUT_DURATION_SEC = 2.8;
 const NIGHT_DHABA_DURATION_SEC = 6.2;
@@ -373,7 +373,7 @@ export function Scene02_RishikeshDay1({
           posX: rockSeatManish.x,
           posZ: rockSeatManish.z,
           facingYaw: rockSeatManish.yaw,
-          groundY: rockSeatManish.rockTopY - 0.44,
+          groundY: rockSeatManish.rockTopY - 0.52,
           strideRatio: 0,
           stridePhase: 0,
           elapsed: sim.elapsed,
@@ -386,7 +386,7 @@ export function Scene02_RishikeshDay1({
           posX: rockSeatYash.x,
           posZ: rockSeatYash.z,
           facingYaw: rockSeatYash.yaw,
-          groundY: rockSeatYash.rockTopY - 0.44,
+          groundY: rockSeatYash.rockTopY - 0.52,
           strideRatio: 0,
           stridePhase: 0,
           elapsed: sim.elapsed,
@@ -438,7 +438,7 @@ export function Scene02_RishikeshDay1({
           scratch.currentLookAt.lerp(scratch.desiredLookAt, 1 - Math.exp(-delta * 6));
           camera.lookAt(scratch.currentLookAt);
         } else if (waterfallSeatedRef.current) {
-          if (walkElapsed >= WATERFALL_WALK_IN_DURATION_SEC + 0.9 && !streamVideoUnlockedRef.current) {
+          if (walkElapsed >= WATERFALL_WALK_IN_DURATION_SEC + 1.2 && !streamVideoUnlockedRef.current) {
             streamVideoUnlockedRef.current = true;
             onUnlockDay1StreamVideo?.();
           }
@@ -448,7 +448,7 @@ export function Scene02_RishikeshDay1({
             posX: rockSeatIshaan.x,
             posZ: rockSeatIshaan.z,
             facingYaw: rockSeatIshaan.yaw,
-            groundY: rockSeatIshaan.rockTopY - 0.44,
+            groundY: rockSeatIshaan.rockTopY - 0.52,
             strideRatio: 0,
             stridePhase: 0,
             elapsed: sim.elapsed,
@@ -461,7 +461,7 @@ export function Scene02_RishikeshDay1({
             posX: rockSeatShree.x,
             posZ: rockSeatShree.z,
             facingYaw: rockSeatShree.yaw,
-            groundY: rockSeatShree.rockTopY - 0.44,
+            groundY: rockSeatShree.rockTopY - 0.52,
             strideRatio: 0,
             stridePhase: 0,
             elapsed: sim.elapsed,
@@ -1053,7 +1053,7 @@ export function Scene02_RishikeshDay1({
                 waterfallSeated
                   ? [
                       DAY1_WATERFALL_ROCK_SEATS.ishaan.x,
-                      DAY1_WATERFALL_ROCK_SEATS.ishaan.rockTopY - 0.44,
+                      DAY1_WATERFALL_ROCK_SEATS.ishaan.rockTopY - 0.52,
                       DAY1_WATERFALL_ROCK_SEATS.ishaan.z,
                     ]
                   : [-2.15, 0.02, -1.35]
@@ -1080,7 +1080,7 @@ export function Scene02_RishikeshDay1({
                 waterfallSeated
                   ? [
                       DAY1_WATERFALL_ROCK_SEATS.srishti.x,
-                      DAY1_WATERFALL_ROCK_SEATS.srishti.rockTopY - 0.44,
+                      DAY1_WATERFALL_ROCK_SEATS.srishti.rockTopY - 0.52,
                       DAY1_WATERFALL_ROCK_SEATS.srishti.z,
                     ]
                   : [1.15, 0.02, -1.75]
@@ -1103,7 +1103,7 @@ export function Scene02_RishikeshDay1({
               rightForearmRef={manishRig.rightForearmRef}
               position={[
                 DAY1_WATERFALL_ROCK_SEATS.friend_black_tee.x,
-                DAY1_WATERFALL_ROCK_SEATS.friend_black_tee.rockTopY - 0.44,
+                DAY1_WATERFALL_ROCK_SEATS.friend_black_tee.rockTopY - 0.52,
                 DAY1_WATERFALL_ROCK_SEATS.friend_black_tee.z,
               ]}
               rotationY={DAY1_WATERFALL_ROCK_SEATS.friend_black_tee.yaw}
@@ -1124,7 +1124,7 @@ export function Scene02_RishikeshDay1({
               rightForearmRef={yashRig.rightForearmRef}
               position={[
                 DAY1_WATERFALL_ROCK_SEATS.friend_plaid.x,
-                DAY1_WATERFALL_ROCK_SEATS.friend_plaid.rockTopY - 0.44,
+                DAY1_WATERFALL_ROCK_SEATS.friend_plaid.rockTopY - 0.52,
                 DAY1_WATERFALL_ROCK_SEATS.friend_plaid.z,
               ]}
               rotationY={DAY1_WATERFALL_ROCK_SEATS.friend_plaid.yaw}

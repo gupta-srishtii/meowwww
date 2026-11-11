@@ -381,7 +381,7 @@ export function Day1WaterfallEnvironment({
         >
           <boxGeometry args={[0.42, 0.03, 0.92]} />
           <meshStandardMaterial
-            color="#cbd5e1"
+            color="#67b9ce"
             emissive="#bae6fd"
             emissiveIntensity={0.08}
             transparent
@@ -415,7 +415,7 @@ export function Day1WaterfallEnvironment({
         >
           <boxGeometry args={[0.64, 0.025, 0.85]} />
           <meshStandardMaterial
-            color="#cbd5e1"
+            color="#67b9ce"
             emissive="#bae6fd"
             emissiveIntensity={0.06}
             transparent
@@ -446,11 +446,11 @@ export function Day1WaterfallEnvironment({
         />
       </mesh>
       <mesh position={[4.28, 0.018, 1.1]} rotation={[-Math.PI / 2, 0, -0.06]}>
-        <planeGeometry args={[0.42, 7.6]} />
+        <planeGeometry args={[1.2, 7.6]} />
         <meshStandardMaterial
-          color="#cbd5e1"
+          color="#67b9ce"
           transparent
-          opacity={0.38}
+          opacity={0.72}
           roughness={0.2}
         />
       </mesh>

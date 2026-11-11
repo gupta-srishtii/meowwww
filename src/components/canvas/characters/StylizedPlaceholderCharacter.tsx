@@ -44,6 +44,7 @@ export interface StylizedPlaceholderCharacterProps {
   holdingFork?: boolean;
   holdingPhone?: boolean;
   holdingSweet?: boolean;
+  holdingWaterBottle?: boolean;
   tilakApplied?: boolean;
   castShadow?: boolean;
   showNameTag?: boolean;
@@ -80,6 +81,7 @@ export function StylizedPlaceholderCharacter({
   holdingFork = false,
   holdingPhone = false,
   holdingSweet = false,
+  holdingWaterBottle = false,
   tilakApplied = false,
   castShadow = false,
   showNameTag = true,
@@ -799,6 +801,12 @@ export function StylizedPlaceholderCharacter({
               <sphereGeometry args={[0.033, 8, 8]} />
               <meshStandardMaterial color={skinColor} roughness={0.76} />
             </mesh>
+            {holdingWaterBottle && (
+              <group position={[0, -0.20, -0.04]}>
+                <mesh><cylinderGeometry args={[0.035, 0.035, 0.17, 10]} /><meshStandardMaterial color="#7dd3fc" transparent opacity={0.8} /></mesh>
+                <mesh position={[0, 0.09, 0]}><cylinderGeometry args={[0.023, 0.023, 0.025, 8]} /><meshStandardMaterial color="#2563eb" /></mesh>
+              </group>
+            )}
             {holdingSweet && (
               <group name="held-mithai" position={[0, -0.205, -0.045]}>
                 <mesh castShadow={castShadow}>

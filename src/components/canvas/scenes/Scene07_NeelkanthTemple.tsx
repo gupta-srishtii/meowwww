@@ -51,6 +51,7 @@ export interface Scene07NeelkanthTempleProps {
   litDiya: boolean;
   hadDarshan: boolean;
   capturedFood?: boolean;
+  ateCafe?: boolean;
   eatingCafeActive?: boolean;
   activeDarshanPan: boolean;
   autoPlayMode?: boolean;
@@ -144,6 +145,7 @@ export function Scene07_NeelkanthTemple({
   litDiya,
   hadDarshan,
   capturedFood = false,
+  ateCafe = false,
   eatingCafeActive = false,
   activeDarshanPan,
   autoPlayMode = false,
@@ -168,6 +170,7 @@ export function Scene07_NeelkanthTemple({
   const rightKneeRef = useRef<THREE.Group>(null);
   const leftArmRef = useRef<THREE.Group>(null);
   const rightArmRef = useRef<THREE.Group>(null);
+  const rightForearmRef = useRef<THREE.Group>(null);
 
   const companionRigsRef = useRef<CompanionRigMap | null>(null);
   const companionStatesRef = useRef(
@@ -272,25 +275,29 @@ export function Scene07_NeelkanthTemple({
     if (activeDarshanPan) {
       darshanElapsedRef.current += delta;
       // Align Ishaan cleanly in left-center of devotional lower-third arc facing Garbhagriha (-Z)
-      sim.posX = THREE.MathUtils.damp(sim.posX, -0.38, 8, delta);
-      sim.posZ = THREE.MathUtils.damp(sim.posZ, -2.65, 8, delta);
+      sim.posX = THREE.MathUtils.damp(sim.posX, -0.95, 8, delta);
+      sim.posZ = THREE.MathUtils.damp(sim.posZ, -4.8, 8, delta);
       sim.velX = 0;
       sim.velZ = 0;
       sim.facingYaw = THREE.MathUtils.damp(
         sim.facingYaw,
-        yawTowardTarget(-0.38, -2.65, 0, -6.2),
+        yawTowardTarget(-0.95, -4.8, 0, -6.2),
         8,
         delta
       );
       idlePose = 'pray_bow';
     } else if (eatingCafeActive) {
       cafeElapsedRef.current += delta;
-      sim.posX = NEELKANTH_CAFE_SEATS.ishaan.x;
-      sim.posZ = NEELKANTH_CAFE_SEATS.ishaan.z;
+      const seat = NEELKANTH_CAFE_SEATS.ishaan;
+      sim.posX = THREE.MathUtils.damp(sim.posX, seat.x, 3.5, delta);
+      sim.posZ = THREE.MathUtils.damp(sim.posZ, seat.z, 3.5, delta);
       sim.velX = 0;
       sim.velZ = 0;
       sim.facingYaw = NEELKANTH_CAFE_SEATS.ishaan.facingYaw;
-      idlePose = 'sit_eat';
+      if (cafeElapsedRef.current < 1.4) {
+        strideRatio = 0.5;
+        sim.stridePhase += delta * 7;
+      } else idlePose = 'sit_eat';
     } else if (autoPlayMode && onAutoTriggerHotspot) {
       const targetId = !rangBell
         ? 'bell'
@@ -298,7 +305,7 @@ export function Scene07_NeelkanthTemple({
           ? 'diya'
           : !hadDarshan
             ? 'darshan'
-            : !capturedFood
+            : !ateCafe
               ? 'neelkanth_food'
               : 'scooters';
       const targetSpot = NEELKANTH_HOTSPOTS.find((h) => h.id === targetId);
@@ -348,6 +355,7 @@ export function Scene07_NeelkanthTemple({
         rightKnee: rightKneeRef.current,
         leftArm: leftArmRef.current,
         rightArm: rightArmRef.current,
+        rightForearm: rightForearmRef.current,
       },
       posX: sim.posX,
       posZ: sim.posZ,
@@ -357,6 +365,7 @@ export function Scene07_NeelkanthTemple({
       elapsed: t,
       delta,
       idlePose,
+      armGesturePhase: cafeElapsedRef.current * 0.4,
       reducedMotion,
     });
 
@@ -430,9 +439,9 @@ export function Scene07_NeelkanthTemple({
     if (activeDarshanPan) {
       const dPan = Math.min(1, darshanElapsedRef.current / 4.0);
       scratch.desiredCamPos.set(
-        Math.sin(dPan * Math.PI) * 0.34,
-        1.82 - dPan * 0.06,
-        0.35 - dPan * 0.65
+        1.55 + Math.sin(dPan * Math.PI) * 0.2,
+        1.85 - dPan * 0.06,
+        -3.45 - dPan * 0.25
       );
       scratch.desiredLookAt.set(0, 1.32, -5.95);
     } else if (eatingCafeActive) {
@@ -540,6 +549,7 @@ export function Scene07_NeelkanthTemple({
         rightKneeRef={rightKneeRef}
         leftArmRef={leftArmRef}
         rightArmRef={rightArmRef}
+        rightForearmRef={rightForearmRef}
         holdingFork={eatingCafeActive}
         position={[0.15, 0, 10.65]}
         castShadow={shadowsEnabled}

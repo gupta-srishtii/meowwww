@@ -223,8 +223,8 @@ export function Scene13_BhaiDoojFinale({
       swingGroupRef.current.rotation.x = swingAngle;
     }
 
-    const jhulaSeatZ = -1.75 - Math.sin(swingAngle) * 1.9;
-    const jhulaSeatY = 0.43 + (1 - Math.cos(swingAngle)) * 1.9;
+    const jhulaSeatZ = -1.75 + Math.sin(swingAngle) * 1.855;
+    const jhulaSeatY = 2.55 - Math.cos(swingAngle) * 1.855;
 
     const ishaanPose: CharacterIdlePose =
       phase === 'playful_laugh' ? 'sit_laugh' : 'sit_ready';
@@ -287,8 +287,14 @@ export function Scene13_BhaiDoojFinale({
     });
 
     if (onSwing) {
-      if (ishaanGroupRef.current) ishaanGroupRef.current.rotation.x = -swingAngle;
-      if (shreeGroupRef.current) shreeGroupRef.current.rotation.x = -swingAngle;
+      // Transform each seated pelvis with the actual bench pivot and cushion top.
+      for (const group of [ishaanGroupRef.current, shreeGroupRef.current]) {
+        if (!group) continue;
+        const localRootY = -1.855 - 0.70 * group.scale.y;
+        group.position.y = 2.55 + Math.cos(swingAngle) * localRootY;
+        group.position.z = -1.75 - Math.sin(swingAngle) * localRootY;
+        group.rotation.x = swingAngle;
+      }
     } else {
       if (ishaanGroupRef.current) ishaanGroupRef.current.rotation.x = 0;
       if (shreeGroupRef.current) shreeGroupRef.current.rotation.x = 0;

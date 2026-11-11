@@ -91,8 +91,8 @@ export const NEELKANTH_HOTSPOTS: readonly WalkHotspot[] = [
   {
     id: 'darshan',
     label: 'Pray to Mahadev',
-    x: 0.0,
-    z: -3.1,
+    x: -0.95,
+    z: -4.8,
     radius: 1.3,
     actionType: 'interact',
   },

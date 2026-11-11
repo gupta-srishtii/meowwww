@@ -19,6 +19,7 @@ next-env.d.ts
 private-assets/
 personal-photos/
 personal-audio/
+qa-artifacts/
 
 # Local scratch/backup docs
 MASTER_PLAN_BACKUP.md

@@ -195,6 +195,7 @@ export default function Experience() {
   const [bellSwingImpulseNonce, setBellSwingImpulseNonce] = useState(0);
   const [litDiya, setLitDiya] = useState(false);
   const [hadDarshan, setHadDarshan] = useState(false);
+  const [ateNeelkanthCafe, setAteNeelkanthCafe] = useState(false);
   const [activeDarshanPan, setActiveDarshanPan] = useState(false);
   const [morningToastVisible, setMorningToastVisible] = useState(false);
   const [neelkanthToastVisible, setNeelkanthToastVisible] = useState(false);
@@ -655,9 +656,10 @@ export default function Experience() {
       () => {
         neelkanthCafeTimerRef.current = null;
         setNeelkanthCafeActive(false);
+        setAteNeelkanthCafe(true);
         handleCaptureNeelkanthFoodPolaroid();
       },
-      reducedMotion ? 500 : 3800
+      reducedMotion ? 1800 : 8000
     );
   }, [activeDarshanPan, handleCaptureNeelkanthFoodPolaroid, neelkanthCafeActive, reducedMotion]);
 
@@ -667,6 +669,7 @@ export default function Experience() {
       neelkanthCafeTimerRef.current = null;
     }
     setNeelkanthCafeActive(false);
+    setAteNeelkanthCafe(true);
     handleCaptureNeelkanthFoodPolaroid();
   }, [handleCaptureNeelkanthFoodPolaroid]);
 
@@ -849,7 +852,7 @@ export default function Experience() {
       if (isNeelkanthWalkActive) {
         if (activeDarshanPan || neelkanthCafeActive) return;
         if (hotspotId === 'neelkanth_food') {
-          if (!capturedNeelkanthFood) {
+          if (!ateNeelkanthCafe) {
             handleStartNeelkanthCafe();
           } else {
             handleCaptureNeelkanthFoodPolaroid();
@@ -955,6 +958,7 @@ export default function Experience() {
       activeDarshanPan,
       bookPhotoActive,
       capturedNeelkanthFood,
+      ateNeelkanthCafe,
       day1Phase,
       foodCinematicActive,
       foodCinematicPlayedThisVisit,
@@ -1569,6 +1573,7 @@ export default function Experience() {
     setMorningToastVisible(false);
     setNeelkanthToastVisible(false);
     setNeelkanthCafeActive(false);
+    setAteNeelkanthCafe(false);
     setActiveDarshanPan(false);
     setFoodCinematicActive(false);
     setFoodCinematicPlayedThisVisit(false);
@@ -1679,6 +1684,10 @@ export default function Experience() {
     }
 
     if (isBhaiDoojSceneActive) {
+      if (bhaiDoojPhase === 'complete') {
+        const id = setStoryTimeout(handleFinishBhaiDooj, reducedMotion ? 900 : 3000);
+        return () => clearStoryTimeout(id);
+      }
       if (bhaiDoojPhase === 'arrival') {
         const id = setStoryTimeout(
           () => setBhaiDoojPhase('applying_tilak'),
@@ -1884,7 +1893,7 @@ export default function Experience() {
   useEffect(() => {
     setModalPaused(
       anyModalOpen ||
-        hotelSummaryOpen ||
+        (hotelSummaryOpen && playMode !== 'watch') ||
         pendingResumeCheckpoint !== null ||
         activeNarration !== null
     );
@@ -1894,6 +1903,7 @@ export default function Experience() {
     anyModalOpen,
     hotelSummaryOpen,
     pendingResumeCheckpoint,
+    playMode,
     setModalPaused,
   ]);
 
@@ -2033,6 +2043,7 @@ export default function Experience() {
           litDiya={litDiya}
           hadDarshan={hadDarshan}
           capturedNeelkanthFood={capturedNeelkanthFood}
+          ateNeelkanthCafe={ateNeelkanthCafe}
           neelkanthCafeActive={neelkanthCafeActive}
           activeDarshanPan={activeDarshanPan}
           ateTrailheadMaggi={false}

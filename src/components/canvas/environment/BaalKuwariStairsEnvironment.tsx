@@ -700,6 +700,7 @@ export function BaalKuwariStairsEnvironment({
 
   const landingSpecs = STAIR_SEGMENTS.filter((s) => s.kind === 'landing');
   const step200Spot = getTransformForMilestoneStep(200);
+  const waterSpot = sampleStairTransformAtS(THREE.MathUtils.lerp(STAIR_SEGMENTS[1].sStart, STAIR_SEGMENTS[1].sEnd, 0.30));
   const summitSpot = getTransformForMilestoneStep(400);
   const summitWaypoint = WAYPOINTS[WAYPOINTS.length - 1];
 
@@ -848,8 +849,8 @@ export function BaalKuwariStairsEnvironment({
 
       {/* Roadside Cold Water & Refreshment Stall at Flight 1, Step ~30 */}
       <RoadsideWaterStall
-        position={[-3.8, 1.8, -6.15]}
-        rotationY={0.32}
+        position={[waterSpot.x - waterSpot.rx * 2.1, waterSpot.y, waterSpot.z - waterSpot.rz * 2.1]}
+        rotationY={waterSpot.yaw}
         castShadow={shadowsEnabled}
       />
 

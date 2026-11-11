@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
@@ -116,6 +116,8 @@ function sampleStairSFromKeyframes(
 
 const ASCENT_SRISHTI_KEYFRAMES: readonly { t: number; s: number }[] = [
   { t: 0.0, s: -0.9 },
+  { t: 2.6, s: THREE.MathUtils.lerp(SEG_FLIGHT_1.sStart, SEG_FLIGHT_1.sEnd, 0.30) },
+  { t: 4.0, s: THREE.MathUtils.lerp(SEG_FLIGHT_1.sStart, SEG_FLIGHT_1.sEnd, 0.30) },
   { t: 4.2, s: HAND_HELP_1_START_S }, // Approach steep Flight 1
   { t: 5.8, s: HAND_HELP_1_START_S + 0.15 }, // Pause slightly as Ishaan reaches hand down
   { t: 11.4, s: HAND_HELP_1_END_S }, // Climb steadily hand-in-hand (Help #1)
@@ -244,6 +246,7 @@ export function Scene09_BaalKuwariStairs({
   }
 
   const { camera, size, clock } = useThree();
+  const [waterPurchased, setWaterPurchased] = useState(initialStepCount >= 30);
   const shadowsEnabled = QUALITY_PRESETS[qualityProfile].shadows;
   const reducedMotion = useReducedMotion();
 
@@ -470,6 +473,14 @@ export function Scene09_BaalKuwariStairs({
       } else if (mappedTime >= SUMMIT_CREST_T) {
         ishaanPose = 'chat_nod';
         srishtiPose = 'chat_nod';
+      }
+      if (mappedTime >= 2.6 && mappedTime <= 4.0) {
+        ishaanPose = 'hand_assist_reach';
+        srishtiPose = 'chat_nod';
+        ishaanSpeed = 0;
+        srishtiSpeed = 0;
+        phaseLabel = 'Buying water at the hillside stall';
+        if (mappedTime > 3.5 && !waterPurchased) setWaterPurchased(true);
       }
 
       // Manish & Yash climb happily trailing behind the pair
@@ -822,6 +833,7 @@ export function Scene09_BaalKuwariStairs({
       {/* Playable Third-Person Ishaan */}
       <StylizedPlaceholderCharacter
         characterVariant="ishaan"
+        holdingWaterBottle={waterPurchased}
         groupRef={playerGroupRef}
         torsoRef={playerTorsoRef}
         headRef={playerHeadRef}
