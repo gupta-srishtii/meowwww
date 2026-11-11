@@ -263,7 +263,7 @@ function sampleHillsideHeightOffset(
   const toeY = alcove * smoothStep01(distOut / 1.8) * 0.24;
 
   const hillSlopeGain =
-    segment === 'to_baalkuwari' || segment === 'to_baalkuwari_stairs' ? 0.66 : 0.56;
+    segment === 'to_baalkuwari' || segment === 'to_baalkuwari_stairs' ? 0.74 : 0.66;
   const nearClimb = Math.pow(Math.min(climbRamp, 32) + 0.001, 0.87) * hillSlopeGain;
   const highRidgeGain = climbRaw > 32 ? Math.pow(climbRaw - 32, 0.72) * 0.34 : 0;
   const rockyNoise = ridgedNoise2D(wx, wz) * smoothStep01(climbRaw / 5.5) * 0.75;
@@ -411,9 +411,45 @@ function sampleWorldMountainElevation(
 const ROAD_SEGMENTS = 320;
 const HILLSIDE_BATTER_SAMPLES = 7;
 const VALLEY_BATTER_SAMPLES = 7;
-const MAX_PINE_TREES = 240;
-const MAX_ROADSIDE_SHRUBS = 140;
-const MAX_CLIFF_ROCKS = 96;
+const MAX_PINE_TREES = 270;
+const MAX_ROADSIDE_SHRUBS = 185;
+const MAX_CLIFF_ROCKS = 110;
+const MAX_MOUNTAIN_FLOWERS = 240;
+
+function getPwdJunctionBoardTexture(): THREE.CanvasTexture | null {
+  if (typeof document === 'undefined') return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  ctx.fillStyle = '#14532d';
+  ctx.fillRect(0, 0, 512, 256);
+  ctx.strokeStyle = '#f8fafc';
+  ctx.lineWidth = 10;
+  ctx.strokeRect(12, 12, 488, 232);
+
+  ctx.fillStyle = '#f8fafc';
+  ctx.font = 'bold 44px sans-serif';
+  ctx.fillText('←  NEELKANTH', 38, 102);
+
+  ctx.strokeStyle = 'rgba(248, 250, 252, 0.45)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(32, 134);
+  ctx.lineTo(480, 134);
+  ctx.stroke();
+
+  ctx.fillStyle = '#fde68a';
+  ctx.font = 'bold 34px sans-serif';
+  ctx.fillText('HILL OVERLOOK  →', 42, 194);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
 
 function createSeededRandom(seed: number): () => number {
   let state = seed >>> 0;
@@ -740,6 +776,7 @@ export function MountainRoadEnvironment({
   const treeCount = Math.min(MAX_PINE_TREES, Math.round(MAX_PINE_TREES * densityRatio));
   const shrubCount = Math.min(MAX_ROADSIDE_SHRUBS, Math.round(MAX_ROADSIDE_SHRUBS * densityRatio));
   const rockCount = Math.min(MAX_CLIFF_ROCKS, Math.round(MAX_CLIFF_ROCKS * densityRatio));
+  const flowerCount = Math.min(MAX_MOUNTAIN_FLOWERS, Math.round(MAX_MOUNTAIN_FLOWERS * densityRatio));
 
   const isOffroad =
     roadSegment === 'to_baalkuwari' || roadSegment === 'to_baalkuwari_stairs';
@@ -753,6 +790,7 @@ export function MountainRoadEnvironment({
   const asphaltTex = useMemo(() => getAsphaltRoadTexture(), []);
   const offroadDirtTex = useMemo(() => getOffroadDirtTrackTexture(), []);
   const gopuramTex = useMemo(() => getGopuramDetailTexture(), []);
+  const junctionBoardTex = useMemo(() => getPwdJunctionBoardTexture(), []);
 
   const dirLightRef = useRef<THREE.DirectionalLight>(null);
   const roadFlagRefs = useRef<(THREE.Mesh | null)[]>([]);
@@ -762,8 +800,10 @@ export function MountainRoadEnvironment({
   const milestoneMeshRef = useRef<THREE.InstancedMesh>(null);
   const shrubMeshRef = useRef<THREE.InstancedMesh>(null);
   const rockMeshRef = useRef<THREE.InstancedMesh>(null);
+  const flowerMeshRef = useRef<THREE.InstancedMesh>(null);
   const trunkMeshRef = useRef<THREE.InstancedMesh>(null);
   const foliageLowerMeshRef = useRef<THREE.InstancedMesh>(null);
+  const foliageMidMeshRef = useRef<THREE.InstancedMesh>(null);
   const foliageUpperMeshRef = useRef<THREE.InstancedMesh>(null);
 
   const turnoutA = useMemo(
@@ -1194,6 +1234,7 @@ export function MountainRoadEnvironment({
     if (
       !trunkMeshRef.current ||
       !foliageLowerMeshRef.current ||
+      !foliageMidMeshRef.current ||
       !foliageUpperMeshRef.current ||
       !shrubMeshRef.current ||
       !rockMeshRef.current
@@ -1208,8 +1249,10 @@ export function MountainRoadEnvironment({
     const right = new THREE.Vector3();
     const up = new THREE.Vector3();
     const foliageColor = new THREE.Color();
+    const foliageMidColor = new THREE.Color();
     const foliageUpperColor = new THREE.Color();
     const shrubColor = new THREE.Color();
+    const flowerColor = new THREE.Color();
 
     const isSafeWorldPlacement = (
       wx: number,
@@ -1275,22 +1318,31 @@ export function MountainRoadEnvironment({
       dummy.updateMatrix();
       trunkMeshRef.current.setMatrixAt(placedTrees, dummy.matrix);
 
-      dummy.position.set(wx, rootY + 2.15 * scale, wz);
+      dummy.position.set(wx, rootY + 2.05 * scale, wz);
       dummy.updateMatrix();
       foliageLowerMeshRef.current.setMatrixAt(placedTrees, dummy.matrix);
 
-      dummy.position.set(wx, rootY + 3.25 * scale, wz);
+      dummy.position.set(wx, rootY + 2.85 * scale, wz);
+      dummy.scale.set(scale * 0.92, scale * 0.95, scale * 0.92);
+      dummy.updateMatrix();
+      foliageMidMeshRef.current.setMatrixAt(placedTrees, dummy.matrix);
+
+      dummy.position.set(wx, rootY + 3.65 * scale, wz);
+      dummy.scale.set(scale * 0.85, scale * 0.9, scale * 0.85);
       dummy.updateMatrix();
       foliageUpperMeshRef.current.setMatrixAt(placedTrees, dummy.matrix);
 
-      foliageColor.setHSL(0.32 + (rand() - 0.5) * 0.05, 0.4, 0.23 + rand() * 0.09);
-      foliageUpperColor.copy(foliageColor).offsetHSL(0, 0, 0.05);
+      foliageColor.setHSL(0.32 + (rand() - 0.5) * 0.05, 0.42, 0.21 + rand() * 0.09);
+      foliageMidColor.copy(foliageColor).offsetHSL(0, 0.02, 0.03);
+      foliageUpperColor.copy(foliageColor).offsetHSL(0, 0, 0.06);
       foliageLowerMeshRef.current.setColorAt(placedTrees, foliageColor);
+      foliageMidMeshRef.current.setColorAt(placedTrees, foliageMidColor);
       foliageUpperMeshRef.current.setColorAt(placedTrees, foliageUpperColor);
       placedTrees += 1;
     }
     trunkMeshRef.current.count = placedTrees;
     foliageLowerMeshRef.current.count = placedTrees;
+    foliageMidMeshRef.current.count = placedTrees;
     foliageUpperMeshRef.current.count = placedTrees;
 
     let placedShrubs = 0;
@@ -1372,13 +1424,50 @@ export function MountainRoadEnvironment({
     }
     rockMeshRef.current.count = placedRocks;
 
+    if (flowerMeshRef.current) {
+      let placedFlowers = 0;
+      const flowerPalettes = ['#fbbf24', '#f8fafc', '#f472b6', '#c084fc'];
+      for (let attempt = 0; attempt < flowerCount * 3 && placedFlowers < flowerCount; attempt += 1) {
+        const d = 8 + rand() * (totalLength - 18);
+        sampleRoadFrame(curve, d, totalLength, point, tangent, right, up);
+        const alcove = getStallAlcoveBlend(d, roadSegment);
+        const placeHill = rand() < 0.62;
+        const lateral = placeHill
+          ? -(ROAD_HALF_WIDTH + 1.55 + alcove * 2.1 + rand() * 4.5)
+          : getApronOuterOffset(d, roadSegment, turnoutA, turnoutB, stopDist) + 0.55 + rand() * 3.8;
+        const wx = point.x + right.x * lateral;
+        const wz = point.z + right.z * lateral;
+        if (!isSafeWorldPlacement(wx, wz, 0.45, 0.45)) continue;
+        const footprint = sampleTerrainFootprint(terrainMeshSampler, wx, wz, 0.22);
+        if (!footprint) continue;
+        const fScale = 0.72 + rand() * 0.65;
+        dummy.position.set(wx, footprint.minY + 0.09 * fScale, wz);
+        dummy.rotation.set(rand() * 0.25, rand() * Math.PI * 2, rand() * 0.25);
+        dummy.scale.set(fScale, fScale, fScale);
+        dummy.updateMatrix();
+        flowerMeshRef.current.setMatrixAt(placedFlowers, dummy.matrix);
+        flowerColor.set(flowerPalettes[placedFlowers % flowerPalettes.length]);
+        flowerMeshRef.current.setColorAt(placedFlowers, flowerColor);
+        placedFlowers += 1;
+      }
+      flowerMeshRef.current.count = placedFlowers;
+      flowerMeshRef.current.instanceMatrix.needsUpdate = true;
+      if (flowerMeshRef.current.instanceColor) {
+        flowerMeshRef.current.instanceColor.needsUpdate = true;
+      }
+    }
+
     trunkMeshRef.current.instanceMatrix.needsUpdate = true;
     foliageLowerMeshRef.current.instanceMatrix.needsUpdate = true;
+    foliageMidMeshRef.current.instanceMatrix.needsUpdate = true;
     foliageUpperMeshRef.current.instanceMatrix.needsUpdate = true;
     shrubMeshRef.current.instanceMatrix.needsUpdate = true;
     rockMeshRef.current.instanceMatrix.needsUpdate = true;
     if (foliageLowerMeshRef.current.instanceColor) {
       foliageLowerMeshRef.current.instanceColor.needsUpdate = true;
+    }
+    if (foliageMidMeshRef.current.instanceColor) {
+      foliageMidMeshRef.current.instanceColor.needsUpdate = true;
     }
     if (foliageUpperMeshRef.current.instanceColor) {
       foliageUpperMeshRef.current.instanceColor.needsUpdate = true;
@@ -1395,6 +1484,7 @@ export function MountainRoadEnvironment({
     treeCount,
     shrubCount,
     rockCount,
+    flowerCount,
     roadSegment,
     isOffroad,
     stopDist,
@@ -1460,6 +1550,16 @@ export function MountainRoadEnvironment({
       .addScaledVector(right, -(ROAD_HALF_WIDTH + 0.65))
       .addScaledVector(up, 0.0);
 
+    // 4. Scenic Y-junction branch + PWD directional board along road to Neelkanth (`d = 172m`)
+    const jDist = Math.min(totalLength - 30, 172);
+    sampleRoadFrame(curve, jDist, totalLength, point, tangent, right, up);
+    basis.makeBasis(right, up, tangent.clone().negate());
+    const junctionQuat = new THREE.Quaternion().setFromRotationMatrix(basis);
+    const junctionPos = point
+      .clone()
+      .addScaledVector(right, ROAD_HALF_WIDTH + 1.1)
+      .addScaledVector(up, 0.0);
+
     return {
       viewPos,
       viewQuat,
@@ -1472,6 +1572,8 @@ export function MountainRoadEnvironment({
       stopQuat,
       offroadSignPos,
       offroadSignQuat,
+      junctionPos,
+      junctionQuat,
     };
   }, [curve, totalLength, stopDist, turnoutA]);
 
@@ -1923,10 +2025,21 @@ export function MountainRoadEnvironment({
         <meshStandardMaterial color={isOffroad ? '#6b4e38' : '#64748b'} roughness={isOffroad ? 0.92 : 0.65} />
       </instancedMesh>
 
-      {/* Instanced hillside shrubs */}
-      <instancedMesh ref={shrubMeshRef} args={[undefined, undefined, MAX_ROADSIDE_SHRUBS]}>
+      <instancedMesh
+        ref={shrubMeshRef}
+        args={[undefined, undefined, MAX_ROADSIDE_SHRUBS]}
+      >
         <dodecahedronGeometry args={[0.65, 0]} />
         <meshStandardMaterial roughness={0.92} flatShading />
+      </instancedMesh>
+
+      {/* Blooming Himalayan Wildflowers Along Verges */}
+      <instancedMesh
+        ref={flowerMeshRef}
+        args={[undefined, undefined, MAX_MOUNTAIN_FLOWERS]}
+      >
+        <dodecahedronGeometry args={[0.16, 0]} />
+        <meshStandardMaterial roughness={0.75} flatShading />
       </instancedMesh>
 
       {/* Instanced rocky hillside cliff boulders */}
@@ -1938,7 +2051,7 @@ export function MountainRoadEnvironment({
         <meshStandardMaterial color="#646d7a" roughness={0.95} flatShading />
       </instancedMesh>
 
-      {/* Instanced stylized pine trees (deeper trunk anchor prevents slope gaps) */}
+      {/* Instanced 3-tier Deodar & Mountain Pines (deeper trunk anchor prevents slope gaps) */}
       <instancedMesh
         ref={trunkMeshRef}
         args={[undefined, undefined, MAX_PINE_TREES]}
@@ -1951,7 +2064,15 @@ export function MountainRoadEnvironment({
         args={[undefined, undefined, MAX_PINE_TREES]}
         castShadow={shadowsEnabled && qualityProfile === 'high'}
       >
-        <coneGeometry args={[1.15, 2.1, 7]} />
+        <coneGeometry args={[1.22, 1.95, 7]} />
+        <meshStandardMaterial roughness={0.9} flatShading />
+      </instancedMesh>
+      <instancedMesh
+        ref={foliageMidMeshRef}
+        args={[undefined, undefined, MAX_PINE_TREES]}
+        castShadow={shadowsEnabled && qualityProfile === 'high'}
+      >
+        <coneGeometry args={[0.98, 1.85, 7]} />
         <meshStandardMaterial roughness={0.9} flatShading />
       </instancedMesh>
       <instancedMesh
@@ -1959,9 +2080,61 @@ export function MountainRoadEnvironment({
         args={[undefined, undefined, MAX_PINE_TREES]}
         castShadow={shadowsEnabled && qualityProfile === 'high'}
       >
-        <coneGeometry args={[0.85, 1.85, 7]} />
+        <coneGeometry args={[0.72, 1.75, 7]} />
         <meshStandardMaterial roughness={0.9} flatShading />
       </instancedMesh>
+
+      {/* Sky Sun Disc Matching Route Time-of-Day (Warm Golden Sunset on Return Ride) */}
+      <group
+        position={[
+          roadSegment === 'to_hotel_return' ? -55 : 70,
+          roadSegment === 'to_hotel_return' ? 38 : 118,
+          roadSegment === 'to_hotel_return' ? -330 : -380,
+        ]}
+      >
+        <mesh>
+          <sphereGeometry args={[roadSegment === 'to_hotel_return' ? 14 : 11, 20, 16]} />
+          <meshBasicMaterial
+            color={roadSegment === 'to_hotel_return' ? '#fb923c' : '#fef3c7'}
+          />
+        </mesh>
+        <mesh>
+          <sphereGeometry args={[roadSegment === 'to_hotel_return' ? 21 : 16, 16, 12]} />
+          <meshBasicMaterial
+            color={roadSegment === 'to_hotel_return' ? '#fdba74' : '#fde68a'}
+            transparent
+            opacity={0.22}
+          />
+        </mesh>
+      </group>
+
+      {/* Authentic Indian PWD Highway Junction Fork & Green Directional Signboard on Neelkanth Route */}
+      {roadSegment === 'to_neelkanth' && (
+        <group position={landmarks.junctionPos} quaternion={landmarks.junctionQuat}>
+          {/* Secondary spur branch road peeling cleanly right into hillside overlook */}
+          <mesh position={[3.2, -0.04, -7.2]} rotation={[-Math.PI / 2, 0, -0.58]} receiveShadow={shadowsEnabled}>
+            <planeGeometry args={[4.4, 18.0]} />
+            <meshStandardMaterial color="#8d785e" map={offroadDirtTex ?? undefined} roughness={0.94} />
+          </mesh>
+          {/* Steel tubular PWD signboard post & reflective green destination board */}
+          <mesh position={[-0.35, 1.45, -1.8]} castShadow={shadowsEnabled}>
+            <cylinderGeometry args={[0.055, 0.065, 3.0, 8]} />
+            <meshStandardMaterial color="#e2e8f0" roughness={0.55} />
+          </mesh>
+          <mesh position={[0.85, 1.45, -1.8]} castShadow={shadowsEnabled}>
+            <cylinderGeometry args={[0.055, 0.065, 3.0, 8]} />
+            <meshStandardMaterial color="#e2e8f0" roughness={0.55} />
+          </mesh>
+          <mesh position={[0.25, 2.35, -1.8]} castShadow={shadowsEnabled}>
+            <boxGeometry args={[2.15, 1.08, 0.08]} />
+            <meshStandardMaterial
+              color="#ffffff"
+              map={junctionBoardTex ?? undefined}
+              roughness={0.6}
+            />
+          </mesh>
+        </group>
+      )}
 
       {/* 5 Visually distinct roadside vendor stalls, berm pedestrians & curve chevron posts */}
       <RoadsideRoadLife

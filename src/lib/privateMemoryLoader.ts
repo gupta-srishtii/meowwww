@@ -8,6 +8,7 @@ export interface PolaroidMemorySpec {
   caption: string;
   locationTag: string;
   gradientClass: string;
+  mediaKind?: 'image' | 'video';
   /** Primary high-confidence filename in user's local `personal-photos/` folder; `null` when uncertain/unassigned. */
   matchedFilename: string | null;
   /** Optional alternate local filename aliases that map to this exact confirmed moment. */
@@ -25,6 +26,16 @@ export const FINALE_SONG_AUDIO_EXTENSIONS = [
 ] as const;
 
 export const POLAROID_MEMORY_SPECS: Record<string, PolaroidMemorySpec> = {
+  scene02_day1_stream_video: {
+    id: 'scene02_day1_stream_video',
+    title: 'Day 1 · Rocky Stream Stop',
+    caption: 'Spontaneous scooter ride off the Rishikesh road — sitting together by the clear stream boulders',
+    locationTag: 'Rishikesh Day 1 · Video',
+    gradientClass: 'from-emerald-200 via-teal-100 to-sky-100',
+    mediaKind: 'video',
+    matchedFilename: 'DAY 1 1.mp4',
+    altFilenames: ['DAY 1 2 .mp4', 'DAY 1 2.mp4'],
+  },
   scene03_tea_stop: {
     id: 'scene03_tea_stop',
     title: 'Morning Bun Maska & Kulhad Chai',
@@ -116,6 +127,7 @@ export interface PrivateMediaSessionState {
   templeSongName: string | null;
   templeSongUrl: string | null;
   savedHandleNeedsPermission: boolean;
+  statusNote: string | null;
 }
 
 const localObjectUrls = new Map<string, string>();
@@ -125,6 +137,7 @@ let finaleSongUrl: string | null = null;
 let templeSongName: string | null = null;
 let templeSongUrl: string | null = null;
 let savedHandleNeedsPermission = false;
+let lastStatusNote: string | null = null;
 const memoryListeners = new Set<() => void>();
 let memoryRevision = 0;
 
@@ -291,7 +304,7 @@ async function collectFilesFromDirectoryHandle(rootHandle: DirectoryHandleLike):
   const targetNames = getAllTargetFilenames();
 
   const walkDirectory = async (dir: DirectoryHandleLike, depth: number): Promise<void> => {
-    if (depth > 3) return;
+    if (depth > 4) return;
     for await (const entry of dir.values()) {
       if (entry.kind === 'file') {
         const lower = entry.name.toLowerCase();
@@ -345,11 +358,6 @@ export function registerLocalPhotoFolder(
     matchedFiles += 1;
   }
 
-  if (matchedFiles > 0) {
-    linkedFolderLabel = folderLabel?.trim() || 'Local Trip Folder';
-    savedHandleNeedsPermission = false;
-  }
-
   if (autoDetectedFinaleAudio) {
     if (finaleSongUrl) {
       URL.revokeObjectURL(finaleSongUrl);
@@ -367,6 +375,22 @@ export function registerLocalPhotoFolder(
   }
 
   if (matchedFiles > 0 || autoDetectedFinaleAudio || autoDetectedTempleAudio) {
+    const cleanLabel = folderLabel?.trim() || 'Local Trip Folder';
+    linkedFolderLabel =
+      linkedFolderLabel && !linkedFolderLabel.includes(cleanLabel)
+        ? `${linkedFolderLabel} + ${cleanLabel}`
+        : cleanLabel;
+    savedHandleNeedsPermission = false;
+    const totalLinked = Object.keys(POLAROID_MEMORY_SPECS).filter(
+      (id) => getResolvedPolaroidMemory(id).resolvedUrl !== null
+    ).length;
+    lastStatusNote = `Loaded ${totalLinked}/${Object.keys(POLAROID_MEMORY_SPECS).length} media memories${
+      finaleSongUrl || templeSongUrl ? ' + audio' : ''
+    } for this browser session.`;
+    notifyMemoryListeners();
+  } else {
+    lastStatusNote =
+      'No matching trip files found in that folder (try selecting personal-photos, personal-audio, or the parent folder).';
     notifyMemoryListeners();
   }
   return Object.keys(POLAROID_MEMORY_SPECS).filter(
@@ -542,9 +566,50 @@ export async function pickPrivateMediaDirectory(): Promise<{
   }
 }
 
+export async function pickDirectoryViaFallbackInput(): Promise<{
+  status: 'picked' | 'cancelled';
+  matchedPhotos: number;
+}> {
+  if (typeof document === 'undefined') {
+    return { status: 'cancelled', matchedPhotos: 0 };
+  }
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.setAttribute('webkitdirectory', '');
+    input.setAttribute('directory', '');
+    let settled = false;
+    const finalize = (res: { status: 'picked' | 'cancelled'; matchedPhotos: number }) => {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener('focus', handleFocusBack);
+      resolve(res);
+    };
+    const handleFocusBack = () => {
+      window.setTimeout(() => {
+        if (!settled && (!input.files || input.files.length === 0)) {
+          finalize({ status: 'cancelled', matchedPhotos: 0 });
+        }
+      }, 450);
+    };
+    input.addEventListener('change', () => {
+      const files = input.files;
+      if (!files || files.length === 0) {
+        finalize({ status: 'cancelled', matchedPhotos: 0 });
+        return;
+      }
+      const matchedPhotos = registerLocalPhotoFolder(files, 'Selected Folder');
+      finalize({ status: 'picked', matchedPhotos });
+    });
+    window.addEventListener('focus', handleFocusBack, { once: true });
+    input.click();
+  });
+}
+
 /**
  * Convenience helper for inline UI buttons (e.g. inside unlinked Polaroid toast cards):
- * reconnects a saved folder handle in 1 click if available, otherwise opens the directory picker.
+ * reconnects a saved folder handle in 1 click if available, otherwise opens directory picker with `<input webkitdirectory>` fallback.
  */
 export async function connectPrivateMediaInteractively(): Promise<{
   status: 'picked' | 'restored' | 'cancelled' | 'unsupported';
@@ -555,8 +620,17 @@ export async function connectPrivateMediaInteractively(): Promise<{
     if (rec.status === 'restored') {
       return { status: 'restored', matchedPhotos: rec.matchedPhotos };
     }
+    if (rec.status === 'denied') {
+      lastStatusNote =
+        'Folder read permission was not granted — browser security requires permission to read local files.';
+      notifyMemoryListeners();
+    }
   }
-  return pickPrivateMediaDirectory();
+  const picked = await pickPrivateMediaDirectory();
+  if (picked.status === 'unsupported') {
+    return pickDirectoryViaFallbackInput();
+  }
+  return picked;
 }
 
 export function clearLocalPhotoUrls(): void {
@@ -574,6 +648,7 @@ export function clearLocalPhotoUrls(): void {
   templeSongName = null;
   templeSongUrl = null;
   savedHandleNeedsPermission = false;
+  lastStatusNote = null;
   void clearSavedDirectoryHandles();
   notifyMemoryListeners();
 }
@@ -619,6 +694,7 @@ export function getPrivateMediaSessionState(): PrivateMediaSessionState {
     templeSongName,
     templeSongUrl,
     savedHandleNeedsPermission,
+    statusNote: lastStatusNote,
   };
 }
 

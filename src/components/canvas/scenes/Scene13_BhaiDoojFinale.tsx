@@ -15,12 +15,13 @@ import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
 import type { SceneId } from '@/lib/sceneConfig';
 
 export type BhaiDoojPhase =
-  | 'kitaabi_callback'
   | 'arrival'
   | 'applying_tilak'
   | 'sweet_offer'
   | 'eating_together'
-  | 'creator_letter';
+  | 'playful_laugh'
+  | 'jhula_swing'
+  | 'complete';
 
 export interface Scene13BhaiDoojFinaleProps {
   qualityProfile: QualityProfile;
@@ -31,12 +32,16 @@ export interface Scene13BhaiDoojFinaleProps {
   onTilakApplied: () => void;
   onTilakComplete: () => void;
   onEatingComplete: () => void;
+  onLaughComplete?: () => void;
+  onJhulaComplete?: () => void;
   onSceneReady: (token: number, sceneId: SceneId) => void;
   simulateMountFailure?: boolean;
 }
 
 const TILAK_DURATION_SEC = 2.8;
-const EATING_TOGETHER_DURATION_SEC = 6.2;
+const EATING_TOGETHER_DURATION_SEC = 4.2;
+const PLAYFUL_LAUGH_DURATION_SEC = 3.2;
+const JHULA_SWING_HOLD_SEC = 5.4;
 
 /** Smooth bell pulse rising from 0 -> 1 around center `mid` and easing cleanly back to 0. */
 function easeBell(u: number, start: number, end: number): number {
@@ -46,9 +51,8 @@ function easeBell(u: number, start: number, end: number): number {
 }
 
 /**
- * Scene 13 — Interactive Virtual Bhai Dooj Finale.
- * Exclusively Ishaan & Shree seated in a warm home puja setup:
- * Arrival -> Tilak -> Mithai Offering -> Serene Eating Together -> Personal Letter.
+ * Scene 13 — Interactive Virtual Bhai Dooj Finale:
+ * Arrival -> Tilak -> Mithai Offering -> Eating Together -> Playful Laugh -> Marigold Jhula Swing.
  */
 export function Scene13_BhaiDoojFinale({
   qualityProfile,
@@ -59,6 +63,8 @@ export function Scene13_BhaiDoojFinale({
   onTilakApplied,
   onTilakComplete,
   onEatingComplete,
+  onLaughComplete,
+  onJhulaComplete,
   onSceneReady,
   simulateMountFailure = false,
 }: Scene13BhaiDoojFinaleProps) {
@@ -93,12 +99,15 @@ export function Scene13_BhaiDoojFinale({
   const shreeLArmRef = useRef<THREE.Group>(null);
   const shreeRArmRef = useRef<THREE.Group>(null);
   const shreeRForearmRef = useRef<THREE.Group>(null);
+  const swingGroupRef = useRef<THREE.Group>(null);
 
   const simRef = useRef({
     timer: 0,
     tilakMarkFired: false,
     tilakDoneSent: false,
     eatingDoneSent: false,
+    laughDoneSent: false,
+    jhulaDoneSent: false,
     camInitialized: false,
   });
 
@@ -125,6 +134,8 @@ export function Scene13_BhaiDoojFinale({
     simRef.current.tilakMarkFired = false;
     simRef.current.tilakDoneSent = false;
     simRef.current.eatingDoneSent = false;
+    simRef.current.laughDoneSent = false;
+    simRef.current.jhulaDoneSent = false;
     // The contact solver owns all three rotation axes; release its twist between phases.
     if (phase !== 'applying_tilak') {
       shreeRArmRef.current?.rotation.set(0.45, 0, 0.06);
@@ -190,8 +201,35 @@ export function Scene13_BhaiDoojFinale({
       }
     }
 
-    const ishaanPose: CharacterIdlePose = 'sit_ready';
-    const shreePose: CharacterIdlePose = 'sit_ready';
+    if (phase === 'playful_laugh') {
+      const dur = reducedMotion ? 0.9 : PLAYFUL_LAUGH_DURATION_SEC;
+      if (!sim.laughDoneSent && sim.timer >= dur) {
+        sim.laughDoneSent = true;
+        onLaughComplete?.();
+      }
+    }
+
+    if (phase === 'jhula_swing') {
+      const dur = reducedMotion ? 1.2 : JHULA_SWING_HOLD_SEC;
+      if (!sim.jhulaDoneSent && sim.timer >= dur) {
+        sim.jhulaDoneSent = true;
+        onJhulaComplete?.();
+      }
+    }
+
+    const onSwing = phase === 'jhula_swing' || phase === 'complete';
+    const swingAngle = onSwing ? Math.sin(t * 1.4) * 0.15 : Math.sin(t * 0.8) * 0.025;
+    if (swingGroupRef.current) {
+      swingGroupRef.current.rotation.x = swingAngle;
+    }
+
+    const jhulaSeatZ = -1.75 - Math.sin(swingAngle) * 1.9;
+    const jhulaSeatY = 0.43 + (1 - Math.cos(swingAngle)) * 1.9;
+
+    const ishaanPose: CharacterIdlePose =
+      phase === 'playful_laugh' ? 'sit_laugh' : 'sit_ready';
+    const shreePose: CharacterIdlePose =
+      phase === 'playful_laugh' ? 'sit_laugh' : 'sit_ready';
 
     animateCharacterRig({
       refs: {
@@ -206,10 +244,10 @@ export function Scene13_BhaiDoojFinale({
         rightArm: ishaanRArmRef.current,
         rightForearm: ishaanRForearmRef.current,
       },
-      posX: 0.56 - 0.14 * tilakReachWeight,
-      posZ: -0.16,
-      groundY: -0.02,
-      facingYaw: THREE.MathUtils.lerp(1.85, 1.52, tilakReachWeight),
+      posX: onSwing ? 0.36 : 0.56 - 0.14 * tilakReachWeight,
+      posZ: onSwing ? jhulaSeatZ : -0.16,
+      groundY: onSwing ? jhulaSeatY : -0.02,
+      facingYaw: onSwing ? Math.PI + 0.08 : THREE.MathUtils.lerp(1.85, 1.52, tilakReachWeight),
       strideRatio: 0,
       stridePhase: 0,
       torsoBaseY: 0.84,
@@ -234,18 +272,27 @@ export function Scene13_BhaiDoojFinale({
         rightArm: shreeRArmRef.current,
         rightForearm: shreeRForearmRef.current,
       },
-      posX: -0.56 + 0.14 * tilakReachWeight,
-      posZ: -0.16,
-      groundY: -0.02,
-      facingYaw: THREE.MathUtils.lerp(-1.85, -1.52, tilakReachWeight),
+      posX: onSwing ? -0.36 : -0.56 + 0.14 * tilakReachWeight,
+      posZ: onSwing ? jhulaSeatZ : -0.16,
+      groundY: onSwing ? jhulaSeatY : -0.02,
+      facingYaw: onSwing ? Math.PI - 0.08 : THREE.MathUtils.lerp(-1.85, -1.52, tilakReachWeight),
       strideRatio: 0,
       stridePhase: 0,
       torsoBaseY: 0.78,
       elapsed: t,
       delta,
       idlePose: shreePose,
+      armGesturePhase: phase === 'playful_laugh' ? 1.2 : 0,
       reducedMotion,
     });
+
+    if (onSwing) {
+      if (ishaanGroupRef.current) ishaanGroupRef.current.rotation.x = -swingAngle;
+      if (shreeGroupRef.current) shreeGroupRef.current.rotation.x = -swingAngle;
+    } else {
+      if (ishaanGroupRef.current) ishaanGroupRef.current.rotation.x = 0;
+      if (shreeGroupRef.current) shreeGroupRef.current.rotation.x = 0;
+    }
 
     // Subtle bespoke expressive overrides for Tilak application & peaceful sweet sharing
     if (phase === 'applying_tilak') {
@@ -347,13 +394,16 @@ export function Scene13_BhaiDoojFinale({
       }
     }
 
-    // Warm intimate framing focused solely on Ishaan & Shree by the chowki & diya
+    // Warm intimate framing focused solely on Ishaan & Shree by the chowki or swinging on the jhula
     if (phase === 'applying_tilak') {
       scratch.camPos.set(0.05, 1.46, 2.38);
       scratch.lookAt.set(0.04, 0.92, -0.14);
-    } else if (phase === 'creator_letter') {
-      scratch.camPos.set(0.18, 1.58, 3.25);
-      scratch.lookAt.set(-0.2, 0.86, 0.02);
+    } else if (phase === 'playful_laugh') {
+      scratch.camPos.set(0.0, 1.44, 2.65);
+      scratch.lookAt.set(0.0, 0.94, -0.14);
+    } else if (phase === 'jhula_swing' || phase === 'complete') {
+      scratch.camPos.set(Math.sin(t * 0.25) * 0.42, 1.72, 2.72);
+      scratch.lookAt.set(0.0, 1.56, -1.75);
     } else {
       scratch.camPos.set(0.0, 1.5, 2.82);
       scratch.lookAt.set(0.0, 0.82, 0.02);
@@ -379,7 +429,13 @@ export function Scene13_BhaiDoojFinale({
       <BhaiDoojEnvironment
         qualityProfile={qualityProfile}
         paused={paused}
-        sweetsTaken={phase === 'eating_together' || phase === 'creator_letter'}
+        sweetsTaken={
+          phase === 'eating_together' ||
+          phase === 'playful_laugh' ||
+          phase === 'jhula_swing' ||
+          phase === 'complete'
+        }
+        swingGroupRef={swingGroupRef}
       />
 
       {/* Only Ishaan & Shree seated on warm floor gaddis around the puja chowki */}

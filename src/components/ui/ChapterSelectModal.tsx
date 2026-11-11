@@ -85,11 +85,13 @@ export function ChapterSelectModal({
 
   const handleFolderSelected = (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    const matched = registerLocalPhotoFolder(files);
+    const rel = (files[0] as File & { webkitRelativePath?: string })?.webkitRelativePath ?? '';
+    const folderName = rel.split('/')[0] || 'Local Trip Folder';
+    registerLocalPhotoFolder(files, folderName);
+    const updated = getPrivateMediaSessionState();
     setLocalLinkStatus(
-      matched > 0
-        ? `Linked ${matched}/${totalPolaroidsCount} trip photos privately for this browser session`
-        : 'No matching trip filenames found in that folder'
+      updated.statusNote ??
+        `Linked ${updated.matchedPhotoCount}/${totalPolaroidsCount} trip memories privately for this browser session`
     );
   };
 
@@ -97,10 +99,12 @@ export function ChapterSelectModal({
     if (supportsNativeDirectoryPicker()) {
       const res = await pickPrivateMediaDirectory();
       if (res.status === 'picked') {
+        const updated = getPrivateMediaSessionState();
         setLocalLinkStatus(
-          res.matchedPhotos > 0
-            ? `Linked ${res.matchedPhotos}/${totalPolaroidsCount} trip photos privately for this browser session`
-            : 'No matching trip filenames found in that folder'
+          updated.statusNote ??
+            (res.matchedPhotos > 0
+              ? `Linked ${res.matchedPhotos}/${totalPolaroidsCount} trip memories privately for this browser session`
+              : 'No matching trip filenames found in that folder')
         );
         return;
       }
@@ -134,8 +138,16 @@ export function ChapterSelectModal({
   const handleReconnectClick = async () => {
     const rec = await reconnectSavedMediaDirectory();
     if (rec.status === 'restored') {
+      const updated = getPrivateMediaSessionState();
       setLocalLinkStatus(
-        `Reconnected ${rec.matchedPhotos}/${totalPolaroidsCount} trip photos from saved folder`
+        updated.statusNote ??
+          `Reconnected ${rec.matchedPhotos}/${totalPolaroidsCount} trip memories from saved folder`
+      );
+      return;
+    }
+    if (rec.status === 'denied') {
+      setLocalLinkStatus(
+        'Folder permission denied by browser. Click Link Local Folder and grant Read access.'
       );
       return;
     }
@@ -264,13 +276,14 @@ export function ChapterSelectModal({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-medium text-slate-200">
-                    Local Trip Photos ({mediaSession.matchedPhotoCount}/{totalPolaroidsCount} linked)
+                    Local Trip Media ({mediaSession.matchedPhotoCount}/{totalPolaroidsCount} linked)
                   </p>
                   <p className="mt-0.5 text-[10px] text-slate-400">
                     {localLinkStatus ??
+                      mediaSession.statusNote ??
                       (mediaSession.hasLinkedPhotos
                         ? `Linked from ${mediaSession.folderLabel ?? 'local folder'} (device-only, never uploaded).`
-                        : 'Stylized Polaroids load by default. Link your local Photos folder once per browser session (browsers clear file links after refresh).')}
+                        : 'Select your local Photos/Audio folder once to show real trip photos, Day 1 video & songs in this session.')}
                   </p>
                 </div>
                 <input
@@ -410,12 +423,28 @@ export function ChapterSelectModal({
                       }`}
                     >
                       {unlocked && mem.resolvedUrl ? (
-                        <img
-                          src={mem.resolvedUrl}
-                          alt={mem.title}
-                          style={{ imageOrientation: 'from-image' }}
-                          className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                        />
+                        mem.mediaKind === 'video' ? (
+                          <div className="relative h-full w-full">
+                            <video
+                              src={mem.resolvedUrl}
+                              muted
+                              loop
+                              playsInline
+                              autoPlay
+                              className="h-full w-full object-cover"
+                            />
+                            <span className="absolute right-1.5 bottom-1.5 rounded bg-slate-950/75 px-1.5 py-0.5 text-[9px] font-semibold text-amber-200">
+                              VIDEO
+                            </span>
+                          </div>
+                        ) : (
+                          <img
+                            src={mem.resolvedUrl}
+                            alt={mem.title}
+                            style={{ imageOrientation: 'from-image' }}
+                            className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                          />
+                        )
                       ) : unlocked ? (
                         <span className="px-2 text-center text-[10px] font-medium text-slate-800 transition-transform duration-500 ease-out group-hover:scale-[1.03]">
                           {mem.locationTag}
@@ -466,12 +495,23 @@ export function ChapterSelectModal({
                 }`}
               >
                 {previewMem.resolvedUrl ? (
-                  <img
-                    src={previewMem.resolvedUrl}
-                    alt={previewMem.title}
-                    style={{ imageOrientation: 'from-image' }}
-                    className="max-h-full max-w-full rounded object-contain transition-transform duration-500 ease-out hover:scale-[1.02]"
-                  />
+                  previewMem.mediaKind === 'video' ? (
+                    <video
+                      src={previewMem.resolvedUrl}
+                      controls
+                      autoPlay
+                      loop
+                      playsInline
+                      className="max-h-full max-w-full rounded object-contain"
+                    />
+                  ) : (
+                    <img
+                      src={previewMem.resolvedUrl}
+                      alt={previewMem.title}
+                      style={{ imageOrientation: 'from-image' }}
+                      className="max-h-full max-w-full rounded object-contain transition-transform duration-500 ease-out hover:scale-[1.02]"
+                    />
+                  )
                 ) : (
                   <div className="space-y-1.5">
                     <p className="text-[10px] font-semibold tracking-wider text-slate-700 uppercase">

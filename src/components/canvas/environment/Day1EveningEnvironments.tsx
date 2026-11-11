@@ -94,10 +94,10 @@ export const DAY1_MARKET_WALK_BOUNDS: WalkBounds = {
 export const DAY1_MARKET_HOTSPOTS: readonly WalkHotspot[] = [
   {
     id: 'join_dhaba',
-    label: 'Join Ishaan, Manish & Yash at the Dhaba',
+    label: 'Park & Join Manish & Yash at the Dhaba',
     x: 0,
     z: -9.4,
-    radius: 2.2,
+    radius: 2.35,
     actionType: 'interact',
   },
 ];
@@ -350,41 +350,41 @@ export function Day1WaterfallEnvironment({
         <meshStandardMaterial color="#64748b" roughness={0.92} flatShading />
       </mesh>
 
-      {/* Low Natural Green Rocky Stream Shelf & Gentle Brook Flow on RIGHT (`x = +3.1 .. +7.6`) */}
-      <group position={[4.85, 0, -2.35]}>
-        {/* Mossy terraced river boulders (no giant artificial chute cliff) */}
-        <mesh position={[0.95, 0.62, -0.75]} scale={[1.3, 0.85, 1.15]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
-          <dodecahedronGeometry args={[1.05, 1]} />
-          <meshStandardMaterial color="#4a5850" roughness={0.92} flatShading />
+      {/* Natural Green Rocky Mountain Creek Bed & Subtle Trickle Water Flow (`x = +3.1 .. +7.6`) */}
+      <group position={[4.75, 0, -2.35]}>
+        {/* Pale-grey & warm tan stream boulders matching real Day 1 creek stones */}
+        <mesh position={[1.05, 0.45, -0.78]} scale={[1.25, 0.65, 1.15]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+          <dodecahedronGeometry args={[0.98, 1]} />
+          <meshStandardMaterial color="#94a3b8" roughness={0.92} flatShading />
         </mesh>
-        <mesh position={[-0.25, 0.42, -0.35]} scale={[1.15, 0.65, 1.05]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
-          <dodecahedronGeometry args={[0.92, 0]} />
-          <meshStandardMaterial color="#57636c" roughness={0.9} flatShading />
+        <mesh position={[-0.25, 0.34, -0.35]} scale={[1.15, 0.52, 1.0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+          <dodecahedronGeometry args={[0.88, 0]} />
+          <meshStandardMaterial color="#a8a29e" roughness={0.9} flatShading />
         </mesh>
-        <mesh position={[-1.05, 0.34, -0.75]} scale={[1.0, 0.55, 0.95]}>
+        <mesh position={[-1.08, 0.28, -0.78]} scale={[0.95, 0.46, 0.92]}>
           <dodecahedronGeometry args={[0.72, 0]} />
-          <meshStandardMaterial color="#3b5e41" roughness={0.92} flatShading />
+          <meshStandardMaterial color="#64748b" roughness={0.92} flatShading />
         </mesh>
-        <mesh position={[1.15, 0.38, 0.75]} scale={[0.95, 0.52, 0.9]}>
-          <dodecahedronGeometry args={[0.78, 0]} />
-          <meshStandardMaterial color="#4b5563" roughness={0.92} flatShading />
+        <mesh position={[1.18, 0.32, 0.85]} scale={[0.92, 0.44, 0.88]}>
+          <dodecahedronGeometry args={[0.76, 0]} />
+          <meshStandardMaterial color="#78716c" roughness={0.92} flatShading />
         </mesh>
 
-        {/* Subtle low multi-step natural water flow trickling over wet rocks */}
+        {/* Delicate translucent mountain water threads weaving between boulders */}
         <mesh
           ref={(el) => {
             streamSheetRefs.current[0] = el;
           }}
-          position={[0.15, 0.58, 0.45]}
-          rotation={[0.42, -0.25, 0]}
+          position={[0.15, 0.38, 0.45]}
+          rotation={[0.36, -0.25, 0]}
         >
-          <boxGeometry args={[0.68, 0.045, 0.92]} />
+          <boxGeometry args={[0.42, 0.03, 0.92]} />
           <meshStandardMaterial
-            color="#e0f2fe"
-            emissive="#7dd3fc"
-            emissiveIntensity={0.32}
+            color="#cbd5e1"
+            emissive="#bae6fd"
+            emissiveIntensity={0.08}
             transparent
-            opacity={0.68}
+            opacity={0.44}
             roughness={0.22}
           />
         </mesh>
@@ -392,16 +392,16 @@ export function Day1WaterfallEnvironment({
           ref={(el) => {
             streamSheetRefs.current[1] = el;
           }}
-          position={[-0.12, 0.32, 1.15]}
-          rotation={[0.36, -0.22, 0]}
+          position={[-0.12, 0.22, 1.15]}
+          rotation={[0.3, -0.22, 0]}
         >
-          <boxGeometry args={[0.88, 0.045, 0.98]} />
+          <boxGeometry args={[0.52, 0.03, 0.98]} />
           <meshStandardMaterial
-            color="#f0f9ff"
+            color="#e2e8f0"
             emissive="#bae6fd"
-            emissiveIntensity={0.28}
+            emissiveIntensity={0.08}
             transparent
-            opacity={0.66}
+            opacity={0.42}
             roughness={0.24}
           />
         </mesh>
@@ -409,84 +409,99 @@ export function Day1WaterfallEnvironment({
           ref={(el) => {
             streamSheetRefs.current[2] = el;
           }}
-          position={[-0.38, 0.12, 1.75]}
-          rotation={[0.24, -0.15, 0]}
+          position={[-0.38, 0.09, 1.75]}
+          rotation={[0.2, -0.15, 0]}
         >
-          <boxGeometry args={[1.05, 0.04, 0.85]} />
+          <boxGeometry args={[0.64, 0.025, 0.85]} />
           <meshStandardMaterial
-            color="#bae6fd"
-            emissive="#7dd3fc"
-            emissiveIntensity={0.22}
+            color="#cbd5e1"
+            emissive="#bae6fd"
+            emissiveIntensity={0.06}
             transparent
-            opacity={0.62}
+            opacity={0.4}
             roughness={0.22}
           />
         </mesh>
 
-        {/* Gentle stream pool ripple where the brook meets flat cobbles */}
-        <mesh ref={foamRingRef} position={[-0.65, 0.035, 2.05]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[0.92, 18]} />
-          <meshStandardMaterial color="#e0f2fe" transparent opacity={0.54} roughness={0.28} />
+        {/* Subtle clear shallow pebble pool edge */}
+        <mesh ref={foamRingRef} position={[-0.65, 0.028, 2.05]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[0.58, 18]} />
+          <meshStandardMaterial color="#e2e8f0" transparent opacity={0.36} roughness={0.3} />
         </mesh>
       </group>
 
-      {/* Clear mountain stream running past the friends along RIGHT side */}
-      <mesh position={[3.9, 0.02, 2.2]} rotation={[-Math.PI / 2, 0, 0.08]} receiveShadow={shadowsEnabled}>
-        <planeGeometry args={[2.55, 11.5]} />
+      {/* Rocky damp creek gravel bed + narrow meandering shallow water ribbon (zero flat neon rectangle) */}
+      <mesh position={[3.85, 0.012, 2.2]} rotation={[-Math.PI / 2, 0, 0.08]} receiveShadow={shadowsEnabled}>
+        <planeGeometry args={[2.75, 12.2]} />
+        <meshStandardMaterial color="#6e6a64" roughness={0.94} />
+      </mesh>
+      <mesh position={[3.65, 0.02, 2.2]} rotation={[-Math.PI / 2, 0, 0.14]} receiveShadow={shadowsEnabled}>
+        <planeGeometry args={[0.78, 11.4]} />
         <meshStandardMaterial
-          color="#38bdf8"
-          emissive="#0ea5e9"
-          emissiveIntensity={0.18}
+          color="#9fb8c9"
           transparent
-          opacity={0.72}
-          roughness={0.16}
+          opacity={0.5}
+          roughness={0.18}
+        />
+      </mesh>
+      <mesh position={[4.28, 0.018, 1.1]} rotation={[-Math.PI / 2, 0, -0.06]}>
+        <planeGeometry args={[0.42, 7.6]} />
+        <meshStandardMaterial
+          color="#cbd5e1"
+          transparent
+          opacity={0.38}
+          roughness={0.2}
         />
       </mesh>
 
-      {/* Large Natural Flat Stream Boulders Supporting the 4 Seated Friends */}
+      {/* Pale-grey & tan boulders supporting the seated friends along the forest creek */}
       {Object.entries(DAY1_WATERFALL_ROCK_SEATS).map(([key, seat], idx) => (
         <group key={`rock-seat-${key}`} position={[seat.x, 0, seat.z]}>
-          {/* Solid lower embedded boulder body up to exact `seat.rockTopY` */}
           <mesh
             position={[0, seat.rockTopY * 0.5, 0]}
-            scale={[1.05, seat.rockTopY / 0.42, 0.95]}
+            scale={[1.08, seat.rockTopY / 0.42, 0.96]}
             castShadow={shadowsEnabled}
             receiveShadow={shadowsEnabled}
           >
-            <cylinderGeometry args={[0.42, 0.54, 0.42, 9]} />
+            <cylinderGeometry args={[0.44, 0.56, 0.42, 9]} />
             <meshStandardMaterial
-              color={idx % 2 === 0 ? '#64748b' : '#57606b'}
+              color={idx % 2 === 0 ? '#9ca3af' : '#a8a29e'}
               roughness={0.92}
               flatShading
             />
           </mesh>
         </group>
       ))}
-      {/* Decorative foreground stream cobbles & lush creek-bank fern shrubs */}
+      {/* Pale-tan & slate river stones + lush forest creek ferns & leafy bushes */}
       {[
-        [2.75, 0.25, 0.32],
-        [2.55, -2.95, 0.42],
-        [4.95, 1.45, 0.36],
-        [2.95, 1.85, 0.28],
-        [1.45, -3.55, 0.38],
+        [2.75, 0.25, 0.34],
+        [2.55, -2.95, 0.44],
+        [4.95, 1.45, 0.38],
+        [2.95, 1.85, 0.31],
+        [1.45, -3.55, 0.4],
         [0.45, 0.95, 0.34],
-        [2.15, 0.55, 0.26],
+        [2.15, 0.55, 0.28],
+        [3.35, -0.85, 0.3],
+        [4.15, 3.15, 0.36],
+        [3.42, 4.35, 0.32],
       ].map(([rx, rz, rs], idx) => (
-        <mesh key={`cobble-${idx}`} position={[rx, rs * 0.28, rz]} castShadow={shadowsEnabled}>
+        <mesh key={`cobble-${idx}`} position={[rx, rs * 0.26, rz]} castShadow={shadowsEnabled}>
           <dodecahedronGeometry args={[rs, 0]} />
-          <meshStandardMaterial color={idx % 2 === 0 ? '#5c6672' : '#4d5863'} roughness={0.92} flatShading />
+          <meshStandardMaterial color={idx % 2 === 0 ? '#a8a29e' : '#94a3b8'} roughness={0.92} flatShading />
         </mesh>
       ))}
       {[
-        [5.35, -3.4, 0.58],
-        [5.65, 0.85, 0.65],
-        [-5.15, -3.85, 0.72],
-        [-5.45, 1.95, 0.68],
-        [3.15, -4.15, 0.54],
+        [5.35, -3.4, 0.72],
+        [5.65, 0.85, 0.78],
+        [5.85, 3.25, 0.85],
+        [-5.15, -3.85, 0.75],
+        [-5.45, 1.95, 0.72],
+        [3.15, -4.15, 0.68],
+        [0.35, -4.25, 0.64],
       ].map(([fx, fz, fs], idx) => (
         <mesh key={`wf-shrub-${idx}`} position={[fx, fs * 0.42, fz]} castShadow={shadowsEnabled}>
           <dodecahedronGeometry args={[fs, 1]} />
-          <meshStandardMaterial color={idx % 2 === 0 ? '#2b5232' : '#35613b'} roughness={0.92} flatShading />
+          <meshStandardMaterial color={idx % 3 === 0 ? '#1e4620' : idx % 3 === 1 ? '#2b5232' : '#35613b'} roughness={0.92} flatShading />
         </mesh>
       ))}
 

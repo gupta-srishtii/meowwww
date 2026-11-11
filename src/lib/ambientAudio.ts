@@ -22,12 +22,13 @@ export type AmbientAudioMode =
 
 export type FinaleMusicPhase =
   | 'inactive'
-  | 'kitaabi_callback'
   | 'arrival'
   | 'applying_tilak'
   | 'sweet_offer'
   | 'eating_together'
-  | 'creator_letter'
+  | 'playful_laugh'
+  | 'jhula_swing'
+  | 'complete'
   | 'ending';
 
 interface AmbientState {
@@ -271,7 +272,9 @@ class AmbientAudioController {
       (this.finalePhase === 'applying_tilak' ||
         this.finalePhase === 'sweet_offer' ||
         this.finalePhase === 'eating_together' ||
-        this.finalePhase === 'creator_letter' ||
+        this.finalePhase === 'playful_laugh' ||
+        this.finalePhase === 'jhula_swing' ||
+        this.finalePhase === 'complete' ||
         this.finalePhase === 'ending')
     );
   }
@@ -290,10 +293,11 @@ class AmbientAudioController {
       case 'sweet_offer':
       case 'eating_together':
         return vol * 0.78;
-      case 'creator_letter':
-        return vol * 0.28;
+      case 'playful_laugh':
+      case 'jhula_swing':
+      case 'complete':
       case 'ending':
-        return vol * 0.34;
+        return vol * 0.82;
       default:
         return 0;
     }
@@ -667,6 +671,10 @@ class AmbientAudioController {
     this.finalePhase = phase;
     this.updateCustomTrackElement();
     this.applyLevels();
+  }
+
+  isCustomTrackBlocked(): boolean {
+    return this.customTrackBlocked;
   }
 
   syncState(next: AmbientState): void {

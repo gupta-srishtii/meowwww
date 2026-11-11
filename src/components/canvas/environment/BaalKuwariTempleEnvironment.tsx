@@ -21,19 +21,29 @@ import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
 export const BAAL_KUWARI_TEMPLE_WALK_BOUNDS: WalkBounds = {
   minX: -6.4,
   maxX: 6.4,
-  minZ: -4.8,
+  minZ: -12.6,
   maxZ: 5.4,
 };
+
+export function sampleBaalKuwariFloorY(x: number, z: number): number {
+  if (z >= -6.2) return 0;
+  if (x < 1.85 && z > -9.6) return 0;
+  if (z >= -9.6) {
+    const t = Math.max(0, Math.min(1, (-6.2 - z) / 3.4));
+    return THREE.MathUtils.lerp(0, -1.65, t);
+  }
+  return -1.65;
+}
 
 export const BAAL_KUWARI_TEMPLE_OBSTACLES: readonly WalkObstacle[] = [
   // Hilltop stone sanctuary pavilion
   { kind: 'box', minX: -2.45, maxX: 2.45, minZ: -5.4, maxZ: -2.95 },
   // Summit diya pillar
   { kind: 'circle', x: -2.15, z: -1.8, radius: 0.45 },
-  // Backyard camera tripod stand near overlook bench
-  { kind: 'circle', x: 2.35, z: 0.15, radius: 0.36 },
-  // Summit overlook parapet benches
-  { kind: 'box', minX: 3.1, maxX: 4.85, minZ: -1.8, maxZ: -0.95 },
+  // Rear stone courtyard retaining edge behind shrine forcing east-side passage down back stairs
+  { kind: 'box', minX: -6.6, maxX: 2.1, minZ: -9.55, maxZ: -5.6 },
+  // Backyard camera tripod stand on mountain-facing ledge
+  { kind: 'circle', x: 0.35, z: -10.35, radius: 0.36 },
 ];
 
 export const BAAL_KUWARI_TEMPLE_HOTSPOTS: readonly WalkHotspot[] = [
@@ -48,17 +58,17 @@ export const BAAL_KUWARI_TEMPLE_HOTSPOTS: readonly WalkHotspot[] = [
   {
     id: 'summit_polaroid',
     label: 'Take Summit Mountain Polaroid',
-    x: 2.1,
-    z: -3.2,
+    x: 2.95,
+    z: -2.35,
     radius: 1.55,
     actionType: 'photo',
   },
   {
     id: 'book_polaroid',
-    label: 'Photograph Shree Reading by the Valley',
-    x: 2.75,
-    z: -0.95,
-    radius: 1.5,
+    label: 'Photograph Shree Reading on Back Ledge',
+    x: 0.35,
+    z: -9.85,
+    radius: 1.8,
     actionType: 'photo',
   },
   {
@@ -490,22 +500,111 @@ export function BaalKuwariTempleEnvironment({
         </mesh>
       ))}
 
-      {/* Wooden Scenic Bench + Open Book prop overlooking mountain ridges */}
-      <group position={[3.95, 0, -1.35]} rotation={[0, -0.45, 0]}>
-        <mesh position={[0, 0.42, 0]} castShadow={shadowsEnabled}>
-          <boxGeometry args={[1.6, 0.08, 0.5]} />
-          <meshStandardMaterial color="#8c5e42" roughness={0.85} />
+      {/* Back-side Stone Stairs + Pebbly Grassy Backyard Mountain-Facing Ledge (`z = -6.2 .. -13.2`) */}
+      {/* 8 Weathered Concrete Back-Side Steps (`z = -6.2 -> -9.6`, `y = 0 -> -1.65`) along east rear of shrine */}
+      {Array.from({ length: 8 }).map((_, idx) => {
+        const t = (idx + 0.5) / 8;
+        const sz = THREE.MathUtils.lerp(-6.3, -9.5, t);
+        const sy = THREE.MathUtils.lerp(-0.1, -1.55, t);
+        return (
+          <group key={`bk-backstep-${idx}`} position={[3.25, sy, sz]}>
+            <mesh receiveShadow={shadowsEnabled} castShadow={shadowsEnabled}>
+              <boxGeometry args={[2.25, 0.24, 0.48]} />
+              <meshStandardMaterial color="#b4ac9e" roughness={0.92} />
+            </mesh>
+            {/* Subtle teal/green step edge paint matching real Baal Kuwari steps */}
+            <mesh position={[0, 0.125, -0.19]}>
+              <boxGeometry args={[2.25, 0.02, 0.09]} />
+              <meshStandardMaterial color="#0f766e" roughness={0.78} />
+            </mesh>
+          </group>
+        );
+      })}
+      {/* White stone bollards & galvanized steel pipe rails flanking back-side stairs */}
+      {[2.15, 4.35].map((rx, rIdx) => (
+        <group key={`bk-backrail-${rIdx}`}>
+          {[-6.4, -7.9, -9.5].map((rz, bIdx) => (
+            <mesh
+              key={`bk-post-${bIdx}`}
+              position={[rx, THREE.MathUtils.lerp(0.32, -1.25, bIdx / 2), rz]}
+              castShadow={shadowsEnabled}
+            >
+              <boxGeometry args={[0.14, 0.72, 0.14]} />
+              <meshStandardMaterial color="#f1f5f9" roughness={0.85} />
+            </mesh>
+          ))}
+          <mesh position={[rx, -0.35, -7.95]} rotation={[-0.44, 0, 0]}>
+            <cylinderGeometry args={[0.025, 0.025, 3.65, 8]} />
+            <meshStandardMaterial color="#94a3b8" metalness={0.65} roughness={0.35} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Pebbly Grassy Backyard Ledge Overlooking Distant Himalayan Valley (`z = -9.6..-13.2`, `y = -1.65`) */}
+      <group position={[0.25, -1.65, -11.4]}>
+        <mesh position={[0, -0.85, 0]} receiveShadow={shadowsEnabled}>
+          <boxGeometry args={[8.4, 1.7, 3.8]} />
+          <meshStandardMaterial color="#5d5347" roughness={0.95} />
         </mesh>
-        {[-0.6, 0.6].map((lx) => (
-          <mesh key={lx} position={[lx, 0.2, 0]}>
-            <boxGeometry args={[0.14, 0.4, 0.44]} />
-            <meshStandardMaterial color="#57534e" roughness={0.92} />
+        <mesh position={[0, 0.02, 0]} receiveShadow={shadowsEnabled}>
+          <boxGeometry args={[8.2, 0.08, 3.6]} />
+          <meshStandardMaterial color="#7d7766" map={courtyardTex ?? undefined} roughness={0.95} />
+        </mesh>
+        {/* Grassy edge clumps & pale pebbles along the outer cliff brim */}
+        {[
+          [-2.8, -1.35, 0.45],
+          [-1.2, -1.45, 0.38],
+          [0.65, -1.5, 0.42],
+          [2.1, -1.38, 0.46],
+          [3.15, -1.25, 0.36],
+        ].map(([gx, gz, gs], idx) => (
+          <mesh key={`ledge-grass-${idx}`} position={[gx, 0.1, gz]} receiveShadow={shadowsEnabled}>
+            <dodecahedronGeometry args={[gs, 0]} />
+            <meshStandardMaterial color={idx % 2 === 0 ? '#4d6f3d' : '#5f7f44'} roughness={0.92} flatShading />
           </mesh>
         ))}
-        {/* Open book sitting gently on the scenic bench or held forward during book photo moment */}
+        {/* Chain-link corner wire post + green overhanging backyard branches */}
+        <mesh position={[-3.45, 0.65, -1.45]} castShadow={shadowsEnabled}>
+          <cylinderGeometry args={[0.04, 0.045, 1.35, 8]} />
+          <meshStandardMaterial color="#64748b" metalness={0.5} roughness={0.45} />
+        </mesh>
+        <mesh position={[-3.25, 1.85, -1.15]} scale={[1.35, 0.85, 1.15]}>
+          <dodecahedronGeometry args={[0.92, 1]} />
+          <meshStandardMaterial color="#275036" roughness={0.88} flatShading />
+        </mesh>
+      </group>
+
+      {/* Distant Winding Valley River Bed & Ridge Utility Poles below Cliff (`book on baalkumari temple me.jpg` view) */}
+      <mesh position={[2.5, -16.5, -48]} rotation={[-Math.PI / 2, 0, 0.18]}>
+        <planeGeometry args={[11, 86]} />
+        <meshStandardMaterial color="#7aa0b8" transparent opacity={0.62} roughness={0.25} />
+      </mesh>
+      <mesh position={[2.5, -16.6, -48]} rotation={[-Math.PI / 2, 0, 0.18]}>
+        <planeGeometry args={[18, 86]} />
+        <meshStandardMaterial color="#94a3b8" roughness={0.94} />
+      </mesh>
+      {[-12, 4, 18].map((ux, idx) => (
+        <group key={`valley-pole-${idx}`} position={[ux, -5.8 - idx * 1.4, -26 - idx * 8]}>
+          <mesh position={[0, 2.2, 0]}>
+            <cylinderGeometry args={[0.04, 0.06, 4.4, 6]} />
+            <meshStandardMaterial color="#475569" roughness={0.9} />
+          </mesh>
+          <mesh position={[0, 4.1, 0]}>
+            <boxGeometry args={[0.75, 0.05, 0.05]} />
+            <meshStandardMaterial color="#334155" roughness={0.85} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Grey-Blue Core Sling Bag + Open White Book at Srishti's Cliff-Edge Overlook Spot (`[1.08, -1.65, -12.35]`) */}
+      <group position={[1.08, -1.65, -12.35]}>
+        <mesh position={[-0.45, 0.11, 0.18]} rotation={[0.15, 0.42, 0]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[0.24, 0.19, 0.1]} />
+          <meshStandardMaterial color="#738496" roughness={0.84} />
+        </mesh>
         <group
-          position={bookPhotoActive ? [0, 0.9, -0.26] : [0.32, 0.475, -0.02]}
-          rotation={bookPhotoActive ? [-0.55, 0, 0] : [0, 0.2, 0]}
+          position={bookPhotoActive ? [0, 0.88, -0.3] : [0.05, 0.44, -0.22]}
+          rotation={bookPhotoActive ? [-0.45, 0.12, 0] : [-0.22, 0.2, 0]}
         >
           <mesh position={[-0.085, 0.012, 0]} rotation={[0, 0, 0.14]} castShadow={shadowsEnabled}>
             <boxGeometry args={[0.16, 0.02, 0.22]} />
@@ -522,8 +621,8 @@ export function BaalKuwariTempleEnvironment({
         </group>
       </group>
 
-      {/* Backyard camera tripod stand near overlook bench */}
-      <group position={[2.35, 0, 0.15]} rotation={[0, -0.75, 0]}>
+      {/* Camera Tripod Stand on Backyard Ledge Pointed Out Across the Mountain Valley (`[0.35, -1.65, -10.35]`) */}
+      <group position={[0.35, -1.65, -10.35]} rotation={[0, -0.35, 0]}>
         {[0, (Math.PI * 2) / 3, (Math.PI * 4) / 3].map((yaw, idx) => (
           <group key={idx} position={[0, 0.96, 0]} rotation={[0, yaw, 0]}>
             <mesh position={[0, -0.48, 0.13]} rotation={[-0.25, 0, 0]} castShadow={shadowsEnabled}>
@@ -608,7 +707,7 @@ export function BaalKuwariTempleEnvironment({
         reducedMotion={reducedMotion}
       />
       <HotspotBeaconSparkle
-        position={[2.1, 0, -3.2]}
+        position={[2.95, 0, -2.35]}
         visible={!capturedPolaroid}
         color="#38bdf8"
         height={0.95}
@@ -616,7 +715,7 @@ export function BaalKuwariTempleEnvironment({
         reducedMotion={reducedMotion}
       />
       <HotspotBeaconSparkle
-        position={[2.75, 0, -0.95]}
+        position={[0.35, -1.6, -9.85]}
         visible={!capturedBookPolaroid}
         color="#f59e0b"
         height={0.95}

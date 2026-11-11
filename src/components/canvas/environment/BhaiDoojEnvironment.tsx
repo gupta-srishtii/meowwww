@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -10,19 +10,21 @@ export interface BhaiDoojEnvironmentProps {
   qualityProfile: QualityProfile;
   paused: boolean;
   sweetsTaken?: boolean;
+  swingGroupRef?: RefObject<THREE.Group | null>;
 }
 
-const FAIRY_LIGHTS_X = [-2.2, -1.65, -1.1, -0.55, 0, 0.55, 1.1, 1.65, 2.2];
+const FAIRY_LIGHTS_X = [-2.6, -1.95, -1.3, -0.65, 0, 0.65, 1.3, 1.95, 2.6];
 
 /**
- * Warm cozy Indian home interior for the Bhai Dooj Tilak finale.
- * Grounded cushions (gaddis), low wooden puja chowki, brass thali, roli, akshat, mithai & lit diya.
- * Explicitly staged with zero crowd — only Ishaan & Shree present.
+ * Warm festive courtyard veranda for the Bhai Dooj celebration:
+ * Puja rug & chowki in foreground, flower-draped traditional wooden jhula (swing) behind,
+ * marigold garlands, glowing diyas and fairy string lights. Only Ishaan & Srishti present.
  */
 export function BhaiDoojEnvironment({
   qualityProfile,
   paused,
   sweetsTaken = false,
+  swingGroupRef,
 }: BhaiDoojEnvironmentProps) {
   const shadowsEnabled = QUALITY_PRESETS[qualityProfile].shadows;
   const reducedMotion = useReducedMotion();
@@ -93,61 +95,60 @@ export function BhaiDoojEnvironment({
         <meshStandardMaterial color="#7f1d1d" roughness={0.92} />
       </mesh>
 
-      {/* Back & flanking warm cream plaster Indian home walls */}
-      <mesh position={[0, 2.2, -2.5]} receiveShadow={shadowsEnabled}>
-        <boxGeometry args={[12, 4.6, 0.25]} />
+      {/* Back & flanking warm cream plaster walls giving generous festive depth for jhula */}
+      <mesh position={[0, 2.35, -3.55]} receiveShadow={shadowsEnabled}>
+        <boxGeometry args={[12.5, 4.9, 0.25]} />
         <meshStandardMaterial color="#f5e6cf" roughness={0.88} />
       </mesh>
-      <mesh position={[-4.5, 2.2, 0.5]} receiveShadow={shadowsEnabled}>
-        <boxGeometry args={[0.25, 4.6, 8.5]} />
+      <mesh position={[-4.8, 2.35, 0.0]} receiveShadow={shadowsEnabled}>
+        <boxGeometry args={[0.25, 4.9, 9.2]} />
         <meshStandardMaterial color="#ecd8ba" roughness={0.88} />
       </mesh>
-      <mesh position={[4.5, 2.2, 0.5]} receiveShadow={shadowsEnabled}>
-        <boxGeometry args={[0.25, 4.6, 8.5]} />
+      <mesh position={[4.8, 2.35, 0.0]} receiveShadow={shadowsEnabled}>
+        <boxGeometry args={[0.25, 4.9, 9.2]} />
         <meshStandardMaterial color="#ecd8ba" roughness={0.88} />
       </mesh>
 
       {/* Warm teak wooden wainscoting dado & festive marigold garlands along back wall */}
-      <mesh position={[0, 0.45, -2.35]}>
-        <boxGeometry args={[11.6, 0.9, 0.08]} />
+      <mesh position={[0, 0.45, -3.4]}>
+        <boxGeometry args={[12.0, 0.9, 0.08]} />
         <meshStandardMaterial color="#6d4329" roughness={0.82} />
       </mesh>
       {/* Draped warm saffron/crimson festive side curtains flanking altar wall */}
-      {[-3.45, 3.45].map((dx) => (
-        <mesh key={`curtain-${dx}`} position={[dx, 2.2, -2.32]} castShadow={shadowsEnabled}>
-          <boxGeometry args={[0.72, 3.2, 0.08]} />
+      {[-3.65, 3.65].map((dx) => (
+        <mesh key={`curtain-${dx}`} position={[dx, 2.3, -3.37]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[0.78, 3.4, 0.08]} />
           <meshStandardMaterial color="#9f1239" roughness={0.9} />
         </mesh>
       ))}
-      {/* Brass mandala/sunburst frame centered on home altar wall */}
-      <mesh position={[0, 2.1, -2.35]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.52, 0.52, 0.04, 24]} />
+      {/* Brass mandala/sunburst frame centered high on backdrop wall */}
+      <mesh position={[0, 2.45, -3.4]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.56, 0.56, 0.04, 24]} />
         <meshStandardMaterial color="#d97706" metalness={0.62} roughness={0.32} />
       </mesh>
-      <mesh position={[0, 2.1, -2.32]}>
-        <circleGeometry args={[0.38, 24]} />
+      <mesh position={[0, 2.45, -3.37]}>
+        <circleGeometry args={[0.41, 24]} />
         <meshStandardMaterial color="#9a3412" roughness={0.78} />
       </mesh>
 
-      {/* Warm string fairy lights draped in gentle catenary across back wall */}
+      {/* Warm string fairy lights draped across backdrop & jhula header */}
       {FAIRY_LIGHTS_X.map((fx, idx) => {
-        const sag = Math.cos((fx / 2.2) * (Math.PI / 2)) * -0.22 + 2.85;
+        const sag = Math.cos((fx / 2.6) * (Math.PI / 2)) * -0.24 + 3.05;
         return (
-          <mesh key={idx} position={[fx, sag, -2.32]}>
-            <sphereGeometry args={[0.045, 10, 10]} />
+          <mesh key={idx} position={[fx, sag, -3.35]}>
+            <sphereGeometry args={[0.048, 10, 10]} />
             <meshStandardMaterial
               color="#fef08a"
               emissive="#fbbf24"
-              emissiveIntensity={1.5}
+              emissiveIntensity={1.65}
             />
           </mesh>
         );
       })}
-      {/* Left & right vertical marigold floral strings framing altar */}
-      {[-2.4, 2.4].map((mx) =>
-        [1.55, 1.85, 2.15, 2.45, 2.75].map((my, idx) => (
-          <mesh key={`${mx}-${my}`} position={[mx, my, -2.33]}>
-            <sphereGeometry args={[0.068, 10, 10]} />
+      {[-2.8, 2.8].map((mx) =>
+        [1.55, 1.88, 2.21, 2.54, 2.87].map((my, idx) => (
+          <mesh key={`${mx}-${my}`} position={[mx, my, -3.36]}>
+            <sphereGeometry args={[0.072, 10, 10]} />
             <meshStandardMaterial
               color={idx % 2 === 0 ? '#f59e0b' : '#ea580c'}
               roughness={0.75}
@@ -155,6 +156,71 @@ export function BhaiDoojEnvironment({
           </mesh>
         ))
       )}
+
+      {/* Ornate Flower-Draped Traditional Wooden Jhula (Swing) at `[0, 0, -1.75]` */}
+      <group position={[0, 0, -1.75]}>
+        {/* Carved dark teak A-frame uprights & festive upper crossbar (`pivotY = 2.55`) */}
+        {[-1.12, 1.12].map((px) => (
+          <group key={`jhula-pillar-${px}`} position={[px, 0, 0]}>
+            <mesh position={[0, 1.32, 0]} castShadow={shadowsEnabled}>
+              <cylinderGeometry args={[0.075, 0.095, 2.65, 10]} />
+              <meshStandardMaterial color="#582c16" roughness={0.82} />
+            </mesh>
+            <mesh position={[0, 0.06, 0]} castShadow={shadowsEnabled}>
+              <boxGeometry args={[0.24, 0.12, 0.92]} />
+              <meshStandardMaterial color="#451f0d" roughness={0.88} />
+            </mesh>
+          </group>
+        ))}
+        <mesh position={[0, 2.58, 0]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[2.56, 0.14, 0.18]} />
+          <meshStandardMaterial color="#5c2d16" roughness={0.8} />
+        </mesh>
+        {/* Top beam marigold garlands & warm fairy bulbs on jhula crossbar */}
+        {[-0.95, -0.65, -0.35, 0, 0.35, 0.65, 0.95].map((bx, idx) => (
+          <group key={`jhula-garland-${idx}`} position={[bx, 2.48, 0.08]}>
+            <mesh>
+              <sphereGeometry args={[0.068, 10, 10]} />
+              <meshStandardMaterial color={idx % 2 === 0 ? '#f59e0b' : '#ea580c'} roughness={0.72} />
+            </mesh>
+            <mesh position={[0, -0.09, 0.02]}>
+              <sphereGeometry args={[0.036, 8, 8]} />
+              <meshStandardMaterial color="#fef08a" emissive="#fbbf24" emissiveIntensity={1.6} />
+            </mesh>
+          </group>
+        ))}
+
+        {/* Swinging Plank Bench, Brass Chains & Side Flower Garlands (rotates smoothly on `swingGroupRef`) */}
+        <group ref={swingGroupRef} position={[0, 2.55, 0]}>
+          {[-0.84, 0.84].map((cx) => (
+            <group key={`chain-${cx}`} position={[cx, 0, 0]}>
+              <mesh position={[0, -0.96, 0]} castShadow={shadowsEnabled}>
+                <cylinderGeometry args={[0.018, 0.018, 1.92, 8]} />
+                <meshStandardMaterial color="#eab308" metalness={0.76} roughness={0.26} />
+              </mesh>
+              {[-0.35, -0.7, -1.05, -1.4, -1.72].map((gy, gIdx) => (
+                <mesh key={`ch-fl-${gIdx}`} position={[0, gy, 0.025]}>
+                  <sphereGeometry args={[0.056, 8, 8]} />
+                  <meshStandardMaterial color={gIdx % 2 === 0 ? '#f97316' : '#facc15'} roughness={0.72} />
+                </mesh>
+              ))}
+            </group>
+          ))}
+          {/* Carved seat plank & crimson-gold brocade cushion (`world seat y = 2.55 - 1.92 = 0.63`) */}
+          <mesh position={[0, -1.94, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+            <boxGeometry args={[1.76, 0.08, 0.58]} />
+            <meshStandardMaterial color="#6d3a1e" roughness={0.8} />
+          </mesh>
+          <mesh position={[0, -1.89, 0.01]} castShadow={shadowsEnabled}>
+            <boxGeometry args={[1.64, 0.07, 0.5]} />
+            <meshStandardMaterial color="#b91c1c" roughness={0.85} />
+          </mesh>
+          <mesh position={[0, -1.56, -0.26]} castShadow={shadowsEnabled}>
+            <boxGeometry args={[1.68, 0.34, 0.07]} />
+            <meshStandardMaterial color="#7c2d12" roughness={0.82} />
+          </mesh>
+        </group>
+      </group>
 
       {/* Plush Crimson-Gold Upholstered Low Wooden Seated Cushions (gaddi patlas) */}
       {[

@@ -93,8 +93,8 @@ function smooth01(t: number): number {
 }
 
 function sampleTownBasinY(wx: number, wz: number): number {
-  // Keep Rishikesh street, interior lane, and neighboring house blocks flat around y = -0.04
-  const edgeX = Math.max(0, Math.abs(wx) - 24.0);
+  // Keep Rishikesh street, interior lane, extended morning road (to tapri at x = +34), and houses flat around y = -0.04
+  const edgeX = Math.max(0, Math.abs(wx) - 52.0);
   const edgeNorth = Math.max(0, -14.0 - wz);
   const rise = Math.max(edgeX * 0.65, edgeNorth * 0.78);
   const hillMask = smooth01(rise / 10.0);
@@ -182,39 +182,40 @@ export const DAY1_HOTSPOTS: readonly WalkHotspot[] = [
 ];
 
 export const DAY2_MORNING_WALK_BOUNDS: WalkBounds = {
-  minX: -5.1,
-  maxX: 18.2,
+  minX: -5.2,
+  maxX: 37.5,
   minZ: -0.25,
   maxZ: 12.6,
 };
 
 export const DAY2_MORNING_OBSTACLES: readonly WalkObstacle[] = [
-  { kind: 'box', minX: -4.75, maxX: -2.25, minZ: 1.55, maxZ: 2.85 },
   { kind: 'box', minX: -5.4, maxX: -2.55, minZ: 3.85, maxZ: 7.6 },
   { kind: 'box', minX: 2.55, maxX: 5.4, minZ: 3.85, maxZ: 7.6 },
   { kind: 'box', minX: 4.1, maxX: 8.7, minZ: 3.9, maxZ: 7.6 },
   { kind: 'box', minX: 9.6, maxX: 13.4, minZ: 3.9, maxZ: 7.6 },
+  { kind: 'box', minX: 18.6, maxX: 23.0, minZ: 3.9, maxZ: 7.6 },
+  { kind: 'box', minX: 26.2, maxX: 30.2, minZ: 3.9, maxZ: 7.6 },
   { kind: 'box', minX: 2.45, maxX: 4.55, minZ: -0.35, maxZ: 0.72 },
-  // Distant town-road bun-maska & chai stall counter + bench well away from hotel
-  { kind: 'box', minX: 14.3, maxX: 16.4, minZ: 7.05, maxZ: 8.35 },
-  { kind: 'box', minX: 13.4, maxX: 14.3, minZ: 7.05, maxZ: 7.82 },
+  // Morning town-road bun-maska & chai stall counter + bench further down the Rishikesh road
+  { kind: 'box', minX: 32.5, maxX: 34.7, minZ: 7.05, maxZ: 8.35 },
+  { kind: 'box', minX: 31.6, maxX: 32.5, minZ: 7.05, maxZ: 7.82 },
 ];
 
 export const DAY2_MORNING_HOTSPOTS: readonly WalkHotspot[] = [
   {
     id: 'bun_maska_chai',
-    label: 'Have Bun Maska & Chai Together',
-    x: 15.6,
-    z: 9.15,
-    radius: 2.0,
+    label: 'Park & Have Bun Maska & Chai Together',
+    x: 33.4,
+    z: 9.4,
+    radius: 2.5,
     actionType: 'interact',
   },
   {
     id: 'depart_neelkanth',
-    label: 'Hop on Scooters Toward Neelkanth',
-    x: -2.75,
-    z: 2.55,
-    radius: 1.85,
+    label: 'Start Scooters Toward Neelkanth',
+    x: -2.2,
+    z: 2.65,
+    radius: 2.2,
     actionType: 'interact',
   },
 ];
@@ -335,7 +336,7 @@ export function HotelReturnEnvironment({
       const z =
         band === 0
           ? -20 - (i % 6) * 5.2
-          : -28 + ((i * 5.8) % 44);
+          : -16 - ((i * 5.1) % 32);
       const scale = 0.88 + ((i * 5) % 6) * 0.09;
       const groundY = terrainSampler.trySampleY(x, z) ?? sampleTownBasinY(x, z);
       items.push([x, groundY - 0.25 * scale, z, scale]);
@@ -420,6 +421,29 @@ export function HotelReturnEnvironment({
       <pointLight position={[0, 2.55, 0.5]} intensity={1.7} color="#fbbf24" distance={14} />
       <pointLight position={[0, TERRACE_Y + 2.25, -3.2]} intensity={1.45} color="#fde68a" distance={15} />
 
+      {nightReturn && (
+        <>
+          <mesh position={[-22, 34, -66]}>
+            <sphereGeometry args={[2.1, 16, 16]} />
+            <meshBasicMaterial color="#fef3c7" />
+          </mesh>
+          {[
+            [-32, 29, -58],
+            [-14, 38, -62],
+            [6, 33, -64],
+            [22, 28, -56],
+            [35, 36, -60],
+            [-26, 22, -48],
+            [15, 25, -52],
+          ].map(([sx, sy, sz], idx) => (
+            <mesh key={`night-star-${idx}`} position={[sx, sy, sz]}>
+              <sphereGeometry args={[0.18, 6, 6]} />
+              <meshBasicMaterial color="#fef9c3" />
+            </mesh>
+          ))}
+        </>
+      )}
+
       {/* Sculpted Rishikesh Town Basin Connected to Hills & Himalayan Horizon */}
       <ConnectedHillTerrain
         width={170}
@@ -433,7 +457,7 @@ export function HotelReturnEnvironment({
         geometry={terrainGeometry}
         receiveShadow={shadowsEnabled}
       />
-      <DistantHimalayanRidges ridges={HOTEL_RIDGES} />
+      <DistantHimalayanRidges ridges={HOTEL_RIDGES} centerZ={-20} baseY={-24} />
 
       {/* Foothill pine cluster behind the town neighborhood */}
       <instancedMesh ref={trunkInstRef} args={[undefined, undefined, MAX_PINES]} castShadow={shadowsEnabled}>
@@ -445,16 +469,16 @@ export function HotelReturnEnvironment({
         <meshStandardMaterial color="#2a4e32" roughness={0.9} flatShading />
       </instancedMesh>
 
-      {/* 1. RISHIKESH MAIN ROAD (`z = 7.4..12.6`) + SIDEWALK */}
-      <mesh position={[0, -0.005, 10.1]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow={shadowsEnabled}>
-        <planeGeometry args={[92, 5.4]} />
+      {/* 1. RISHIKESH MAIN ROAD (`z = 7.4..12.6`) + SIDEWALK extending down toward morning bun-maska stall */}
+      <mesh position={[8, -0.005, 10.1]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow={shadowsEnabled}>
+        <planeGeometry args={[112, 5.4]} />
         <meshStandardMaterial
           color="#5c6674"
           map={asphaltTex ?? undefined}
           roughness={0.9}
         />
       </mesh>
-      {[-28, -20, -12, -4, 4, 12, 20, 28].map((rx) => (
+      {[-28, -20, -12, -4, 4, 12, 20, 28, 36, 44].map((rx) => (
         <mesh key={rx} position={[rx, 0.006, 10.1]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[3.4, 0.12]} />
           <meshStandardMaterial color="#e2e8f0" roughness={0.85} />
@@ -530,6 +554,31 @@ export function HotelReturnEnvironment({
         <mesh position={[0, 1.35, 1.98]}>
           <boxGeometry args={[3.5, 2.1, 0.08]} />
           <meshStandardMaterial color="#b45309" roughness={0.72} />
+        </mesh>
+      </group>
+      {/* Extra Morning Market Shops & Verandas along main road (`x = 20.5 .. 28.2`) */}
+      <group position={[20.8, 0, 5.8]}>
+        <mesh position={[0, 2.0, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+          <boxGeometry args={[4.2, 4.0, 3.6]} />
+          <meshStandardMaterial color="#e7dcc8" roughness={0.88} />
+        </mesh>
+        <mesh position={[0, 1.32, 1.82]}>
+          <boxGeometry args={[2.6, 2.1, 0.08]} />
+          <meshStandardMaterial color="#0369a1" roughness={0.68} />
+        </mesh>
+        <mesh position={[0, 2.6, 2.2]} rotation={[0.24, 0, 0]}>
+          <boxGeometry args={[3.1, 0.08, 0.92]} />
+          <meshStandardMaterial color="#b45309" roughness={0.82} />
+        </mesh>
+      </group>
+      <group position={[28.2, 0, 5.85]}>
+        <mesh position={[0, 1.85, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+          <boxGeometry args={[3.9, 3.7, 3.5]} />
+          <meshStandardMaterial color="#d8e3da" roughness={0.88} />
+        </mesh>
+        <mesh position={[0, 1.28, 1.78]}>
+          <boxGeometry args={[2.5, 2.05, 0.08]} />
+          <meshStandardMaterial color="#047857" roughness={0.7} />
         </mesh>
       </group>
       {/* Street utility pole beside main road */}
@@ -875,25 +924,29 @@ export function HotelReturnEnvironment({
         </group>
       ))}
 
-      {/* Parked Hero Scooters Beside House Entry Yard (cleanly spaced off walls) */}
-      <group position={[-3.82, 0, 2.28]} rotation={[0, 0.34, 0]}>
-        <PrototypeScooter
-          variant="lead"
-          castShadow={shadowsEnabled}
-          hideRiders
-        />
-      </group>
-      <group position={[-2.74, 0, 2.4]} rotation={[0, 0.24, 0]}>
-        <PrototypeScooter
-          variant="companion"
-          castShadow={shadowsEnabled}
-          hideRiders
-        />
-      </group>
+      {/* Parked Hero Scooters Beside House Entry Yard (hidden during active Day 2 morning ride when driven) */}
+      {!isMorning && (
+        <>
+          <group position={[-3.82, 0, 2.28]} rotation={[0, 0.34, 0]}>
+            <PrototypeScooter
+              variant="lead"
+              castShadow={shadowsEnabled}
+              hideRiders
+            />
+          </group>
+          <group position={[-2.74, 0, 2.4]} rotation={[0, 0.24, 0]}>
+            <PrototypeScooter
+              variant="companion"
+              castShadow={shadowsEnabled}
+              hideRiders
+            />
+          </group>
+        </>
+      )}
 
-      {/* Lively Morning Road Bun-Maska & Kulhad Chai Stall Down the Town Road Away from Hotel (Day 2 Morning) */}
+      {/* Lively Morning Road Bun-Maska & Kulhad Chai Stall Further Down the Rishikesh Town Road (`x = 33.6`) */}
       {isMorning && (
-        <group position={[15.4, 0, 7.68]}>
+        <group position={[33.6, 0, 7.68]}>
           {/* Framed timber posts + colorful striped roadside tea tapri awning */}
           {[
             [-0.86, -0.46],
