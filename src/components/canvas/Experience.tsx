@@ -497,6 +497,7 @@ export default function Experience() {
 
   const handleUnlockDay1StreamVideo = useCallback(() => {
     capturePolaroidAndSave('scene02_day1_stream_video');
+    capturePolaroidAndSave('scene02_day1_stream_video_2');
     setDay1StreamToastVisible(true);
     if (day1StreamTimerRef.current !== null) {
       clearStoryTimeout(day1StreamTimerRef.current);
@@ -1523,7 +1524,7 @@ export default function Experience() {
   }, [templeSongUrl]);
 
   useEffect(() => {
-    void tryRestoreSavedMediaDirectory();
+    if (process.env.NODE_ENV !== 'production') void tryRestoreSavedMediaDirectory();
   }, []);
 
   useEffect(() => {

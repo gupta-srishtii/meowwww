@@ -69,7 +69,7 @@ export function NeelkanthHUD({
         onPause={onPause}
       />
 
-      {!mediaState.templeSongUrl && (
+      {process.env.NODE_ENV !== 'production' && !mediaState.templeSongUrl && (
         <>
           <input
             ref={templeAudioInputRef}

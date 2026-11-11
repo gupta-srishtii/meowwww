@@ -77,7 +77,7 @@ export function BhaiDoojHUD({
           ♪ Play Bhai Dooj Song
         </button>
       ) : (
-        !finaleSongUrl &&
+        process.env.NODE_ENV !== 'production' && !finaleSongUrl &&
         phase !== 'complete' && (
           <>
             <input

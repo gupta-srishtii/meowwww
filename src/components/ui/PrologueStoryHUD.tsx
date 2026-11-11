@@ -156,7 +156,7 @@ export function PrologueStoryHUD({
                 </button>
               </div>
 
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900/75 px-3.5 py-2.5">
+              <div className={process.env.NODE_ENV === "production" ? "hidden" : "mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900/75 px-3.5 py-2.5"}>
                 <div className="min-w-0 text-[11px]">
                   <p className="font-medium text-amber-100">
                     {mediaState.hasLinkedPhotos

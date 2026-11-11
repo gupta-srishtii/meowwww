@@ -53,7 +53,9 @@ export function ChapterSelectModal({
   const furthestChapterRank = useProgressStore((s) => s.furthestChapterRank);
   const collectedPolaroids = useProgressStore((s) => s.collectedPolaroids);
 
-  usePolaroidMemoryRevision();
+  const mediaRevision = usePolaroidMemoryRevision();
+  const [failedMedia, setFailedMedia] = useState<Record<string, boolean>>({});
+  useEffect(() => setFailedMedia({}), [mediaRevision]);
   const [activeTab, setActiveTab] = useState<'chapters' | 'memories'>(initialTab);
   const [previewPolaroidId, setPreviewPolaroidId] = useState<string | null>(null);
   const [localLinkStatus, setLocalLinkStatus] = useState<string | null>(null);
@@ -272,7 +274,7 @@ export function ChapterSelectModal({
         ) : (
           <div className="mt-3 space-y-3">
             {/* Client-Only Local Media Linker (Zero HTTP Exposure) */}
-            <div className="space-y-2 rounded-xl border border-slate-800 bg-slate-950/75 px-3 py-2.5">
+            <div className={process.env.NODE_ENV === "production" ? "hidden" : "space-y-2 rounded-xl border border-slate-800 bg-slate-950/75 px-3 py-2.5"}>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-medium text-slate-200">
@@ -422,11 +424,12 @@ export function ChapterSelectModal({
                         unlocked ? mem.gradientClass : 'from-slate-800 to-slate-900'
                       }`}
                     >
-                      {unlocked && mem.resolvedUrl ? (
+                      {unlocked && mem.resolvedUrl && !failedMedia[pid] ? (
                         mem.mediaKind === 'video' ? (
                           <div className="relative h-full w-full">
                             <video
                               src={mem.resolvedUrl}
+                              onError={() => setFailedMedia(old => ({ ...old, [pid]: true }))}
                               muted
                               loop
                               playsInline
@@ -440,6 +443,7 @@ export function ChapterSelectModal({
                         ) : (
                           <img
                             src={mem.resolvedUrl}
+                            onError={() => setFailedMedia(old => ({ ...old, [pid]: true }))}
                             alt={mem.title}
                             style={{ imageOrientation: 'from-image' }}
                             className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
@@ -447,7 +451,7 @@ export function ChapterSelectModal({
                         )
                       ) : unlocked ? (
                         <span className="px-2 text-center text-[10px] font-medium text-slate-800 transition-transform duration-500 ease-out group-hover:scale-[1.03]">
-                          {mem.locationTag}
+                          {mem.matchedFilename ? 'Media unavailable' : 'Virtual scene memory'}
                         </span>
                       ) : (
                         <span className="text-[10px] text-slate-500">Locked</span>
@@ -494,10 +498,11 @@ export function ChapterSelectModal({
                     : `bg-gradient-to-br ${previewMem.gradientClass}`
                 }`}
               >
-                {previewMem.resolvedUrl ? (
+                {previewMem.resolvedUrl && !failedMedia[previewMem.id] ? (
                   previewMem.mediaKind === 'video' ? (
                     <video
                       src={previewMem.resolvedUrl}
+                      onError={() => setFailedMedia(old => ({ ...old, [previewMem.id]: true }))}
                       controls
                       autoPlay
                       loop
@@ -507,6 +512,7 @@ export function ChapterSelectModal({
                   ) : (
                     <img
                       src={previewMem.resolvedUrl}
+                      onError={() => setFailedMedia(old => ({ ...old, [previewMem.id]: true }))}
                       alt={previewMem.title}
                       style={{ imageOrientation: 'from-image' }}
                       className="max-h-full max-w-full rounded object-contain transition-transform duration-500 ease-out hover:scale-[1.02]"
@@ -518,7 +524,8 @@ export function ChapterSelectModal({
                       {previewMem.locationTag}
                     </p>
                     <p className="text-xs font-medium text-slate-800">{previewMem.caption}</p>
-                    {previewMem.matchedFilename && (
+                    <p className="text-xs text-slate-600">Media unavailable</p>
+                    {previewMem.matchedFilename && process.env.NODE_ENV !== "production" && (
                       <div className="space-y-1.5 pt-1">
                         <p className="text-[10px] text-slate-600/80">
                           Needs local folder access for &ldquo;{previewMem.matchedFilename}&rdquo;

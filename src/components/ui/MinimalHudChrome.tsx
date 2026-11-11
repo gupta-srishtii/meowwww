@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   connectPrivateMediaInteractively,
   getResolvedPolaroidMemory,
@@ -95,6 +95,8 @@ export function PolaroidToastCard({
   usePolaroidMemoryRevision();
   const resolvedMem = polaroidId ? getResolvedPolaroidMemory(polaroidId) : null;
   const resolvedUrl = resolvedMem?.resolvedUrl ?? null;
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [resolvedUrl]);
 
   const handleConnectClick = () => {
     if (onConnectPhotos) {
@@ -119,10 +121,11 @@ export function PolaroidToastCard({
               resolvedUrl ? '' : `bg-gradient-to-br ${gradientClass} px-3`
             }`}
           >
-            {resolvedUrl ? (
+            {resolvedUrl && !failed ? (
               resolvedMem?.mediaKind === 'video' ? (
                 <video
                   src={resolvedUrl}
+                  onError={() => setFailed(true)}
                   autoPlay
                   loop
                   muted
@@ -133,6 +136,7 @@ export function PolaroidToastCard({
               ) : (
                 <img
                   src={resolvedUrl}
+                  onError={() => setFailed(true)}
                   alt={title}
                   style={{ imageOrientation: 'from-image' }}
                   className="max-h-full max-w-full rounded object-contain transition-transform duration-500 ease-out group-hover:scale-[1.03]"
@@ -141,22 +145,20 @@ export function PolaroidToastCard({
             ) : (
               <div className="flex flex-col items-center gap-2 px-2 text-center">
                 <span className="rounded-full border border-slate-900/15 bg-white/75 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider text-slate-700 uppercase">
-                  {resolvedMem?.mediaKind === 'video'
-                    ? 'Local Video Unlinked'
-                    : 'Local Photo Unlinked'}
+                  {resolvedMem?.matchedFilename ? 'Media unavailable' : 'Virtual scene memory'}
                 </span>
                 <p className="line-clamp-2 text-[11px] font-medium leading-snug text-slate-800">
-                  {resolvedMem?.matchedFilename
+                  {process.env.NODE_ENV === 'production' ? 'The moment is remembered. Its media is currently unavailable.' : resolvedMem?.matchedFilename
                     ? `Needs local folder access for "${resolvedMem.matchedFilename}"`
                     : caption}
                 </p>
-                <button
+                {process.env.NODE_ENV !== 'production' && resolvedMem?.matchedFilename && <button
                   type="button"
                   onClick={handleConnectClick}
                   className="rounded-lg border border-slate-900/20 bg-slate-900 px-3 py-1 text-[11px] font-semibold text-amber-100 shadow transition hover:bg-slate-800"
                 >
                   {resolvedMem?.mediaKind === 'video' ? 'Connect Trip Media' : 'Connect Photos'}
-                </button>
+                </button>}
               </div>
             )}
           </div>
@@ -169,7 +171,7 @@ export function PolaroidToastCard({
                 {resolvedMem?.caption ?? caption}
               </p>
               <p className="mt-1 text-[10px] font-medium text-emerald-700">
-                ✓ Saved to Yaadein{stackedCount > 1 ? ` · ${stackedCount} captured` : ''}
+                {resolvedUrl && !failed ? '✓ Saved to Yaadein' : 'Story moment remembered'}{stackedCount > 1 ? ` · ${stackedCount} captured` : ''}
               </p>
             </div>
             <button

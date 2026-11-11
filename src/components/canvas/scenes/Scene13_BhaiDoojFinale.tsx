@@ -13,6 +13,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { ambientAudio } from '@/lib/ambientAudio';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
 import type { SceneId } from '@/lib/sceneConfig';
+import { registerVirtualMemory } from '@/lib/privateMemoryLoader';
 
 export type BhaiDoojPhase =
   | 'arrival'
@@ -72,7 +73,7 @@ export function Scene13_BhaiDoojFinale({
     throw new Error('Simulated fault while mounting Bhai Dooj finale scene.');
   }
 
-  const { camera, size, clock } = useThree();
+  const { camera, size, clock, gl, scene } = useThree();
   const shadowsEnabled = QUALITY_PRESETS[qualityProfile].shadows;
   const reducedMotion = useReducedMotion();
 
@@ -128,6 +129,15 @@ export function Scene13_BhaiDoojFinale({
     }),
     []
   );
+
+  useEffect(() => {
+    if (!tilakApplied) return;
+    const frame = window.requestAnimationFrame(() => {
+      gl.render(scene, camera);
+      try { registerVirtualMemory('scene13_bhaidooj_tilak', gl.domElement.toDataURL('image/jpeg', 0.8)); } catch { /* Keep the virtual moment labelled if WebGL capture is unavailable. */ }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [tilakApplied, gl, scene, camera]);
 
   useEffect(() => {
     simRef.current.timer = 0;

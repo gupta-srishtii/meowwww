@@ -34,7 +34,12 @@ export const POLAROID_MEMORY_SPECS: Record<string, PolaroidMemorySpec> = {
     gradientClass: 'from-emerald-200 via-teal-100 to-sky-100',
     mediaKind: 'video',
     matchedFilename: 'DAY 1 1.mp4',
-    altFilenames: ['DAY 1 2 .mp4', 'DAY 1 2.mp4'],
+  },
+  scene02_day1_stream_video_2: {
+    id: 'scene02_day1_stream_video_2', title: 'Day 1 · By the Stream',
+    caption: 'Another moment together beside the stream', locationTag: 'Rishikesh Day 1 · Video',
+    gradientClass: 'from-emerald-200 via-teal-100 to-sky-100', mediaKind: 'video',
+    matchedFilename: 'DAY 1 2 .mp4', altFilenames: ['DAY 1 2.mp4'],
   },
   scene03_tea_stop: {
     id: 'scene03_tea_stop',
@@ -139,6 +144,33 @@ export interface PrivateMediaSessionState {
 }
 
 const localObjectUrls = new Map<string, string>();
+const cloudUrls = new Map<string, string>();
+const virtualMemories = new Map<string, string>();
+
+export function registerVirtualMemory(id: string, dataUrl: string): void {
+  if (id !== 'scene13_bhaidooj_tilak' || !dataUrl.startsWith('data:image/')) return;
+  virtualMemories.set(id, dataUrl);
+  notifyMemoryListeners();
+}
+
+/** Catalog contains same-origin authenticated routes, never storage credentials or object keys. */
+export async function loadPrivateCloudMedia(): Promise<boolean> {
+  try {
+    const response = await fetch('/api/media', { credentials: 'same-origin', cache: 'no-store' });
+    if (!response.ok) return false;
+    const data = await response.json() as { media?: { id: string; url: string }[] };
+    if (!Array.isArray(data.media) || data.media.length === 0) return false;
+    for (const item of data.media) {
+      if (item.url !== `/api/media/${item.id}`) continue;
+      if (Object.hasOwn(POLAROID_MEMORY_SPECS, item.id)) cloudUrls.set(item.id, item.url);
+      if (item.id === 'finale_song') { finaleSongUrl = new URL(item.url, window.location.origin).href; finaleSongName = 'Bhai Dooj'; }
+      if (item.id === 'temple_song') { templeSongUrl = new URL(item.url, window.location.origin).href; templeSongName = 'Har Har Mahadev'; }
+    }
+    lastStatusNote = 'Private memories connected';
+    notifyMemoryListeners();
+    return true;
+  } catch { return false; }
+}
 let linkedFolderLabel: string | null = null;
 let finaleSongName: string | null = null;
 let finaleSongUrl: string | null = null;
@@ -684,7 +716,7 @@ export function getResolvedPolaroidMemory(polaroidId: string): ResolvedPolaroidM
       }
     }
   }
-  return { ...base, resolvedUrl };
+  return { ...base, resolvedUrl: resolvedUrl ?? cloudUrls.get(polaroidId) ?? virtualMemories.get(polaroidId) ?? null };
 }
 
 export function getPrivateMediaSessionState(): PrivateMediaSessionState {
