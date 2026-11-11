@@ -5,6 +5,13 @@ import type { QualityProfile } from '@/lib/qualityProfile';
 export interface PauseMenuModalProps {
   open: boolean;
   chapterTitle: string;
+  playMode?: 'play' | 'watch';
+  onChangePlayMode?: (mode: 'play' | 'watch') => void;
+  hasPreviousChapter?: boolean;
+  hasNextChapter?: boolean;
+  nextChapterUnlocked?: boolean;
+  onPreviousChapter?: () => void;
+  onNextChapter?: () => void;
   qualityProfile: QualityProfile;
   audioMuted: boolean;
   musicVolume: number;
@@ -33,6 +40,13 @@ const QUALITY_OPTIONS: { value: QualityProfile; label: string }[] = [
 export function PauseMenuModal({
   open,
   chapterTitle,
+  playMode = 'play',
+  onChangePlayMode,
+  hasPreviousChapter = false,
+  hasNextChapter = false,
+  nextChapterUnlocked = false,
+  onPreviousChapter,
+  onNextChapter,
   qualityProfile,
   audioMuted,
   musicVolume,
@@ -74,8 +88,66 @@ export function PauseMenuModal({
             onClick={onResume}
             className="w-full rounded-xl bg-amber-400 px-4 py-2.5 text-xs font-semibold text-slate-950 transition hover:bg-amber-300"
           >
-            Resume (Esc)
+            Continue (Esc)
           </button>
+
+          {onChangePlayMode && (
+            <div className="rounded-xl border border-slate-700/80 bg-slate-950/75 p-1.5">
+              <p className="mb-1 px-1 text-[10px] font-medium text-slate-400">
+                Experience Mode (switches cleanly without losing progress)
+              </p>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => onChangePlayMode('play')}
+                  className={`rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition ${
+                    playMode === 'play'
+                      ? 'bg-amber-400 text-slate-950'
+                      : 'bg-slate-800/80 text-slate-300 hover:text-white'
+                  }`}
+                >
+                  Play It Yourself
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChangePlayMode('watch')}
+                  className={`rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition ${
+                    playMode === 'watch'
+                      ? 'bg-amber-400 text-slate-950'
+                      : 'bg-slate-800/80 text-slate-300 hover:text-white'
+                  }`}
+                >
+                  Watch Our Story
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-1.5">
+            <button
+              type="button"
+              disabled={!hasPreviousChapter}
+              onClick={onPreviousChapter}
+              className="rounded-xl border border-slate-700 bg-slate-950/60 px-2 py-2 text-[11px] font-medium text-slate-200 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              ← Previous
+            </button>
+            <button
+              type="button"
+              onClick={onRestartStretch}
+              className="rounded-xl border border-slate-700 bg-slate-950/60 px-2 py-2 text-[11px] font-medium text-slate-200 transition hover:bg-slate-800"
+            >
+              Replay
+            </button>
+            <button
+              type="button"
+              disabled={!hasNextChapter || !nextChapterUnlocked}
+              onClick={onNextChapter}
+              className="rounded-xl border border-slate-700 bg-slate-950/60 px-2 py-2 text-[11px] font-medium text-slate-200 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next →
+            </button>
+          </div>
 
           <button
             type="button"
@@ -91,14 +163,6 @@ export function PauseMenuModal({
             className="w-full rounded-xl border border-slate-700 bg-slate-800/85 px-4 py-2 text-xs font-medium text-slate-100 transition hover:bg-slate-800"
           >
             How to Play &amp; Controls
-          </button>
-
-          <button
-            type="button"
-            onClick={onRestartStretch}
-            className="w-full rounded-xl border border-slate-700 bg-slate-950/60 px-4 py-2 text-xs font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white"
-          >
-            Restart Current Stretch
           </button>
         </div>
 

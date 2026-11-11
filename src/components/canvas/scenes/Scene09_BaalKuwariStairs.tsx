@@ -45,6 +45,7 @@ export interface Scene09BaalKuwariStairsProps {
   simulateMountFailure?: boolean;
   stairTelemetryRefs?: StairTelemetryRefs;
   onReachHalfwayMilestone: () => void;
+  onStairCaption?: (speaker: string, text: string) => void;
   onAscentComplete: () => void;
   onDescentComplete: () => void;
   onSceneReady: (token: number, sceneId: SceneId) => void;
@@ -233,6 +234,7 @@ export function Scene09_BaalKuwariStairs({
   simulateMountFailure = false,
   stairTelemetryRefs,
   onReachHalfwayMilestone,
+  onStairCaption,
   onAscentComplete,
   onDescentComplete,
   onSceneReady,
@@ -284,6 +286,7 @@ export function Scene09_BaalKuwariStairs({
     yashYaw: 0,
     yashPhase: 0,
     halfwayNotified: false,
+    gotchaCaptionSent: false,
     completedNotified: false,
     lastDomStep: -999,
     lastDomPhase: '',
@@ -332,6 +335,7 @@ export function Scene09_BaalKuwariStairs({
     simRef.current.elapsedSec = startSec;
     simRef.current.halfwayNotified =
       direction === 'descent' || initialStepCountRef.current >= 200;
+    simRef.current.gotchaCaptionSent = direction === 'descent';
     simRef.current.completedNotified = false;
     simRef.current.lastDomStep = -999;
     simRef.current.lastDomPhase = '';
@@ -475,10 +479,13 @@ export function Scene09_BaalKuwariStairs({
       yashLat = -0.52;
 
       if (help1Weight > 0.25) {
-        phaseLabel = 'Steep pitch #1 · Ishaan helps Shree up the steps';
+        phaseLabel = 'Steep pitch #1 · Ishaan initiates & holds Shree’s hand';
         camYawShift = 0.78;
         camDist = 4.15;
         camHeightOffset = 1.65;
+        if (!sim.gotchaCaptionSent && mappedTime >= HELP1_FADE_IN_T + 1.0) {
+          sim.gotchaCaptionSent = true;
+        }
       } else if (help2Weight > 0.25) {
         phaseLabel = 'Steep pitch #2 · Holding hands across Flight 3';
         camYawShift = 0.82;

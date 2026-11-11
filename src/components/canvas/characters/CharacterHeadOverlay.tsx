@@ -21,7 +21,7 @@ const BADGE_BY_VARIANT: Partial<Record<CharacterVariant, BadgeMeta>> = {
     dotColor: '#f1f5f9',
   },
   srishti: {
-    name: 'Shree',
+    name: 'Srishti',
     chipClass: 'border-indigo-300/75 bg-indigo-950/85 text-amber-100',
     dotColor: '#e0e7ff',
   },
@@ -70,22 +70,8 @@ function getConversationalBubble(
     }
     if (sceneId === 7) {
       return {
-        srishti: [
-          'Mandir ke andar kitni shaanti lag rahi hai.',
-        ],
-        ishaan: [
-          'Har Har Mahadev — darshan saath mein ho gaye.',
-        ],
-      };
-    }
-    if (sceneId === 8 && baalSubStage === 'maggi_stop') {
-      return {
-        srishti: [
-          'Chhoti si Maggi break ke baad seedhiyan!',
-        ],
-        ishaan: [
-          'Chalo sab, ab wapas scooty pe gate tak.',
-        ],
+        srishti: [],
+        ishaan: [],
       };
     }
     if (sceneId === 9 && stairDirection === 'descent') {
@@ -98,15 +84,11 @@ function getConversationalBubble(
         ],
       };
     }
+    if (sceneId === 2 || sceneId === 3) {
+      return { srishti: [], ishaan: [] };
+    }
     if (sceneId === 9) {
-      return {
-        srishti: [
-          'Yeh waala step steep hai, haath do!',
-        ],
-        ishaan: [
-          'Bas thoda aur Shree, main pakad ke hoon.',
-        ],
-      };
+      return { srishti: [], ishaan: [] };
     }
     if (sceneId === 10) {
       return {
@@ -153,19 +135,28 @@ export function CharacterHeadOverlay({
   const roadSubStage = useProgressStore((s) => s.roadSubStage);
   const baalSubStage = useProgressStore((s) => s.baalKuwariSubStage);
   const stairDirection = useProgressStore((s) => s.baalKuwariStairDirection);
+  const neelkanthDarshanActive = useProgressStore((s) => s.neelkanthDarshanActive);
   const transitionPhase = useProgressStore((s) => s.transitionPhase);
   const isPaused = useProgressStore(selectIsSimulationPaused);
 
   const isWalkingScene =
+    committedSceneId === 2 ||
+    committedSceneId === 3 ||
     committedSceneId === 6 ||
     committedSceneId === 7 ||
     committedSceneId === 9 ||
     committedSceneId === 10 ||
     committedSceneId === 12 ||
-    (committedSceneId === 5 && roadSubStage === 'viewpoint_walk') ||
-    (committedSceneId === 8 && baalSubStage === 'maggi_stop');
+    (committedSceneId === 5 && roadSubStage === 'viewpoint_walk');
 
-  const enabled = Boolean(badge && showTag && isWalkingScene && !isPaused && transitionPhase === 'idle');
+  const enabled = Boolean(
+    badge &&
+      showTag &&
+      isWalkingScene &&
+      !neelkanthDarshanActive &&
+      !isPaused &&
+      transitionPhase === 'idle'
+  );
 
   const [bubbleTick, setBubbleTick] = useState(0);
   useEffect(() => {
@@ -201,7 +192,6 @@ export function CharacterHeadOverlay({
     <Html
       center
       position={[0, headY, 0]}
-      distanceFactor={7.2}
       zIndexRange={[10, 0]}
       style={{ pointerEvents: 'none', userSelect: 'none' }}
     >

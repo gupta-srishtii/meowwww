@@ -4,7 +4,28 @@ import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } fro
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { StylizedPlaceholderCharacter } from '@/components/canvas/characters/StylizedPlaceholderCharacter';
-import { animateCharacterRig, animateIshaanWalkRig } from '@/components/canvas/characters/animateCharacterRig';
+import {
+  animateCharacterRig,
+  animateIshaanWalkRig,
+  type HumanRigRefs,
+} from '@/components/canvas/characters/animateCharacterRig';
+import {
+  DAY1_MAGGI_HOTSPOTS,
+  DAY1_MAGGI_SEATS,
+  DAY1_MAGGI_TABLE_CENTER,
+  DAY1_MARKET_HOTSPOTS,
+  DAY1_MARKET_WALK_BOUNDS,
+  DAY1_NIGHT_DHABA_SEATS,
+  DAY1_NIGHT_DHABA_TABLE_CENTER,
+  DAY1_WATERFALL_HOTSPOTS,
+  DAY1_WATERFALL_ROCK_SEATS,
+  DAY1_WATERFALL_WALK_BOUNDS,
+  Day1MaggiStopEnvironment,
+  Day1MarketWalkEnvironment,
+  Day1NightDhabaEnvironment,
+  Day1WaterfallEnvironment,
+  sampleMarketStreetY,
+} from '@/components/canvas/environment/Day1EveningEnvironments';
 import {
   DAY1_HOTSPOTS,
   DAY1_OBSTACLES,
@@ -26,8 +47,9 @@ import {
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
 import type { SceneId } from '@/lib/sceneConfig';
+import type { Day1StoryPhase } from '@/components/ui/PrologueStoryHUD';
 
-export type Day1Phase = 'travel_cinematic' | 'stay_explore' | 'evening_maggi';
+export type Day1Phase = Day1StoryPhase;
 
 export interface Scene02RishikeshDay1Props {
   walkInputRef: RefObject<WalkInputState>;
@@ -35,19 +57,101 @@ export interface Scene02RishikeshDay1Props {
   paused: boolean;
   transitionToken: number;
   day1Phase: Day1Phase;
+  autoPlayMode?: boolean;
+  terraceToggleNonce?: number;
+  waterfallSitNonce?: number;
   onAdvanceDay1Phase: (next: Day1Phase) => void;
+  onDay1CallStateChange: (active: boolean) => void;
   onDay1Complete: () => void;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onSceneReady: (token: number, sceneId: SceneId) => void;
   simulateMountFailure?: boolean;
 }
 
-const TRAVEL_DURATION_SEC = 7.5;
-const EVENING_MAGGI_DURATION_SEC = 7.2;
+const WATERFALL_RIDE_DURATION_SEC = 3.2;
+const WATERFALL_TOTAL_DURATION_SEC = 7.6;
+const EVENING_MAGGI_DURATION_SEC = 5.4;
+const RETURN_ROLLOUT_DURATION_SEC = 2.6;
+const NIGHT_DHABA_DURATION_SEC = 6.2;
+const NIGHT_RETURN_DURATION_SEC = 4.0;
+
+function useRigRefs(): HumanRigRefs & {
+  groupRef: RefObject<THREE.Group | null>;
+  torsoRef: RefObject<THREE.Group | null>;
+  headRef: RefObject<THREE.Group | null>;
+  leftLegRef: RefObject<THREE.Group | null>;
+  leftKneeRef: RefObject<THREE.Group | null>;
+  rightLegRef: RefObject<THREE.Group | null>;
+  rightKneeRef: RefObject<THREE.Group | null>;
+  leftArmRef: RefObject<THREE.Group | null>;
+  rightArmRef: RefObject<THREE.Group | null>;
+  rightForearmRef: RefObject<THREE.Group | null>;
+} {
+  const groupRef = useRef<THREE.Group>(null);
+  const torsoRef = useRef<THREE.Group>(null);
+  const headRef = useRef<THREE.Group>(null);
+  const leftLegRef = useRef<THREE.Group>(null);
+  const leftKneeRef = useRef<THREE.Group>(null);
+  const rightLegRef = useRef<THREE.Group>(null);
+  const rightKneeRef = useRef<THREE.Group>(null);
+  const leftArmRef = useRef<THREE.Group>(null);
+  const rightArmRef = useRef<THREE.Group>(null);
+  const rightForearmRef = useRef<THREE.Group>(null);
+
+  return useMemo(
+    () => ({
+      groupRef,
+      torsoRef,
+      headRef,
+      leftLegRef,
+      leftKneeRef,
+      rightLegRef,
+      rightKneeRef,
+      leftArmRef,
+      rightArmRef,
+      rightForearmRef,
+      get group() {
+        return groupRef.current;
+      },
+      get torso() {
+        return torsoRef.current;
+      },
+      get head() {
+        return headRef.current;
+      },
+      get leftLeg() {
+        return leftLegRef.current;
+      },
+      get leftKnee() {
+        return leftKneeRef.current;
+      },
+      get rightLeg() {
+        return rightLegRef.current;
+      },
+      get rightKnee() {
+        return rightKneeRef.current;
+      },
+      get leftArm() {
+        return leftArmRef.current;
+      },
+      get rightArm() {
+        return rightArmRef.current;
+      },
+      get rightForearm() {
+        return rightForearmRef.current;
+      },
+    }),
+    []
+  );
+}
 
 /**
- * Scene 2 — Day 1: Train from Lucknow & Bus from Delhi -> Modest Lane Stay ->
- * Walk out from connected ground-floor foyer onto yard & scooters -> Evening Maggi vignette.
+ * Scene 2 — Authentic Day 1 Evening Reconstruction:
+ * 1) `stay_meet`: Post-rafting evening meet at modest lane stay in Day 1 outfits (green graphic tee & yellow kurti).
+ * 2) `waterfall_ride_stop`: Daytime/golden-hour road stop + subtle natural stream water flow over mossy rocks.
+ * 2B) `evening_maggi_stop`: ~5:00 PM golden-hour roadside Maggi & chai together.
+ * 3) `return_and_kanishka`: Return at dusk -> Srishti spends relaxed evening time with Kanishka as evening turns to ~9 PM night -> Ishaan calls for dhaba dinner.
+ * 4) `market_street_walk` -> `night_dhaba_dinner` -> `night_hotel_return`.
  */
 export function Scene02_RishikeshDay1({
   walkInputRef,
@@ -55,413 +159,1203 @@ export function Scene02_RishikeshDay1({
   paused,
   transitionToken,
   day1Phase,
+  autoPlayMode = false,
+  terraceToggleNonce = 0,
+  waterfallSitNonce = 0,
   onAdvanceDay1Phase,
+  onDay1CallStateChange,
   onDay1Complete,
   onNearbyHotspotChange,
   onSceneReady,
   simulateMountFailure = false,
 }: Scene02RishikeshDay1Props) {
   if (simulateMountFailure) {
-    throw new Error('Simulated fault while mounting Day 1 Rishikesh arrival scene.');
+    throw new Error('Simulated fault while mounting Day 1 Rishikesh evening scene.');
   }
 
-  const { camera, scene, size } = useThree();
+  const { camera, size } = useThree();
   const shadowsEnabled = QUALITY_PRESETS[qualityProfile].shadows;
   const reducedMotion = useReducedMotion();
   const [onTerraceState, setOnTerraceState] = useState(false);
+  const [waterfallParked, setWaterfallParked] = useState(false);
+  const [waterfallSeated, setWaterfallSeated] = useState(false);
+  const [duskNight, setDuskNight] = useState(false);
 
-  const playerGroupRef = useRef<THREE.Group>(null);
-  const playerTorsoRef = useRef<THREE.Group>(null);
-  const playerHeadRef = useRef<THREE.Group>(null);
-  const leftLegRef = useRef<THREE.Group>(null);
-  const leftKneeRef = useRef<THREE.Group>(null);
-  const rightLegRef = useRef<THREE.Group>(null);
-  const rightKneeRef = useRef<THREE.Group>(null);
-  const leftArmRef = useRef<THREE.Group>(null);
-  const rightArmRef = useRef<THREE.Group>(null);
+  const ishaanRig = useRigRefs();
+  const shreeRig = useRigRefs();
+  const manishRig = useRigRefs();
+  const yashRig = useRigRefs();
 
-  const shreeGroupRef = useRef<THREE.Group>(null);
-  const shreeTorsoRef = useRef<THREE.Group>(null);
-  const shreeHeadRef = useRef<THREE.Group>(null);
-  const shreeLLegRef = useRef<THREE.Group>(null);
-  const shreeLKneeRef = useRef<THREE.Group>(null);
-  const shreeRLegRef = useRef<THREE.Group>(null);
-  const shreeRKneeRef = useRef<THREE.Group>(null);
-  const shreeLArmRef = useRef<THREE.Group>(null);
-  const shreeRArmRef = useRef<THREE.Group>(null);
+  const leadScooterRef = useRef<THREE.Group>(null);
+  const compScooterRef = useRef<THREE.Group>(null);
+  const returnScooter1Ref = useRef<THREE.Group>(null);
+  const returnScooter2Ref = useRef<THREE.Group>(null);
 
-  const manishGroupRef = useRef<THREE.Group>(null);
-  const manishTorsoRef = useRef<THREE.Group>(null);
-  const manishHeadRef = useRef<THREE.Group>(null);
-  const manishLLegRef = useRef<THREE.Group>(null);
-  const manishLKneeRef = useRef<THREE.Group>(null);
-  const manishRLegRef = useRef<THREE.Group>(null);
-  const manishRKneeRef = useRef<THREE.Group>(null);
-  const manishLArmRef = useRef<THREE.Group>(null);
-  const manishRArmRef = useRef<THREE.Group>(null);
-
-  const trainGroupRef = useRef<THREE.Group>(null);
-  const busGroupRef = useRef<THREE.Group>(null);
+  const readyTokenRef = useRef(-1);
+  const phaseTimerRef = useRef(0);
+  const completedRef = useRef(false);
+  const phaseAdvancedRef = useRef(false);
+  const callTriggeredRef = useRef(false);
+  const prevHotspotIdRef = useRef<string | null>(null);
+  const onTerraceRef = useRef(false);
+  const waterfallSeatedRef = useRef(false);
 
   const simRef = useRef({
-    // Starts cleanly inside the connected ground-floor foyer (-0.45 doorway connects at z = -0.6)
     posX: -0.45,
-    posZ: -2.45,
-    groundY: 0,
+    posZ: -0.35,
     velX: 0,
     velZ: 0,
-    facingYaw: Math.PI, // Facing south (+Z) toward open front door & scooters
+    facingYaw: Math.PI,
+    orbitYaw: Math.PI,
+    orbitPitch: 0.25,
     stridePhase: 0,
-    orbitYaw: 0,
-    orbitPitch: 0.24,
-    cameraInitialized: false,
-    onTerrace: false,
-    lastHotspotId: null as string | null,
-    phaseTimer: 0,
-    readySent: false,
-    completedSent: false,
+    strideRatio: 0,
+    elapsed: 0,
   });
 
   const scratch = useMemo(
     () => ({
-      camPos: new THREE.Vector3(),
-      lookAt: new THREE.Vector3(),
-      smoothLook: new THREE.Vector3(),
+      desiredCamPos: new THREE.Vector3(),
+      desiredLookAt: new THREE.Vector3(),
+      currentLookAt: new THREE.Vector3(-0.45, 1.3, 2.0),
     }),
     []
   );
 
   useEffect(() => {
-    simRef.current.phaseTimer = 0;
-    simRef.current.completedSent = false;
-  }, [day1Phase]);
-
-  useEffect(() => {
-    const toggle = (ev: Event) => {
-      const detail = (ev as CustomEvent<{ to: 'up' | 'down' }>).detail;
-      const sim = simRef.current;
-      if (detail?.to === 'up' && !sim.onTerrace) {
-        sim.onTerrace = true;
-        sim.posX = 3.1;
-        sim.posZ = -2.25;
-        sim.groundY = TERRACE_Y;
-        sim.facingYaw = 0;
-        setOnTerraceState(true);
-      } else if (detail?.to === 'down' && sim.onTerrace) {
-        sim.onTerrace = false;
-        sim.posX = 2.65;
-        sim.posZ = 1.45;
-        sim.groundY = 0;
-        sim.facingYaw = Math.PI;
-        setOnTerraceState(false);
-      }
-    };
-    window.addEventListener('day1:toggle-terrace', toggle);
-    return () => window.removeEventListener('day1:toggle-terrace', toggle);
-  }, []);
-
-  useEffect(() => {
-    if (camera instanceof THREE.PerspectiveCamera) {
-      camera.fov = size.width / Math.max(1, size.height) < 0.8 ? 58 : 52;
-      camera.updateProjectionMatrix();
+    phaseTimerRef.current = 0;
+    phaseAdvancedRef.current = false;
+    callTriggeredRef.current = false;
+    prevHotspotIdRef.current = null;
+    onNearbyHotspotChange(null);
+    if (day1Phase !== 'waterfall_ride_stop') {
+      setWaterfallParked(false);
+      waterfallSeatedRef.current = false;
+      setWaterfallSeated(false);
     }
-  }, [camera, size.width, size.height]);
-
-  const readyTokenRef = useRef(-1);
-  useEffect(() => {
+    if (day1Phase !== 'return_and_kanishka') {
+      onDay1CallStateChange(false);
+      setDuskNight(false);
+    }
+    if (day1Phase === 'stay_meet') {
+      simRef.current.posX = -0.45;
+      simRef.current.posZ = -0.35;
+      simRef.current.velX = 0;
+      simRef.current.velZ = 0;
+      simRef.current.facingYaw = Math.PI;
+      simRef.current.orbitYaw = Math.PI;
+      simRef.current.orbitPitch = 0.25;
+      onTerraceRef.current = false;
+      setOnTerraceState(false);
+    } else if (day1Phase === 'waterfall_ride_stop') {
+      simRef.current.posX = -1.65;
+      simRef.current.posZ = -1.25;
+      simRef.current.velX = 0;
+      simRef.current.velZ = 0;
+      simRef.current.facingYaw = -Math.PI * 0.48;
+      simRef.current.orbitYaw = -Math.PI * 0.45;
+      simRef.current.orbitPitch = 0.22;
+      waterfallSeatedRef.current = autoPlayMode;
+      setWaterfallSeated(autoPlayMode);
+    } else if (day1Phase === 'market_street_walk') {
+      simRef.current.posX = 0.15;
+      simRef.current.posZ = 10.2;
+      simRef.current.velX = 0;
+      simRef.current.velZ = 0;
+      simRef.current.facingYaw = 0;
+      simRef.current.orbitYaw = 0;
+      simRef.current.orbitPitch = 0.22;
+    }
     if (readyTokenRef.current !== transitionToken) {
       readyTokenRef.current = transitionToken;
       onSceneReady(transitionToken, 2);
     }
-  }, [transitionToken, onSceneReady]);
+  }, [day1Phase, transitionToken, autoPlayMode, onDay1CallStateChange, onNearbyHotspotChange, onSceneReady]);
+
+  const toggleTerrace = useCallback((goTerrace: boolean) => {
+    onTerraceRef.current = goTerrace;
+    setOnTerraceState(goTerrace);
+    simRef.current.velX = 0;
+    simRef.current.velZ = 0;
+    if (goTerrace) {
+      simRef.current.posX = 2.85;
+      simRef.current.posZ = -1.65;
+      simRef.current.facingYaw = 0;
+    } else {
+      simRef.current.posX = 2.75;
+      simRef.current.posZ = 1.65;
+      simRef.current.facingYaw = Math.PI;
+    }
+  }, []);
 
   useEffect(() => {
-    if (day1Phase === 'travel_cinematic') {
-      const prevBg = scene.background;
-      const prevFog = scene.fog;
-      scene.background = new THREE.Color('#273b56');
-      scene.fog = new THREE.Fog('#273b56', 18, 70);
-      return () => {
-        scene.background = prevBg;
-        scene.fog = prevFog;
-      };
+    if (terraceToggleNonce > 0 && day1Phase === 'stay_meet') {
+      toggleTerrace(!onTerraceRef.current);
     }
-    return undefined;
-  }, [day1Phase, scene]);
+  }, [terraceToggleNonce, day1Phase, toggleTerrace]);
 
-  const finishEveningMaggi = useCallback(() => {
-    if (!simRef.current.completedSent) {
-      simRef.current.completedSent = true;
-      onDay1Complete();
+  useEffect(() => {
+    if (waterfallSitNonce > 0 && day1Phase === 'waterfall_ride_stop') {
+      const next = !waterfallSeatedRef.current;
+      waterfallSeatedRef.current = next;
+      setWaterfallSeated(next);
+      simRef.current.velX = 0;
+      simRef.current.velZ = 0;
+      if (!next) {
+        simRef.current.posX = -0.35;
+        simRef.current.posZ = -1.25;
+      }
     }
-  }, [onDay1Complete]);
+  }, [waterfallSitNonce, day1Phase]);
 
-  useFrame((state, rawDelta) => {
-    if (paused || (typeof document !== 'undefined' && document.hidden)) return;
+  useFrame((_, rawDelta) => {
     const delta = Math.min(rawDelta, 0.05);
-    if (delta <= 0) return;
-
+    if (paused || (typeof document !== 'undefined' && document.hidden)) return;
     const sim = simRef.current;
-    const t = state.clock.elapsedTime;
-    sim.phaseTimer += delta;
+    sim.elapsed += delta;
 
-    if (day1Phase === 'travel_cinematic') {
-      const dur = reducedMotion ? 1.5 : TRAVEL_DURATION_SEC;
-      const u = THREE.MathUtils.clamp(sim.phaseTimer / dur, 0, 1);
-      if (trainGroupRef.current) {
-        trainGroupRef.current.position.x = THREE.MathUtils.lerp(-14, 14, u);
+    // ---------------------------------------------------------
+    // PHASE 2: WATERFALL RIDE & ROCK STREAM SITTING
+    // ---------------------------------------------------------
+    if (day1Phase === 'waterfall_ride_stop') {
+      phaseTimerRef.current += delta;
+      const t = phaseTimerRef.current;
+      const rideAlpha = Math.min(1, t / WATERFALL_RIDE_DURATION_SEC);
+      const ease = rideAlpha * rideAlpha * (3 - 2 * rideAlpha);
+
+      const isNowParked = t >= WATERFALL_RIDE_DURATION_SEC;
+      if (isNowParked !== waterfallParked) {
+        setWaterfallParked(isNowParked);
       }
-      if (busGroupRef.current) {
-        busGroupRef.current.position.x = THREE.MathUtils.lerp(13, -13, u);
+
+      if (!isNowParked) {
+        const zLead = THREE.MathUtils.lerp(16.5, -1.6, ease);
+        const zComp = THREE.MathUtils.lerp(20.5, -0.35, ease);
+        if (leadScooterRef.current) {
+          leadScooterRef.current.position.set(-3.35 + Math.sin(ease * Math.PI) * 0.35, 0.02, zLead);
+          leadScooterRef.current.rotation.set(0, -0.18 - (1 - ease) * 0.08, 0);
+        }
+        if (compScooterRef.current) {
+          compScooterRef.current.position.set(-4.55 + Math.sin(ease * Math.PI) * 0.25, 0.02, zComp);
+          compScooterRef.current.rotation.set(0, -0.25, 0);
+        }
+        scratch.desiredCamPos.set(-5.65, 2.25, zLead + 4.8);
+        scratch.desiredLookAt.set(0.65, 1.35, zLead - 2.6);
+        camera.position.lerp(scratch.desiredCamPos, 1 - Math.exp(-delta * 4.5));
+        scratch.currentLookAt.lerp(scratch.desiredLookAt, 1 - Math.exp(-delta * 5.2));
+        camera.lookAt(scratch.currentLookAt);
+      } else {
+        const sitT = Math.min(1, (t - WATERFALL_RIDE_DURATION_SEC) / 5.4);
+        const rockSeatIshaan = DAY1_WATERFALL_ROCK_SEATS.ishaan;
+        const rockSeatShree = DAY1_WATERFALL_ROCK_SEATS.srishti;
+        const rockSeatManish = DAY1_WATERFALL_ROCK_SEATS.friend_black_tee;
+        const rockSeatYash = DAY1_WATERFALL_ROCK_SEATS.friend_plaid;
+
+        animateCharacterRig({
+          refs: manishRig,
+          posX: rockSeatManish.x,
+          posZ: rockSeatManish.z,
+          facingYaw: rockSeatManish.yaw,
+          groundY: rockSeatManish.rockTopY - 0.44,
+          strideRatio: 0,
+          stridePhase: 0,
+          elapsed: sim.elapsed,
+          delta,
+          idlePose: 'sit_ready',
+          reducedMotion,
+        });
+        animateCharacterRig({
+          refs: yashRig,
+          posX: rockSeatYash.x,
+          posZ: rockSeatYash.z,
+          facingYaw: rockSeatYash.yaw,
+          groundY: rockSeatYash.rockTopY - 0.44,
+          strideRatio: 0,
+          stridePhase: 0,
+          elapsed: sim.elapsed,
+          delta,
+          idlePose: 'sit_laugh',
+          armGesturePhase: 2.3,
+          reducedMotion,
+        });
+
+        if (autoPlayMode || waterfallSeatedRef.current) {
+          animateCharacterRig({
+            refs: ishaanRig,
+            posX: rockSeatIshaan.x,
+            posZ: rockSeatIshaan.z,
+            facingYaw: rockSeatIshaan.yaw,
+            groundY: rockSeatIshaan.rockTopY - 0.44,
+            strideRatio: 0,
+            stridePhase: 0,
+            elapsed: sim.elapsed,
+            delta,
+            idlePose: 'sit_laugh',
+            reducedMotion,
+          });
+          animateCharacterRig({
+            refs: shreeRig,
+            posX: rockSeatShree.x,
+            posZ: rockSeatShree.z,
+            facingYaw: rockSeatShree.yaw,
+            groundY: rockSeatShree.rockTopY - 0.44,
+            strideRatio: 0,
+            stridePhase: 0,
+            elapsed: sim.elapsed,
+            delta,
+            idlePose: 'sit_laugh',
+            armGesturePhase: 1.4,
+            reducedMotion,
+          });
+          scratch.desiredCamPos.set(-1.35 + Math.sin(sitT * 1.15) * 0.6, 2.05, 1.95 - sitT * 0.65);
+          scratch.desiredLookAt.set(3.25, 1.12, -1.65);
+          camera.position.lerp(scratch.desiredCamPos, 1 - Math.exp(-delta * 4.5));
+          scratch.currentLookAt.lerp(scratch.desiredLookAt, 1 - Math.exp(-delta * 5.2));
+          camera.lookAt(scratch.currentLookAt);
+
+          if (!autoPlayMode && prevHotspotIdRef.current !== 'sit_boulders_stand') {
+            prevHotspotIdRef.current = 'sit_boulders_stand';
+            onNearbyHotspotChange({
+              id: 'sit_boulders',
+              label: 'Stand Up & Walk Back to Scooters',
+              x: rockSeatIshaan.x,
+              z: rockSeatIshaan.z,
+              radius: 2.0,
+              actionType: 'interact',
+            });
+          }
+        } else {
+          const input = walkInputRef.current;
+          if (input) {
+            const moveDist = stepWalkSimulation(
+              sim,
+              input,
+              delta,
+              DAY1_WATERFALL_WALK_BOUNDS,
+              []
+            );
+            const speed = Math.hypot(sim.velX, sim.velZ);
+            sim.strideRatio = THREE.MathUtils.clamp(speed / WALK_SPEED_MPS, 0, 1);
+            if (sim.strideRatio > 0.03) {
+              sim.stridePhase += moveDist * 3.8;
+            }
+          }
+          animateIshaanWalkRig({
+            refs: ishaanRig,
+            posX: sim.posX,
+            posZ: sim.posZ,
+            facingYaw: sim.facingYaw,
+            strideRatio: sim.strideRatio,
+            stridePhase: sim.stridePhase,
+            elapsed: sim.elapsed,
+            delta,
+            groundY: 0.02,
+            reducedMotion,
+          });
+          animateCharacterRig({
+            refs: shreeRig,
+            posX: 1.15,
+            posZ: -1.75,
+            facingYaw: Math.atan2(-(sim.posX - 1.15), -(sim.posZ + 1.75)),
+            strideRatio: 0,
+            stridePhase: 0,
+            elapsed: sim.elapsed,
+            delta,
+            idlePose: 'look_around',
+            reducedMotion,
+          });
+          const camSin = Math.sin(sim.orbitYaw);
+          const camCos = Math.cos(sim.orbitYaw);
+          const isNarrow = size.width < 768;
+          scratch.desiredCamPos.set(
+            sim.posX + camSin * (isNarrow ? 3.6 : 3.05),
+            1.78,
+            sim.posZ + camCos * (isNarrow ? 3.6 : 3.05)
+          );
+          scratch.desiredLookAt.set(sim.posX - camSin * 1.4, 1.16, sim.posZ - camCos * 1.4);
+          camera.position.lerp(scratch.desiredCamPos, 1 - Math.exp(-delta * 8));
+          scratch.currentLookAt.lerp(scratch.desiredLookAt, 1 - Math.exp(-delta * 10));
+          camera.lookAt(scratch.currentLookAt);
+
+          const wfHotspot = findNearestWalkHotspot(sim.posX, sim.posZ, DAY1_WATERFALL_HOTSPOTS);
+          if ((wfHotspot?.id ?? null) !== prevHotspotIdRef.current) {
+            prevHotspotIdRef.current = wfHotspot?.id ?? null;
+            onNearbyHotspotChange(wfHotspot);
+          }
+        }
       }
-      camera.position.set(0, 4.2, 13.5);
-      camera.lookAt(0, 1.4, -2);
-      if (u >= 1) {
-        onAdvanceDay1Phase('stay_explore');
+
+      if (autoPlayMode && t >= WATERFALL_TOTAL_DURATION_SEC && !phaseAdvancedRef.current) {
+        phaseAdvancedRef.current = true;
+        onAdvanceDay1Phase('evening_maggi_stop');
       }
       return;
     }
 
-    if (day1Phase === 'evening_maggi') {
-      const dur = reducedMotion ? 1.4 : EVENING_MAGGI_DURATION_SEC;
-      const u = THREE.MathUtils.clamp(sim.phaseTimer / dur, 0, 1);
-      // Warm evening Maggi hangout beside scooters near main road edge (separate from Shree's original friends)
+    // ---------------------------------------------------------
+    // PHASE 2B: ~5:00 PM ROADSIDE MAGGI STOP TOGETHER
+    // ---------------------------------------------------------
+    if (day1Phase === 'evening_maggi_stop') {
+      phaseTimerRef.current += delta;
+      const t = phaseTimerRef.current;
+
+      animateCharacterRig({
+        refs: ishaanRig,
+        posX: DAY1_MAGGI_SEATS.ishaan.x,
+        posZ: DAY1_MAGGI_SEATS.ishaan.z,
+        facingYaw: DAY1_MAGGI_SEATS.ishaan.yaw,
+        groundY: -0.25,
+        strideRatio: 0,
+        stridePhase: 0,
+        elapsed: sim.elapsed,
+        delta,
+        idlePose: 'sit_eat',
+        reducedMotion,
+      });
+      animateCharacterRig({
+        refs: shreeRig,
+        posX: DAY1_MAGGI_SEATS.srishti.x,
+        posZ: DAY1_MAGGI_SEATS.srishti.z,
+        facingYaw: DAY1_MAGGI_SEATS.srishti.yaw,
+        groundY: -0.25,
+        strideRatio: 0,
+        stridePhase: 0,
+        elapsed: sim.elapsed,
+        delta,
+        idlePose: 'sit_laugh',
+        armGesturePhase: 1.1,
+        reducedMotion,
+      });
+      animateCharacterRig({
+        refs: manishRig,
+        posX: DAY1_MAGGI_SEATS.friend_black_tee.x,
+        posZ: DAY1_MAGGI_SEATS.friend_black_tee.z,
+        facingYaw: DAY1_MAGGI_SEATS.friend_black_tee.yaw,
+        groundY: -0.25,
+        strideRatio: 0,
+        stridePhase: 0,
+        elapsed: sim.elapsed,
+        delta,
+        idlePose: 'sit_eat',
+        armGesturePhase: 1.9,
+        reducedMotion,
+      });
+      animateCharacterRig({
+        refs: yashRig,
+        posX: DAY1_MAGGI_SEATS.friend_plaid.x,
+        posZ: DAY1_MAGGI_SEATS.friend_plaid.z,
+        facingYaw: DAY1_MAGGI_SEATS.friend_plaid.yaw,
+        groundY: -0.25,
+        strideRatio: 0,
+        stridePhase: 0,
+        elapsed: sim.elapsed,
+        delta,
+        idlePose: 'sit_laugh',
+        armGesturePhase: 0.7,
+        reducedMotion,
+      });
+
+      const angle = 0.3 + Math.sin(t * 0.45) * 0.55;
+      scratch.desiredCamPos.set(
+        DAY1_MAGGI_TABLE_CENTER.x + Math.sin(angle) * 3.1,
+        1.85,
+        DAY1_MAGGI_TABLE_CENTER.z + Math.cos(angle) * 3.1
+      );
+      scratch.desiredLookAt.set(
+        DAY1_MAGGI_TABLE_CENTER.x,
+        0.95,
+        DAY1_MAGGI_TABLE_CENTER.z
+      );
+      camera.position.lerp(scratch.desiredCamPos, 1 - Math.exp(-delta * 4.5));
+      scratch.currentLookAt.lerp(scratch.desiredLookAt, 1 - Math.exp(-delta * 5));
+      camera.lookAt(scratch.currentLookAt);
+
+      if (autoPlayMode && t >= EVENING_MAGGI_DURATION_SEC && !phaseAdvancedRef.current) {
+        phaseAdvancedRef.current = true;
+        onAdvanceDay1Phase('return_and_kanishka');
+      }
+      return;
+    }
+
+    // ---------------------------------------------------------
+    // PHASE 3: RETURN TO STAY (SRISHTI WITH KANISHKA DUSK -> NIGHT) + ~9 PM CALL
+    // ---------------------------------------------------------
+    if (day1Phase === 'return_and_kanishka') {
+      phaseTimerRef.current += delta;
+      const t = phaseTimerRef.current;
+      const rollAlpha = Math.min(1, t / RETURN_ROLLOUT_DURATION_SEC);
+      const rollEase = rollAlpha * rollAlpha * (3 - 2 * rollAlpha);
+
+      // Srishti spends relaxed evening time with Kanishka & original friends downstairs
+      animateCharacterRig({
+        refs: shreeRig,
+        posX: 0.75,
+        posZ: 1.55,
+        facingYaw: -Math.PI * 0.45,
+        strideRatio: 0,
+        stridePhase: 0,
+        elapsed: sim.elapsed,
+        delta,
+        idlePose: t > RETURN_ROLLOUT_DURATION_SEC ? 'look_around' : 'chat_nod',
+        reducedMotion,
+      });
+
+      const zScooter1 = THREE.MathUtils.lerp(2.55, 8.85, rollEase);
+      const xScooter1 = THREE.MathUtils.lerp(-1.1, 2.4, rollEase);
+      if (returnScooter1Ref.current) {
+        returnScooter1Ref.current.position.set(xScooter1, 0, zScooter1);
+        returnScooter1Ref.current.rotation.set(0, -Math.PI * 0.72, 0);
+      }
+      if (returnScooter2Ref.current) {
+        returnScooter2Ref.current.position.set(xScooter1 - 1.35, 0, zScooter1 - 1.15);
+        returnScooter2Ref.current.rotation.set(0, -Math.PI * 0.72, 0);
+      }
+
+      if (t >= RETURN_ROLLOUT_DURATION_SEC * 0.85 && !duskNight) {
+        setDuskNight(true);
+      }
+
+      if (t >= RETURN_ROLLOUT_DURATION_SEC && !callTriggeredRef.current) {
+        callTriggeredRef.current = true;
+        onDay1CallStateChange(true);
+      }
+
+      if (autoPlayMode && t >= RETURN_ROLLOUT_DURATION_SEC + 3.0 && !phaseAdvancedRef.current) {
+        phaseAdvancedRef.current = true;
+        onDay1CallStateChange(false);
+        onAdvanceDay1Phase('market_street_walk');
+      }
+
+      scratch.desiredCamPos.set(-2.05, 2.28, 6.25);
+      scratch.desiredLookAt.set(1.08, 1.32, 2.15);
+      camera.position.lerp(scratch.desiredCamPos, 1 - Math.exp(-delta * 4.5));
+      scratch.currentLookAt.lerp(scratch.desiredLookAt, 1 - Math.exp(-delta * 5));
+      camera.lookAt(scratch.currentLookAt);
+      return;
+    }
+
+    // ---------------------------------------------------------
+    // PHASE 3B: SRISHTI WALKING THROUGH NIGHT RISHIKESH MARKET STREETS
+    // ---------------------------------------------------------
+    if (day1Phase === 'market_street_walk') {
+      const input = walkInputRef.current;
+      if (autoPlayMode) {
+        const target = DAY1_MARKET_HOTSPOTS[0];
+        const dx = target.x - sim.posX;
+        const dz = target.z - sim.posZ;
+        const dist = Math.hypot(dx, dz);
+        if (dist > 0.75) {
+          const step = Math.min(dist, WALK_SPEED_MPS * 1.18 * delta);
+          sim.posX += (dx / dist) * step;
+          sim.posZ += (dz / dist) * step;
+          sim.facingYaw = Math.atan2(-dx, -dz);
+          sim.stridePhase += delta * 7.2;
+          sim.strideRatio = 0.9;
+        } else {
+          sim.strideRatio = 0;
+          if (!phaseAdvancedRef.current) {
+            phaseAdvancedRef.current = true;
+            onAdvanceDay1Phase('night_dhaba_dinner');
+          }
+        }
+      } else if (input) {
+        const moveDist = stepWalkSimulation(
+          sim,
+          input,
+          delta,
+          DAY1_MARKET_WALK_BOUNDS,
+          []
+        );
+        const speed = Math.hypot(sim.velX, sim.velZ);
+        sim.strideRatio = THREE.MathUtils.clamp(speed / WALK_SPEED_MPS, 0, 1);
+        if (sim.strideRatio > 0.03) {
+          sim.stridePhase += moveDist * 3.8;
+        }
+      }
+
+      const streetY = sampleMarketStreetY(sim.posZ);
       animateIshaanWalkRig({
-        refs: {
-          group: playerGroupRef.current,
-          torso: playerTorsoRef.current,
-          head: playerHeadRef.current,
-          leftLeg: leftLegRef.current,
-          leftKnee: leftKneeRef.current,
-          rightLeg: rightLegRef.current,
-          rightKnee: rightKneeRef.current,
-          leftArm: leftArmRef.current,
-          rightArm: rightArmRef.current,
-        },
-        posX: -2.15,
-        posZ: 6.25,
-        facingYaw: 0.45,
-        strideRatio: 0,
-        stridePhase: 0,
-        elapsed: t,
+        refs: ishaanRig,
+        posX: sim.posX - 0.32,
+        posZ: sim.posZ + 0.12,
+        facingYaw: sim.facingYaw,
+        strideRatio: sim.strideRatio,
+        stridePhase: sim.stridePhase + 0.35,
+        elapsed: sim.elapsed,
         delta,
-        idlePose: 'sit_eat',
+        groundY: streetY,
         reducedMotion,
       });
       animateCharacterRig({
-        refs: {
-          group: shreeGroupRef.current,
-          torso: shreeTorsoRef.current,
-          head: shreeHeadRef.current,
-          leftLeg: shreeLLegRef.current,
-          leftKnee: shreeLKneeRef.current,
-          rightLeg: shreeRLegRef.current,
-          rightKnee: shreeRKneeRef.current,
-          leftArm: shreeLArmRef.current,
-          rightArm: shreeRArmRef.current,
-        },
-        posX: -1.15,
-        posZ: 6.25,
-        facingYaw: -0.45,
-        strideRatio: 0,
-        stridePhase: 0,
-        elapsed: t,
+        refs: shreeRig,
+        posX: sim.posX + 0.32,
+        posZ: sim.posZ,
+        facingYaw: sim.facingYaw,
+        strideRatio: sim.strideRatio,
+        stridePhase: sim.stridePhase,
+        elapsed: sim.elapsed,
         delta,
-        idlePose: 'sit_eat',
-        reducedMotion,
-      });
-      animateCharacterRig({
-        refs: {
-          group: manishGroupRef.current,
-          torso: manishTorsoRef.current,
-          head: manishHeadRef.current,
-          leftLeg: manishLLegRef.current,
-          leftKnee: manishLKneeRef.current,
-          rightLeg: manishRLegRef.current,
-          rightKnee: manishRKneeRef.current,
-          leftArm: manishLArmRef.current,
-          rightArm: manishRArmRef.current,
-        },
-        posX: -1.65,
-        posZ: 5.55,
-        facingYaw: Math.PI,
-        strideRatio: 0,
-        stridePhase: 0,
-        elapsed: t,
-        delta,
+        groundY: streetY,
         idlePose: 'chat_nod',
         reducedMotion,
       });
-      camera.position.set(1.6, 2.35, 9.2);
-      camera.lookAt(-1.65, 1.0, 6.1);
-      if (u >= 1) {
-        finishEveningMaggi();
+
+      const camSin = Math.sin(sim.orbitYaw);
+      const camCos = Math.cos(sim.orbitYaw);
+      const isNarrow = size.width < 768;
+      scratch.desiredCamPos.set(
+        sim.posX + camSin * (isNarrow ? 3.55 : 2.95),
+        streetY + 1.82,
+        sim.posZ + camCos * (isNarrow ? 3.55 : 2.95)
+      );
+      scratch.desiredLookAt.set(
+        sim.posX - camSin * 1.65,
+        streetY + 1.14,
+        sim.posZ - camCos * 1.65
+      );
+      camera.position.lerp(scratch.desiredCamPos, 1 - Math.exp(-delta * 8));
+      scratch.currentLookAt.lerp(scratch.desiredLookAt, 1 - Math.exp(-delta * 10));
+      camera.lookAt(scratch.currentLookAt);
+
+      const mktHotspot = findNearestWalkHotspot(sim.posX, sim.posZ, DAY1_MARKET_HOTSPOTS);
+      if ((mktHotspot?.id ?? null) !== prevHotspotIdRef.current) {
+        prevHotspotIdRef.current = mktHotspot?.id ?? null;
+        onNearbyHotspotChange(mktHotspot);
       }
       return;
     }
 
-    // Walkable Day 1 stay exploration (`stay_explore`)
-    const bounds = sim.onTerrace ? TERRACE_WALK_BOUNDS : DAY1_WALK_BOUNDS;
-    const obstacles = sim.onTerrace ? TERRACE_OBSTACLES : DAY1_OBSTACLES;
-    const simPos = {
-      posX: sim.posX,
-      posZ: sim.posZ,
-      velX: sim.velX,
-      velZ: sim.velZ,
-      facingYaw: sim.facingYaw,
-      stridePhase: sim.stridePhase,
-      orbitYaw: sim.orbitYaw,
-      orbitPitch: sim.orbitPitch,
-    };
-    const moveDist = stepWalkSimulation(simPos, walkInputRef.current, delta, bounds, obstacles);
-    sim.posX = simPos.posX;
-    sim.posZ = simPos.posZ;
-    sim.velX = simPos.velX;
-    sim.velZ = simPos.velZ;
-    sim.facingYaw = simPos.facingYaw;
-    sim.orbitYaw = simPos.orbitYaw;
-    sim.orbitPitch = simPos.orbitPitch;
-    const walkSpeed = Math.hypot(sim.velX, sim.velZ);
-    const strideRatio = THREE.MathUtils.clamp(walkSpeed / WALK_SPEED_MPS, 0, 1);
-    if (strideRatio > 0.03) sim.stridePhase += moveDist * 3.8;
+    // ---------------------------------------------------------
+    // PHASE 4: NIGHTTIME ROADSIDE DHABA DINNER UNDER STARS
+    // ---------------------------------------------------------
+    if (day1Phase === 'night_dhaba_dinner') {
+      phaseTimerRef.current += delta;
+      const t = phaseTimerRef.current;
 
+      animateCharacterRig({
+        refs: ishaanRig,
+        posX: DAY1_NIGHT_DHABA_SEATS.ishaan.x,
+        posZ: DAY1_NIGHT_DHABA_SEATS.ishaan.z,
+        facingYaw: DAY1_NIGHT_DHABA_SEATS.ishaan.yaw,
+        strideRatio: 0,
+        stridePhase: 0,
+        elapsed: sim.elapsed,
+        delta,
+        idlePose: 'sit_eat',
+        reducedMotion,
+      });
+      animateCharacterRig({
+        refs: shreeRig,
+        posX: DAY1_NIGHT_DHABA_SEATS.srishti.x,
+        posZ: DAY1_NIGHT_DHABA_SEATS.srishti.z,
+        facingYaw: DAY1_NIGHT_DHABA_SEATS.srishti.yaw,
+        strideRatio: 0,
+        stridePhase: 0,
+        elapsed: sim.elapsed,
+        delta,
+        idlePose: 'sit_laugh',
+        armGesturePhase: 1.2,
+        reducedMotion,
+      });
+      animateCharacterRig({
+        refs: manishRig,
+        posX: DAY1_NIGHT_DHABA_SEATS.friend_black_tee.x,
+        posZ: DAY1_NIGHT_DHABA_SEATS.friend_black_tee.z,
+        facingYaw: DAY1_NIGHT_DHABA_SEATS.friend_black_tee.yaw,
+        strideRatio: 0,
+        stridePhase: 0,
+        elapsed: sim.elapsed,
+        delta,
+        idlePose: 'sit_eat',
+        armGesturePhase: 2.1,
+        reducedMotion,
+      });
+      animateCharacterRig({
+        refs: yashRig,
+        posX: DAY1_NIGHT_DHABA_SEATS.friend_plaid.x,
+        posZ: DAY1_NIGHT_DHABA_SEATS.friend_plaid.z,
+        facingYaw: DAY1_NIGHT_DHABA_SEATS.friend_plaid.yaw,
+        strideRatio: 0,
+        stridePhase: 0,
+        elapsed: sim.elapsed,
+        delta,
+        idlePose: 'sit_laugh',
+        armGesturePhase: 0.7,
+        reducedMotion,
+      });
+
+      const angle = 0.25 + Math.sin(t * 0.45) * 0.55;
+      scratch.desiredCamPos.set(
+        DAY1_NIGHT_DHABA_TABLE_CENTER.x + Math.sin(angle) * 3.1,
+        1.92,
+        DAY1_NIGHT_DHABA_TABLE_CENTER.z + Math.cos(angle) * 3.1
+      );
+      scratch.desiredLookAt.set(
+        DAY1_NIGHT_DHABA_TABLE_CENTER.x,
+        0.92,
+        DAY1_NIGHT_DHABA_TABLE_CENTER.z
+      );
+      camera.position.lerp(scratch.desiredCamPos, 1 - Math.exp(-delta * 4.5));
+      scratch.currentLookAt.lerp(scratch.desiredLookAt, 1 - Math.exp(-delta * 5));
+      camera.lookAt(scratch.currentLookAt);
+
+      if (autoPlayMode && t >= NIGHT_DHABA_DURATION_SEC && !phaseAdvancedRef.current) {
+        phaseAdvancedRef.current = true;
+        onAdvanceDay1Phase('night_hotel_return');
+      }
+      return;
+    }
+
+    // ---------------------------------------------------------
+    // PHASE 5: RETURN TO HOTEL AT NIGHT -> DAY 1 ENDS GENTLY
+    // ---------------------------------------------------------
+    if (day1Phase === 'night_hotel_return') {
+      phaseTimerRef.current += delta;
+      const t = phaseTimerRef.current;
+      const walkAlpha = Math.min(1, t / 2.6);
+      const walkEase = walkAlpha * walkAlpha * (3 - 2 * walkAlpha);
+      const zPos = THREE.MathUtils.lerp(6.4, 2.0, walkEase);
+      const walking = walkAlpha < 1;
+
+      animateIshaanWalkRig({
+        refs: ishaanRig,
+        posX: -0.42,
+        posZ: zPos,
+        facingYaw: 0,
+        strideRatio: walking ? 0.72 : 0,
+        stridePhase: sim.elapsed * 5.8,
+        elapsed: sim.elapsed,
+        delta,
+        groundY: 0,
+        reducedMotion,
+      });
+      animateCharacterRig({
+        refs: shreeRig,
+        posX: 0.42,
+        posZ: zPos + 0.15,
+        facingYaw: walking ? 0 : -0.35,
+        strideRatio: walking ? 0.72 : 0,
+        stridePhase: sim.elapsed * 5.8 + 0.4,
+        elapsed: sim.elapsed,
+        delta,
+        idlePose: walking ? 'chat_nod' : 'group_wave',
+        reducedMotion,
+      });
+
+      scratch.desiredCamPos.set(-1.95, 2.15, zPos + 4.4);
+      scratch.desiredLookAt.set(0, 1.35, zPos - 2.2);
+      camera.position.lerp(scratch.desiredCamPos, 1 - Math.exp(-delta * 4.5));
+      scratch.currentLookAt.lerp(scratch.desiredLookAt, 1 - Math.exp(-delta * 5));
+      camera.lookAt(scratch.currentLookAt);
+
+      if (autoPlayMode && t >= NIGHT_RETURN_DURATION_SEC && !completedRef.current) {
+        completedRef.current = true;
+        onDay1Complete();
+      }
+      return;
+    }
+
+    // ---------------------------------------------------------
+    // PHASE 1: PLAYABLE RISHIKESH STAY MEET (WITH WATCH AUTOPILOT)
+    // ---------------------------------------------------------
+    const input = walkInputRef.current;
+    if (!input) return;
+
+    const currentTerrace = onTerraceRef.current;
+    const activeBounds = currentTerrace ? TERRACE_WALK_BOUNDS : DAY1_WALK_BOUNDS;
+    const activeObstacles = currentTerrace ? TERRACE_OBSTACLES : DAY1_OBSTACLES;
+    const activeHotspots = currentTerrace ? TERRACE_HOTSPOTS : DAY1_HOTSPOTS;
+
+    if (autoPlayMode && !currentTerrace) {
+      // Smooth directed autopilot walking from interior stay straight out to the evening waterfall ride hotspot
+      const targetSpot = DAY1_HOTSPOTS[1];
+      const dx = targetSpot.x - sim.posX;
+      const dz = targetSpot.z - sim.posZ;
+      const dist = Math.hypot(dx, dz);
+      if (dist > 0.65) {
+        const moveStep = Math.min(dist, WALK_SPEED_MPS * 0.88 * delta);
+        sim.posX += (dx / dist) * moveStep;
+        sim.posZ += (dz / dist) * moveStep;
+        sim.facingYaw = Math.atan2(-dx, -dz);
+        sim.stridePhase += delta * 6.8;
+        sim.strideRatio = 0.85;
+      } else {
+        sim.strideRatio = 0;
+        if (!phaseAdvancedRef.current) {
+          phaseAdvancedRef.current = true;
+          onAdvanceDay1Phase('waterfall_ride_stop');
+        }
+      }
+    } else {
+      const moveDist = stepWalkSimulation(sim, input, delta, activeBounds, activeObstacles);
+      const speed = Math.hypot(sim.velX, sim.velZ);
+      sim.strideRatio = THREE.MathUtils.clamp(speed / WALK_SPEED_MPS, 0, 1);
+      if (sim.strideRatio > 0.03) {
+        sim.stridePhase += moveDist * 3.8;
+      }
+    }
+
+    const activeFloorY = currentTerrace ? TERRACE_Y : 0;
     animateIshaanWalkRig({
-      refs: {
-        group: playerGroupRef.current,
-        torso: playerTorsoRef.current,
-        head: playerHeadRef.current,
-        leftLeg: leftLegRef.current,
-        leftKnee: leftKneeRef.current,
-        rightLeg: rightLegRef.current,
-        rightKnee: rightKneeRef.current,
-        leftArm: leftArmRef.current,
-        rightArm: rightArmRef.current,
-      },
+      refs: ishaanRig,
       posX: sim.posX,
       posZ: sim.posZ,
       facingYaw: sim.facingYaw,
-      strideRatio,
+      strideRatio: sim.strideRatio,
       stridePhase: sim.stridePhase,
-      elapsed: t,
+      elapsed: sim.elapsed,
       delta,
-      groundY: sim.groundY,
+      groundY: activeFloorY,
       reducedMotion,
     });
 
-    // Shree stays by the 1st floor courtyard / terrace; Manish waits beside scooters
+    // Shree stands near lane courtyard welcoming Ishaan after rafting
     animateCharacterRig({
-      refs: {
-        group: shreeGroupRef.current,
-        torso: shreeTorsoRef.current,
-        head: shreeHeadRef.current,
-        leftLeg: shreeLLegRef.current,
-        leftKnee: shreeLKneeRef.current,
-        rightLeg: shreeRLegRef.current,
-        rightKnee: shreeRKneeRef.current,
-        leftArm: shreeLArmRef.current,
-        rightArm: shreeRArmRef.current,
-      },
-      posX: sim.onTerrace ? -0.95 : -1.85,
-      posZ: sim.onTerrace ? -3.85 : 2.1,
-      groundY: sim.onTerrace ? TERRACE_Y : 0,
-      facingYaw: 0.2,
+      refs: shreeRig,
+      posX: 0.35,
+      posZ: 2.25,
+      facingYaw: Math.atan2(-(sim.posX - 0.35), -(sim.posZ - 2.25)),
       strideRatio: 0,
       stridePhase: 0,
-      elapsed: t,
+      elapsed: sim.elapsed,
+      delta,
+      idlePose: 'group_wave',
+      reducedMotion,
+    });
+    animateCharacterRig({
+      refs: manishRig,
+      posX: -1.85,
+      posZ: 3.15,
+      facingYaw: 2.55,
+      strideRatio: 0,
+      stridePhase: 0,
+      elapsed: sim.elapsed,
       delta,
       idlePose: 'chat_nod',
       reducedMotion,
     });
     animateCharacterRig({
-      refs: {
-        group: manishGroupRef.current,
-        torso: manishTorsoRef.current,
-        head: manishHeadRef.current,
-        leftLeg: manishLLegRef.current,
-        leftKnee: manishLKneeRef.current,
-        rightLeg: manishRLegRef.current,
-        rightKnee: manishRKneeRef.current,
-        leftArm: manishLArmRef.current,
-        rightArm: manishRArmRef.current,
-      },
-      posX: -2.4,
-      posZ: 3.15,
-      facingYaw: -0.4,
+      refs: yashRig,
+      posX: -1.05,
+      posZ: 3.45,
+      facingYaw: -1.15,
       strideRatio: 0,
       stridePhase: 0,
-      elapsed: t,
+      elapsed: sim.elapsed,
       delta,
-      idlePose: 'look_around',
+      idlePose: 'chat_nod',
+      armGesturePhase: 1.5,
       reducedMotion,
     });
 
-    const camDist = 5.1;
-    const hDist = Math.cos(sim.orbitPitch) * camDist;
-    const vOff = sim.groundY + 1.25 + Math.sin(sim.orbitPitch) * camDist;
-    scratch.camPos.set(
-      sim.posX + Math.sin(sim.orbitYaw) * hDist,
-      vOff,
-      sim.posZ + Math.cos(sim.orbitYaw) * hDist
+    const camSin = Math.sin(sim.orbitYaw);
+    const camCos = Math.cos(sim.orbitYaw);
+    const isNarrow = size.width < 768;
+    scratch.desiredCamPos.set(
+      sim.posX + camSin * (isNarrow ? 3.55 : 2.95),
+      activeFloorY + (currentTerrace ? 1.88 : 1.72),
+      sim.posZ + camCos * (isNarrow ? 3.55 : 2.95)
     );
-    scratch.lookAt.set(sim.posX, sim.groundY + 1.15, sim.posZ);
+    scratch.desiredLookAt.set(
+      sim.posX - camSin * 1.4,
+      activeFloorY + 1.18,
+      sim.posZ - camCos * 1.4
+    );
+    camera.position.lerp(scratch.desiredCamPos, 1 - Math.exp(-delta * 8));
+    scratch.currentLookAt.lerp(scratch.desiredLookAt, 1 - Math.exp(-delta * 10));
+    camera.lookAt(scratch.currentLookAt);
 
-    if (!sim.cameraInitialized || reducedMotion) {
-      camera.position.copy(scratch.camPos);
-      scratch.smoothLook.copy(scratch.lookAt);
-      sim.cameraInitialized = true;
-    } else {
-      camera.position.x = THREE.MathUtils.damp(camera.position.x, scratch.camPos.x, 8, delta);
-      camera.position.y = THREE.MathUtils.damp(camera.position.y, scratch.camPos.y, 8, delta);
-      camera.position.z = THREE.MathUtils.damp(camera.position.z, scratch.camPos.z, 8, delta);
-      scratch.smoothLook.x = THREE.MathUtils.damp(scratch.smoothLook.x, scratch.lookAt.x, 10, delta);
-      scratch.smoothLook.y = THREE.MathUtils.damp(scratch.smoothLook.y, scratch.lookAt.y, 10, delta);
-      scratch.smoothLook.z = THREE.MathUtils.damp(scratch.smoothLook.z, scratch.lookAt.z, 10, delta);
-    }
-    camera.lookAt(scratch.smoothLook);
-
-    const activeSpots = sim.onTerrace ? TERRACE_HOTSPOTS : DAY1_HOTSPOTS;
-    const nearest = findNearestWalkHotspot(sim.posX, sim.posZ, activeSpots);
-    const nextId = nearest?.id ?? null;
-    if (nextId !== sim.lastHotspotId) {
-      sim.lastHotspotId = nextId;
-      onNearbyHotspotChange(nearest);
+    const hotspot = findNearestWalkHotspot(sim.posX, sim.posZ, activeHotspots);
+    if ((hotspot?.id ?? null) !== prevHotspotIdRef.current) {
+      prevHotspotIdRef.current = hotspot?.id ?? null;
+      onNearbyHotspotChange(hotspot);
     }
   });
 
-  if (day1Phase === 'travel_cinematic') {
+  if (day1Phase === 'waterfall_ride_stop') {
     return (
       <>
-        <ambientLight intensity={0.65} color="#fed7aa" />
-        <directionalLight position={[12, 18, 12]} intensity={1.4} color="#fde68a" />
-        {/* Stylised Train Track (Upper Back: Lucknow -> Rishikesh) */}
-        <mesh position={[0, 1.4, -5.2]}>
-          <boxGeometry args={[36, 0.14, 1.8]} />
-          <meshStandardMaterial color="#334155" roughness={0.9} />
-        </mesh>
-        <group ref={trainGroupRef} position={[-12, 1.5, -5.2]}>
-          {[-2.8, 0, 2.8].map((cx, i) => (
-            <mesh key={i} position={[cx, 0.72, 0]}>
-              <boxGeometry args={[2.5, 1.35, 1.1]} />
-              <meshStandardMaterial color={i === 0 ? '#0f172a' : '#1d4ed8'} roughness={0.6} />
-            </mesh>
-          ))}
-        </group>
+        <Day1WaterfallEnvironment
+          qualityProfile={qualityProfile}
+          paused={paused}
+          scootersParked={waterfallParked}
+          sittingOnBoulders={autoPlayMode || waterfallSeated}
+        />
 
-        {/* Stylized Highway Bus Track (Foreground: Delhi -> Rishikesh) */}
-        <mesh position={[0, 0, -0.5]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[36, 4.0]} />
-          <meshStandardMaterial color="#475569" roughness={0.92} />
-        </mesh>
-        <group ref={busGroupRef} position={[12, 0.1, -0.5]}>
-          <mesh position={[0, 0.9, 0]}>
-            <boxGeometry args={[3.4, 1.55, 1.28]} />
-            <meshStandardMaterial color="#f59e0b" roughness={0.55} />
-          </mesh>
-          <mesh position={[-0.1, 1.15, 0.66]}>
-            <boxGeometry args={[2.7, 0.52, 0.04]} />
-            <meshStandardMaterial color="#bae6fd" roughness={0.3} />
-          </mesh>
-        </group>
+        {!waterfallParked ? (
+          <>
+            <group ref={leadScooterRef} position={[-3.35, 0.02, 16.5]} rotation={[0, -0.25, 0]}>
+              <PrototypeScooter variant="lead" castShadow={shadowsEnabled} outfitMode="day1" />
+            </group>
+            <group ref={compScooterRef} position={[-4.55, 0.02, 20.5]} rotation={[0, -0.25, 0]}>
+              <PrototypeScooter variant="companion" castShadow={shadowsEnabled} outfitMode="day1" />
+            </group>
+          </>
+        ) : (
+          <>
+            <StylizedPlaceholderCharacter
+              characterVariant="ishaan"
+              outfitMode="day1"
+              groupRef={ishaanRig.groupRef}
+              torsoRef={ishaanRig.torsoRef}
+              headRef={ishaanRig.headRef}
+              leftLegRef={ishaanRig.leftLegRef}
+              leftKneeRef={ishaanRig.leftKneeRef}
+              rightLegRef={ishaanRig.rightLegRef}
+              rightKneeRef={ishaanRig.rightKneeRef}
+              leftArmRef={ishaanRig.leftArmRef}
+              rightArmRef={ishaanRig.rightArmRef}
+              rightForearmRef={ishaanRig.rightForearmRef}
+              position={
+                autoPlayMode || waterfallSeated
+                  ? [
+                      DAY1_WATERFALL_ROCK_SEATS.ishaan.x,
+                      DAY1_WATERFALL_ROCK_SEATS.ishaan.rockTopY - 0.44,
+                      DAY1_WATERFALL_ROCK_SEATS.ishaan.z,
+                    ]
+                  : [-1.65, 0.02, -1.25]
+              }
+              rotationY={
+                autoPlayMode || waterfallSeated ? DAY1_WATERFALL_ROCK_SEATS.ishaan.yaw : -Math.PI * 0.48
+              }
+              castShadow={shadowsEnabled}
+            />
+            <StylizedPlaceholderCharacter
+              characterVariant="srishti"
+              outfitMode="day1"
+              groupRef={shreeRig.groupRef}
+              torsoRef={shreeRig.torsoRef}
+              headRef={shreeRig.headRef}
+              leftLegRef={shreeRig.leftLegRef}
+              leftKneeRef={shreeRig.leftKneeRef}
+              rightLegRef={shreeRig.rightLegRef}
+              rightKneeRef={shreeRig.rightKneeRef}
+              leftArmRef={shreeRig.leftArmRef}
+              rightArmRef={shreeRig.rightArmRef}
+              rightForearmRef={shreeRig.rightForearmRef}
+              position={
+                autoPlayMode || waterfallSeated
+                  ? [
+                      DAY1_WATERFALL_ROCK_SEATS.srishti.x,
+                      DAY1_WATERFALL_ROCK_SEATS.srishti.rockTopY - 0.44,
+                      DAY1_WATERFALL_ROCK_SEATS.srishti.z,
+                    ]
+                  : [1.15, 0, -1.75]
+              }
+              rotationY={autoPlayMode || waterfallSeated ? DAY1_WATERFALL_ROCK_SEATS.srishti.yaw : -1.2}
+              castShadow={shadowsEnabled}
+            />
+            <StylizedPlaceholderCharacter
+              characterVariant="friend_black_tee"
+              outfitMode="day1"
+              groupRef={manishRig.groupRef}
+              torsoRef={manishRig.torsoRef}
+              headRef={manishRig.headRef}
+              leftLegRef={manishRig.leftLegRef}
+              leftKneeRef={manishRig.leftKneeRef}
+              rightLegRef={manishRig.rightLegRef}
+              rightKneeRef={manishRig.rightKneeRef}
+              leftArmRef={manishRig.leftArmRef}
+              rightArmRef={manishRig.rightArmRef}
+              rightForearmRef={manishRig.rightForearmRef}
+              position={[
+                DAY1_WATERFALL_ROCK_SEATS.friend_black_tee.x,
+                DAY1_WATERFALL_ROCK_SEATS.friend_black_tee.rockTopY - 0.44,
+                DAY1_WATERFALL_ROCK_SEATS.friend_black_tee.z,
+              ]}
+              rotationY={DAY1_WATERFALL_ROCK_SEATS.friend_black_tee.yaw}
+              castShadow={shadowsEnabled}
+            />
+            <StylizedPlaceholderCharacter
+              characterVariant="friend_plaid"
+              outfitMode="day1"
+              groupRef={yashRig.groupRef}
+              torsoRef={yashRig.torsoRef}
+              headRef={yashRig.headRef}
+              leftLegRef={yashRig.leftLegRef}
+              leftKneeRef={yashRig.leftKneeRef}
+              rightLegRef={yashRig.rightLegRef}
+              rightKneeRef={yashRig.rightKneeRef}
+              leftArmRef={yashRig.leftArmRef}
+              rightArmRef={yashRig.rightArmRef}
+              rightForearmRef={yashRig.rightForearmRef}
+              position={[
+                DAY1_WATERFALL_ROCK_SEATS.friend_plaid.x,
+                DAY1_WATERFALL_ROCK_SEATS.friend_plaid.rockTopY - 0.44,
+                DAY1_WATERFALL_ROCK_SEATS.friend_plaid.z,
+              ]}
+              rotationY={DAY1_WATERFALL_ROCK_SEATS.friend_plaid.yaw}
+              castShadow={shadowsEnabled}
+            />
+          </>
+        )}
+      </>
+    );
+  }
+
+  if (day1Phase === 'evening_maggi_stop') {
+    return (
+      <>
+        <Day1MaggiStopEnvironment qualityProfile={qualityProfile} paused={paused} />
+
+        <StylizedPlaceholderCharacter
+          characterVariant="ishaan"
+          outfitMode="day1"
+          groupRef={ishaanRig.groupRef}
+          torsoRef={ishaanRig.torsoRef}
+          headRef={ishaanRig.headRef}
+          leftLegRef={ishaanRig.leftLegRef}
+          leftKneeRef={ishaanRig.leftKneeRef}
+          rightLegRef={ishaanRig.rightLegRef}
+          rightKneeRef={ishaanRig.rightKneeRef}
+          leftArmRef={ishaanRig.leftArmRef}
+          rightArmRef={ishaanRig.rightArmRef}
+          rightForearmRef={ishaanRig.rightForearmRef}
+          position={[DAY1_MAGGI_SEATS.ishaan.x, -0.25, DAY1_MAGGI_SEATS.ishaan.z]}
+          rotationY={DAY1_MAGGI_SEATS.ishaan.yaw}
+          holdingFork
+          castShadow={shadowsEnabled}
+        />
+        <StylizedPlaceholderCharacter
+          characterVariant="srishti"
+          outfitMode="day1"
+          groupRef={shreeRig.groupRef}
+          torsoRef={shreeRig.torsoRef}
+          headRef={shreeRig.headRef}
+          leftLegRef={shreeRig.leftLegRef}
+          leftKneeRef={shreeRig.leftKneeRef}
+          rightLegRef={shreeRig.rightLegRef}
+          rightKneeRef={shreeRig.rightKneeRef}
+          leftArmRef={shreeRig.leftArmRef}
+          rightArmRef={shreeRig.rightArmRef}
+          rightForearmRef={shreeRig.rightForearmRef}
+          position={[DAY1_MAGGI_SEATS.srishti.x, -0.25, DAY1_MAGGI_SEATS.srishti.z]}
+          rotationY={DAY1_MAGGI_SEATS.srishti.yaw}
+          castShadow={shadowsEnabled}
+        />
+        <StylizedPlaceholderCharacter
+          characterVariant="friend_black_tee"
+          outfitMode="day1"
+          groupRef={manishRig.groupRef}
+          torsoRef={manishRig.torsoRef}
+          headRef={manishRig.headRef}
+          leftLegRef={manishRig.leftLegRef}
+          leftKneeRef={manishRig.leftKneeRef}
+          rightLegRef={manishRig.rightLegRef}
+          rightKneeRef={manishRig.rightKneeRef}
+          leftArmRef={manishRig.leftArmRef}
+          rightArmRef={manishRig.rightArmRef}
+          rightForearmRef={manishRig.rightForearmRef}
+          position={[
+            DAY1_MAGGI_SEATS.friend_black_tee.x,
+            -0.25,
+            DAY1_MAGGI_SEATS.friend_black_tee.z,
+          ]}
+          rotationY={DAY1_MAGGI_SEATS.friend_black_tee.yaw}
+          holdingFork
+          castShadow={shadowsEnabled}
+        />
+        <StylizedPlaceholderCharacter
+          characterVariant="friend_plaid"
+          outfitMode="day1"
+          groupRef={yashRig.groupRef}
+          torsoRef={yashRig.torsoRef}
+          headRef={yashRig.headRef}
+          leftLegRef={yashRig.leftLegRef}
+          leftKneeRef={yashRig.leftKneeRef}
+          rightLegRef={yashRig.rightLegRef}
+          rightKneeRef={yashRig.rightKneeRef}
+          leftArmRef={yashRig.leftArmRef}
+          rightArmRef={yashRig.rightArmRef}
+          rightForearmRef={yashRig.rightForearmRef}
+          position={[
+            DAY1_MAGGI_SEATS.friend_plaid.x,
+            -0.25,
+            DAY1_MAGGI_SEATS.friend_plaid.z,
+          ]}
+          rotationY={DAY1_MAGGI_SEATS.friend_plaid.yaw}
+          castShadow={shadowsEnabled}
+        />
+      </>
+    );
+  }
+
+  if (day1Phase === 'market_street_walk') {
+    return (
+      <>
+        <Day1MarketWalkEnvironment qualityProfile={qualityProfile} paused={paused} />
+        <StylizedPlaceholderCharacter
+          characterVariant="ishaan"
+          outfitMode="day1"
+          groupRef={ishaanRig.groupRef}
+          torsoRef={ishaanRig.torsoRef}
+          headRef={ishaanRig.headRef}
+          leftLegRef={ishaanRig.leftLegRef}
+          leftKneeRef={ishaanRig.leftKneeRef}
+          rightLegRef={ishaanRig.rightLegRef}
+          rightKneeRef={ishaanRig.rightKneeRef}
+          leftArmRef={ishaanRig.leftArmRef}
+          rightArmRef={ishaanRig.rightArmRef}
+          rightForearmRef={ishaanRig.rightForearmRef}
+          position={[-0.17, sampleMarketStreetY(10.32), 10.32]}
+          rotationY={0}
+          castShadow={shadowsEnabled}
+        />
+        <StylizedPlaceholderCharacter
+          characterVariant="srishti"
+          outfitMode="day1"
+          groupRef={shreeRig.groupRef}
+          torsoRef={shreeRig.torsoRef}
+          headRef={shreeRig.headRef}
+          leftLegRef={shreeRig.leftLegRef}
+          leftKneeRef={shreeRig.leftKneeRef}
+          rightLegRef={shreeRig.rightLegRef}
+          rightKneeRef={shreeRig.rightKneeRef}
+          leftArmRef={shreeRig.leftArmRef}
+          rightArmRef={shreeRig.rightArmRef}
+          rightForearmRef={shreeRig.rightForearmRef}
+          position={[0.47, sampleMarketStreetY(10.2), 10.2]}
+          rotationY={0}
+          castShadow={shadowsEnabled}
+        />
+      </>
+    );
+  }
+
+  if (day1Phase === 'night_dhaba_dinner') {
+    return (
+      <>
+        <Day1NightDhabaEnvironment qualityProfile={qualityProfile} />
+
+        <StylizedPlaceholderCharacter
+          characterVariant="ishaan"
+          outfitMode="day1"
+          groupRef={ishaanRig.groupRef}
+          torsoRef={ishaanRig.torsoRef}
+          headRef={ishaanRig.headRef}
+          leftLegRef={ishaanRig.leftLegRef}
+          leftKneeRef={ishaanRig.leftKneeRef}
+          rightLegRef={ishaanRig.rightLegRef}
+          rightKneeRef={ishaanRig.rightKneeRef}
+          leftArmRef={ishaanRig.leftArmRef}
+          rightArmRef={ishaanRig.rightArmRef}
+          rightForearmRef={ishaanRig.rightForearmRef}
+          position={[DAY1_NIGHT_DHABA_SEATS.ishaan.x, -0.25, DAY1_NIGHT_DHABA_SEATS.ishaan.z]}
+          rotationY={DAY1_NIGHT_DHABA_SEATS.ishaan.yaw}
+          holdingFork
+          castShadow={shadowsEnabled}
+        />
+        <StylizedPlaceholderCharacter
+          characterVariant="srishti"
+          outfitMode="day1"
+          groupRef={shreeRig.groupRef}
+          torsoRef={shreeRig.torsoRef}
+          headRef={shreeRig.headRef}
+          leftLegRef={shreeRig.leftLegRef}
+          leftKneeRef={shreeRig.leftKneeRef}
+          rightLegRef={shreeRig.rightLegRef}
+          rightKneeRef={shreeRig.rightKneeRef}
+          leftArmRef={shreeRig.leftArmRef}
+          rightArmRef={shreeRig.rightArmRef}
+          rightForearmRef={shreeRig.rightForearmRef}
+          position={[DAY1_NIGHT_DHABA_SEATS.srishti.x, -0.25, DAY1_NIGHT_DHABA_SEATS.srishti.z]}
+          rotationY={DAY1_NIGHT_DHABA_SEATS.srishti.yaw}
+          castShadow={shadowsEnabled}
+        />
+        <StylizedPlaceholderCharacter
+          characterVariant="friend_black_tee"
+          outfitMode="day1"
+          groupRef={manishRig.groupRef}
+          torsoRef={manishRig.torsoRef}
+          headRef={manishRig.headRef}
+          leftLegRef={manishRig.leftLegRef}
+          leftKneeRef={manishRig.leftKneeRef}
+          rightLegRef={manishRig.rightLegRef}
+          rightKneeRef={manishRig.rightKneeRef}
+          leftArmRef={manishRig.leftArmRef}
+          rightArmRef={manishRig.rightArmRef}
+          rightForearmRef={manishRig.rightForearmRef}
+          position={[
+            DAY1_NIGHT_DHABA_SEATS.friend_black_tee.x,
+            -0.25,
+            DAY1_NIGHT_DHABA_SEATS.friend_black_tee.z,
+          ]}
+          rotationY={DAY1_NIGHT_DHABA_SEATS.friend_black_tee.yaw}
+          holdingFork
+          castShadow={shadowsEnabled}
+        />
+        <StylizedPlaceholderCharacter
+          characterVariant="friend_plaid"
+          outfitMode="day1"
+          groupRef={yashRig.groupRef}
+          torsoRef={yashRig.torsoRef}
+          headRef={yashRig.headRef}
+          leftLegRef={yashRig.leftLegRef}
+          leftKneeRef={yashRig.leftKneeRef}
+          rightLegRef={yashRig.rightLegRef}
+          rightKneeRef={yashRig.rightKneeRef}
+          leftArmRef={yashRig.leftArmRef}
+          rightArmRef={yashRig.rightArmRef}
+          rightForearmRef={yashRig.rightForearmRef}
+          position={[
+            DAY1_NIGHT_DHABA_SEATS.friend_plaid.x,
+            -0.25,
+            DAY1_NIGHT_DHABA_SEATS.friend_plaid.z,
+          ]}
+          rotationY={DAY1_NIGHT_DHABA_SEATS.friend_plaid.yaw}
+          castShadow={shadowsEnabled}
+        />
+      </>
+    );
+  }
+
+  if (day1Phase === 'night_hotel_return') {
+    return (
+      <>
+        <HotelReturnEnvironment
+          qualityProfile={qualityProfile}
+          paused={paused}
+          farewellDone
+          onTerrace={false}
+          variant="day1_stay"
+          hideOriginFriends
+          nightReturn
+          day1Done
+        />
+        <StylizedPlaceholderCharacter
+          characterVariant="ishaan"
+          outfitMode="day1"
+          groupRef={ishaanRig.groupRef}
+          torsoRef={ishaanRig.torsoRef}
+          headRef={ishaanRig.headRef}
+          leftLegRef={ishaanRig.leftLegRef}
+          leftKneeRef={ishaanRig.leftKneeRef}
+          rightLegRef={ishaanRig.rightLegRef}
+          rightKneeRef={ishaanRig.rightKneeRef}
+          leftArmRef={ishaanRig.leftArmRef}
+          rightArmRef={ishaanRig.rightArmRef}
+          rightForearmRef={ishaanRig.rightForearmRef}
+          position={[-0.42, 0, 6.4]}
+          rotationY={0}
+          castShadow={shadowsEnabled}
+        />
+        <StylizedPlaceholderCharacter
+          characterVariant="srishti"
+          outfitMode="day1"
+          groupRef={shreeRig.groupRef}
+          torsoRef={shreeRig.torsoRef}
+          headRef={shreeRig.headRef}
+          leftLegRef={shreeRig.leftLegRef}
+          leftKneeRef={shreeRig.leftKneeRef}
+          rightLegRef={shreeRig.rightLegRef}
+          rightKneeRef={shreeRig.rightKneeRef}
+          leftArmRef={shreeRig.leftArmRef}
+          rightArmRef={shreeRig.rightArmRef}
+          rightForearmRef={shreeRig.rightForearmRef}
+          position={[0.42, 0, 6.55]}
+          rotationY={0}
+          castShadow={shadowsEnabled}
+        />
       </>
     );
   }
@@ -471,75 +1365,112 @@ export function Scene02_RishikeshDay1({
       <HotelReturnEnvironment
         qualityProfile={qualityProfile}
         paused={paused}
-        farewellDone={false}
+        farewellDone={day1Phase === 'return_and_kanishka'}
         onTerrace={onTerraceState}
         variant="day1_stay"
+        hideOriginFriends={false}
+        nightReturn={day1Phase === 'return_and_kanishka' && duskNight}
+        day1Done={day1Phase === 'return_and_kanishka'}
       />
 
-      {/* Evening roadside Maggi bench for Day 1 outing */}
-      {day1Phase === 'evening_maggi' && (
-        <group position={[-1.65, 0, 6.25]}>
-          <mesh position={[0, 0.36, 0]}>
-            <boxGeometry args={[1.45, 0.08, 0.65]} />
-            <meshStandardMaterial color="#785233" roughness={0.85} />
-          </mesh>
-          <mesh position={[-0.35, 0.44, 0]}>
-            <cylinderGeometry args={[0.12, 0.08, 0.08, 12]} />
-            <meshStandardMaterial color="#facc15" roughness={0.6} />
-          </mesh>
-          <mesh position={[0.35, 0.44, 0]}>
-            <cylinderGeometry args={[0.12, 0.08, 0.08, 12]} />
-            <meshStandardMaterial color="#facc15" roughness={0.6} />
-          </mesh>
-          <group position={[-1.1, 0, 1.25]} rotation={[0, 0.65, 0]}>
-            <PrototypeScooter variant="lead" hideRiders castShadow={shadowsEnabled} />
+      {day1Phase === 'return_and_kanishka' ? (
+        <>
+          <StylizedPlaceholderCharacter
+            characterVariant="srishti"
+            outfitMode="day1"
+            groupRef={shreeRig.groupRef}
+            torsoRef={shreeRig.torsoRef}
+            headRef={shreeRig.headRef}
+            leftLegRef={shreeRig.leftLegRef}
+            leftKneeRef={shreeRig.leftKneeRef}
+            rightLegRef={shreeRig.rightLegRef}
+            rightKneeRef={shreeRig.rightKneeRef}
+            leftArmRef={shreeRig.leftArmRef}
+            rightArmRef={shreeRig.rightArmRef}
+            rightForearmRef={shreeRig.rightForearmRef}
+            position={[0.75, 0, 1.55]}
+            rotationY={-Math.PI * 0.45}
+            castShadow={shadowsEnabled}
+          />
+          <group ref={returnScooter1Ref} position={[-1.1, 0, 2.55]} rotation={[0, -Math.PI * 0.72, 0]}>
+            <PrototypeScooter variant="lead" castShadow={shadowsEnabled} outfitMode="day1" driverOnly />
           </group>
-        </group>
+          <group ref={returnScooter2Ref} position={[-2.45, 0, 1.4]} rotation={[0, -Math.PI * 0.72, 0]}>
+            <PrototypeScooter variant="companion" castShadow={shadowsEnabled} outfitMode="day1" />
+          </group>
+        </>
+      ) : (
+        <>
+          <StylizedPlaceholderCharacter
+            characterVariant="ishaan"
+            outfitMode="day1"
+            groupRef={ishaanRig.groupRef}
+            torsoRef={ishaanRig.torsoRef}
+            headRef={ishaanRig.headRef}
+            leftLegRef={ishaanRig.leftLegRef}
+            leftKneeRef={ishaanRig.leftKneeRef}
+            rightLegRef={ishaanRig.rightLegRef}
+            rightKneeRef={ishaanRig.rightKneeRef}
+            leftArmRef={ishaanRig.leftArmRef}
+            rightArmRef={ishaanRig.rightArmRef}
+            rightForearmRef={ishaanRig.rightForearmRef}
+            position={[-0.45, 0, -2.0]}
+            rotationY={Math.PI}
+            castShadow={shadowsEnabled}
+          />
+          <StylizedPlaceholderCharacter
+            characterVariant="srishti"
+            outfitMode="day1"
+            groupRef={shreeRig.groupRef}
+            torsoRef={shreeRig.torsoRef}
+            headRef={shreeRig.headRef}
+            leftLegRef={shreeRig.leftLegRef}
+            leftKneeRef={shreeRig.leftKneeRef}
+            rightLegRef={shreeRig.rightLegRef}
+            rightKneeRef={shreeRig.rightKneeRef}
+            leftArmRef={shreeRig.leftArmRef}
+            rightArmRef={shreeRig.rightArmRef}
+            rightForearmRef={shreeRig.rightForearmRef}
+            position={[0.35, 0, 2.25]}
+            rotationY={0}
+            castShadow={shadowsEnabled}
+          />
+          <StylizedPlaceholderCharacter
+            characterVariant="friend_black_tee"
+            outfitMode="day1"
+            groupRef={manishRig.groupRef}
+            torsoRef={manishRig.torsoRef}
+            headRef={manishRig.headRef}
+            leftLegRef={manishRig.leftLegRef}
+            leftKneeRef={manishRig.leftKneeRef}
+            rightLegRef={manishRig.rightLegRef}
+            rightKneeRef={manishRig.rightKneeRef}
+            leftArmRef={manishRig.leftArmRef}
+            rightArmRef={manishRig.rightArmRef}
+            rightForearmRef={manishRig.rightForearmRef}
+            position={[-1.85, 0, 3.15]}
+            rotationY={2.55}
+            castShadow={shadowsEnabled}
+          />
+          <StylizedPlaceholderCharacter
+            characterVariant="friend_plaid"
+            outfitMode="day1"
+            groupRef={yashRig.groupRef}
+            torsoRef={yashRig.torsoRef}
+            headRef={yashRig.headRef}
+            leftLegRef={yashRig.leftLegRef}
+            leftKneeRef={yashRig.leftKneeRef}
+            rightLegRef={yashRig.rightLegRef}
+            rightKneeRef={yashRig.rightKneeRef}
+            leftArmRef={yashRig.leftArmRef}
+            rightArmRef={yashRig.rightArmRef}
+            rightForearmRef={yashRig.rightForearmRef}
+            position={[-1.05, 0, 3.45]}
+            rotationY={-1.15}
+            castShadow={shadowsEnabled}
+          />
+        </>
       )}
-
-      <StylizedPlaceholderCharacter
-        characterVariant="ishaan"
-        groupRef={playerGroupRef}
-        torsoRef={playerTorsoRef}
-        headRef={playerHeadRef}
-        leftLegRef={leftLegRef}
-        leftKneeRef={leftKneeRef}
-        rightLegRef={rightLegRef}
-        rightKneeRef={rightKneeRef}
-        leftArmRef={leftArmRef}
-        rightArmRef={rightArmRef}
-        position={[-0.45, 0, -2.45]}
-        castShadow={shadowsEnabled}
-      />
-      <StylizedPlaceholderCharacter
-        characterVariant="srishti"
-        groupRef={shreeGroupRef}
-        torsoRef={shreeTorsoRef}
-        headRef={shreeHeadRef}
-        leftLegRef={shreeLLegRef}
-        leftKneeRef={shreeLKneeRef}
-        rightLegRef={shreeRLegRef}
-        rightKneeRef={shreeRKneeRef}
-        leftArmRef={shreeLArmRef}
-        rightArmRef={shreeRArmRef}
-        position={[-1.85, 0, 2.1]}
-        castShadow={shadowsEnabled}
-      />
-      <StylizedPlaceholderCharacter
-        characterVariant="friend_black_tee"
-        groupRef={manishGroupRef}
-        torsoRef={manishTorsoRef}
-        headRef={manishHeadRef}
-        leftLegRef={manishLLegRef}
-        leftKneeRef={manishLKneeRef}
-        rightLegRef={manishRLegRef}
-        rightKneeRef={manishRKneeRef}
-        leftArmRef={manishLArmRef}
-        rightArmRef={manishRArmRef}
-        position={[-2.4, 0, 3.15]}
-        castShadow={shadowsEnabled}
-      />
     </>
   );
 }
-

@@ -5,11 +5,11 @@ interface FallbackStorybookViewProps {
 }
 
 const STORY_SUMMARY_BEATS = [
-  '1. Kitaabi Dastaan — Online reading circle chats & long calls leading to our Rishikesh plan.',
-  '2. Rishikesh Day 1 & Stay — Arriving by train & bus, lane stay, terrace view & evening scooter Maggi.',
+  '1. Where It Began — Meeting online first, then meeting in Rishikesh on Day 1 evening after rafting.',
+  '2. Rishikesh Day 1 Evening — Golden-hour waterfall scooter ride, boulder rest, an evening phone call, and late-night dhaba dinner.',
   '3. Day 2 Morning & Mountain Ride — Bun maska & chai on the main road, viewpoint overlook, roadside tapri & Neelkanth Mahadev.',
-  '4. Baal Kuwari Off-Road & Summit — Rugged dirt track, pre-climb clearing Maggi, ~400 steep steps, bell & summit book overlook.',
-  '5. Safe Return & Virtual Bhai Dooj Finale — Back to the guesthouse before evening bus, then Tilak, mithai & personal Bhai Dooj letter.',
+  '4. Neelkanth Market Café & Baal Kuwari — Chole bhature outside the temple, rugged off-road dirt ride, ~400 steep steps & summit book overlook.',
+  '5. Safe Return & Virtual Bhai Dooj Finale — Back to the guesthouse terrace before evening bus, then Tilak, mithai & personal Bhai Dooj letter.',
 ] as const;
 
 export function FallbackStorybookView({
@@ -22,7 +22,7 @@ export function FallbackStorybookView({
           2D Storybook Mode
         </p>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-50">
-          The Road That Made Us Family
+          Rishikesh · Bhai Dooj
         </h1>
         <p className="mt-2 text-xs leading-relaxed text-slate-300">{reason}</p>
         <ul className="mt-4 space-y-2 rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-xs leading-relaxed text-slate-300">

@@ -9,7 +9,7 @@ export function LoadingScreen({
     <div className="flex h-full w-full flex-col items-center justify-center bg-[#0b1020] px-6 text-center text-slate-100">
       <div className="w-full max-w-sm space-y-4">
         <p className="text-xs font-medium tracking-[0.25em] text-amber-300/80 uppercase">
-          The Road That Made Us Family
+          Rishikesh · Bhai Dooj
         </p>
         <h1 className="text-xl font-semibold tracking-tight text-slate-50 sm:text-2xl">
           Initializing 3D Canvas

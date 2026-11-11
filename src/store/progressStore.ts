@@ -77,6 +77,9 @@ export interface ProgressStoreState {
   modalPaused: boolean;
 
   // Settings & Quality
+  playMode: 'play' | 'watch';
+  modeChosen: boolean;
+  neelkanthDarshanActive: boolean;
   audioMuted: boolean;
   musicVolume: number;
   sfxVolume: number;
@@ -118,6 +121,9 @@ export interface ProgressStoreState {
   setContextLostPaused: (lost: boolean) => void;
   setModalPaused: (paused: boolean) => void;
   toggleAudio: () => void;
+  setPlayMode: (mode: 'play' | 'watch', markChosen?: boolean) => void;
+  setModeChosen: (chosen: boolean) => void;
+  setNeelkanthDarshanActive: (active: boolean) => void;
   setMusicVolume: (volume: number) => void;
   setSfxVolume: (volume: number) => void;
   toggleGuidedMode: () => void;
@@ -170,6 +176,9 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
   contextLostPaused: false,
   modalPaused: false,
 
+  playMode: 'play',
+  modeChosen: false,
+  neelkanthDarshanActive: false,
   audioMuted: false,
   musicVolume: 0.7,
   sfxVolume: 0.85,
@@ -463,6 +472,13 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
       return { sfxVolume: next };
     }),
   toggleGuidedMode: () => set((state) => ({ guidedMode: !state.guidedMode })),
+  setPlayMode: (mode, markChosen = true) =>
+    set({
+      playMode: mode,
+      modeChosen: markChosen,
+    }),
+  setModeChosen: (chosen) => set({ modeChosen: chosen }),
+  setNeelkanthDarshanActive: (active) => set({ neelkanthDarshanActive: active }),
   setQualityProfile: (profile) => set({ qualityProfile: profile }),
 
   downgradeQualityProfile: () => {
@@ -490,6 +506,10 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
       guidedMode: state.guidedMode,
       timestamp: Date.now(),
     };
+
+    if (state.playMode === 'watch') {
+      return snapshot;
+    }
 
     const writeResult = writeCheckpointToStorage(snapshot);
     set({

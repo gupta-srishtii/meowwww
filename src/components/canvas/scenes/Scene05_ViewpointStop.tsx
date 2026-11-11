@@ -18,6 +18,7 @@ import {
 import {
   WALK_SPEED_MPS,
   findNearestWalkHotspot,
+  stepAutoWalkTowardTarget,
   stepWalkSimulation,
   type WalkHotspot,
   type WalkInputState,
@@ -37,6 +38,8 @@ export interface Scene05ViewpointStopProps {
   capturedSolo: boolean;
   capturedGroup: boolean;
   activePhotoMoment: ViewpointPhotoMoment;
+  autoPlayMode?: boolean;
+  onAutoTriggerHotspot?: (hotspotId: string) => void;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onSceneReady: (token: number, sceneId: SceneId) => void;
 }
@@ -62,6 +65,8 @@ export function Scene05_ViewpointStop({
   capturedSolo,
   capturedGroup,
   activePhotoMoment,
+  autoPlayMode = false,
+  onAutoTriggerHotspot,
   onNearbyHotspotChange,
   onSceneReady,
 }: Scene05ViewpointStopProps) {
@@ -122,7 +127,10 @@ export function Scene05_ViewpointStop({
     []
   );
 
+  const autoFiredSetRef = useRef(new Set<string>());
+
   useEffect(() => {
+    autoFiredSetRef.current.clear();
     if (transitionToken > 0) {
       onSceneReady(transitionToken, 5);
     }
@@ -182,6 +190,30 @@ export function Scene05_ViewpointStop({
       sim.velZ = 0;
       sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, Math.PI - 0.14, 8, delta);
       idlePose = 'group_wave';
+    } else if (autoPlayMode && onAutoTriggerHotspot) {
+      const targetId = !capturedShree
+        ? 'viewpoint_shree'
+        : !capturedSolo
+          ? 'viewpoint_solo'
+          : !capturedGroup
+            ? 'viewpoint_group'
+            : 'scooters';
+      const targetSpot = VIEWPOINT_HOTSPOTS.find((h) => h.id === targetId);
+      if (targetSpot) {
+        const res = stepAutoWalkTowardTarget(
+          sim,
+          targetSpot.x,
+          targetSpot.z,
+          delta,
+          VIEWPOINT_WALK_BOUNDS,
+          VIEWPOINT_OBSTACLES
+        );
+        strideRatio = res.strideRatio;
+        if (res.arrived && !autoFiredSetRef.current.has(targetId)) {
+          autoFiredSetRef.current.add(targetId);
+          onAutoTriggerHotspot(targetId);
+        }
+      }
     } else {
       const moveDist = stepWalkSimulation(
         sim,

@@ -1,10 +1,10 @@
 # The Road That Made Us Family
-## MASTER_PLAN.md — v2.8 (Phase 5 Complete — Photo Integration, Cinematic Realism & Finale Music System)
+## MASTER_PLAN.md — v3.1 (Phase 5A — Final Story Accuracy, Gameplay Modes & World Refinement)
 
-**Status:** PHASE 5 IMPLEMENTATION COMPLETE — Verified End-to-End (Pending Final Creator Sign-Off on Finale Song Recording & Personal Letter Before Deployment)  
+**Status:** PHASE 5A COMPLETE (Uncommitted — Pending User Review & Local Verification)  
 **Option Selected:** Option B — Full Cinematic Experience, Phased Development (Quality-First, No Fixed Deadline)  
 **Last Updated:** 2026-11-11  
-**Revision:** v2.8 — Completed Phase 5: integrated all 9 confirmed personal-photos mappings (`tea stop.jpg`, `randomview point srishti.jpg`, `me and ishaan explaing mountains.jpg`, `all four togethere.jpg`, `maggi and tea.jpg`, `food in neelkanth.jpg`, `baalkumari stairs.jpg`, `baalkumari vieew.jpg`, `book on baalkumari temple me.jpg`), added one-click local directory + finale audio linker (`URL.createObjectURL`), fixed portrait/landscape Polaroid aspect framing, added multi-channel music & SFX volume controls plus local *"Bhai Ni Beni Ladki (Kon Halave Limdi)"* finale track envelope with procedural fallback, upgraded house/stall/altar/showcase 3D realism, and ran Scenes 1–14 continuity & build checks (without deploying).
+**Revision:** v3.1 — Phase 5A final story accuracy & polish pass preserving v3.0 foundations: warm intro (*"Welcome to one of our favourite memories."* / *"Some journeys are worth experiencing again."*) with Delhi/Lucknow long-distance call opening, live Pause Menu switcher (`Play It Yourself` / `Watch Our Story`) plus chapter navigation (`Previous` / `Replay` / `Next` where unlocked), Kanishka & Srishti's original rafting group greeting & terrace reunion, interactive forest waterfall creek boulder exploration, Srishti's sloped lit Rishikesh market walk to a lively bustling night dhaba, peaceful night hotel return, Day 2 ground-floor door knock + single *"Kumbhkaran"* tease + ~5 min return stop, Shivling-gated *"Har Har Mahadev"* temple audio & unobstructed Darshan framing, normal-road twin right-hand bends before Baal Kuwari off-road dirt transition, Ishaan initiated hand-hold (*"Gotcha."*), summit book photography alignment, and rooftop terrace group sunset followed by a secret *"There's one more little thing…"* (`Open It`) reveal.
 
 ---
 
@@ -79,18 +79,18 @@ Created as a Bhai Dooj gift for **Ishaan**: you play in third-person as **Ishaan
 | Epilogue | Joy, nostalgia | "I want to keep these memories close." |
 
 ### Core Historical Beats (Preserved Without Invention)
-1. **Kitaabi Dastaan online chats & phone calls → Rishikesh decision** — Srishti and Ishaan met online in the **Kitaabi Dastaan** book community, connected over online chats and phone calls, began calling him **"Bhai"**, and decided to meet in Rishikesh. *(No specific unconfirmed dialogue quotes are invented.)*
-2. **The ~2-minute Mahakumbh meeting** — they also shared a brief ~2-minute in-person meeting at Mahakumbh amidst a huge crowd.
-3. **Travel to Rishikesh & Shared Hotel Stay** — Ishaan traveled from **Lucknow by train** with his friends; Srishti traveled from **Delhi by bus**. They stayed at the same Rishikesh hotel — **Srishti on the first floor**, and **Ishaan and his friend on the ground floor**.
-4. **Day 1 — Group Time & Evening Scooter Maggi** — Srishti initially spent time with her original group; in the evening she went roaming on scooters with Ishaan and his friend and ate Maggi.
-5. **Day 2 Morning — Bun Maska & Chai with Ishaan + Kumbhkaran Delay** — Morning included **bun maska and chai with Ishaan** *(not with Srishti's original friends)* on a lively Rishikesh road. Ishaan and his friend woke up late (earning the playful **"Kumbhkaran"** memory), delaying their departure.
-6. **Two scooters on mountain roads + Maggi/chai stop (`Scenes 5–6`)** — Four friends on two scooters (Ishaan driving with Srishti pillion on Scooter 1; Manish and Yash on Scooter 2) riding through scenic Rishikesh mountain roads, viewpoint pull-off, and roadside Maggi & chai tapri.
-7. **Neelkanth Mahadev Temple (`Scene 7`)** — Visiting Neelkanth Mahadev Temple courtyard for darshan, brass bell, and oil diya.
-8. **Route to Baal Kuwari & Pre-Climb Maggi Stop (`Scene 8`)** — Riding onward along mountain forest roads toward **Baal Kuwari Temple**, stopping for a dedicated **Maggi stop** at the base before beginning the steep climb.
-9. **Approximately 400 Stairs at Baal Kuwari (`Scene 9`)** — Climbing ~400 stone forest steps in manageable segments, with **Ishaan accompanying and helping Srishti** along the climb and **Manish & Yash** naturally accompanying the group.
-10. **Baal Kuwari Temple Arrival (`Scene 10`)** — Reaching the peaceful summit temple at the top of the stairs for a serene memory moment.
-11. **Evening Bus Schedule — Quick Safe Return & Hotel Reunion (`Scenes 11–12`)** — Because Srishti had an evening bus, Ishaan and his friends helped everyone head down and return quickly yet **safely** back to the **hotel** — where **Srishti rejoined her original friends** for a gentle farewell. *(Explicitly does NOT depict Ishaan dropping her directly at the bus stand.)*
-12. **Separate Later Epilogue — The Bhai Dooj Tilak (`Scenes 13–14`, Later Phase)** — A separate, later emotional epilogue (not an event during the Rishikesh trip) concluding with an interactive virtual Bhai Dooj tilak, creator's personal letter, and 3D memory gallery.
+1. **Where It Began (`Scene 1`)** — Separate Delhi & Lucknow evening rooms connected on a brief call deciding to meet in Rishikesh (*"Welcome to one of our favourite memories."* / *"Some journeys are worth experiencing again."*; switchable anytime via ESC between `Play It Yourself` and `Watch Our Story`).
+2. **The ~2-minute Mahakumbh meeting** — they also shared a brief ~2-minute in-person meeting amidst a huge crowd prior to Rishikesh.
+3. **Travel to Rishikesh & Shared Stay (`Scene 2`)** — Ishaan traveled from **Lucknow by train** with Manish & Yash; Srishti traveled from **Delhi by bus**. They met post-rafting on Day 1 evening alongside Kanishka & Srishti's original group at the lane stay.
+4. **Day 1 Evening — Interactive Waterfall, Market Street & Lively Dhaba (`Scene 2`)** — Day 1 outfits (**Ishaan** in forest-green graphic tee + striped joggers; **Shree** in yellow printed short kurti + silver jhumkas). Evening ride to a rocky creek waterfall (`interactive boulder sitting`), return & incoming phone call, Srishti walking through sloped lit Rishikesh market lanes, bustling lively night dhaba dinner, and peaceful night return to stay.
+5. **Day 2 Morning — Door Knock, Bun Maska & 5-Min Return (`Scene 3`)** — Srishti knocks at Ishaan's ground-floor doorway (*"Kumbhkaran!"*), they walk out for **bun maska and kulhad chai** (`BUN MASKA TEA .jpg`), then briefly return (~5 min) to parked scooters (`Scene 4`).
+6. **Two scooters on mountain roads + 3-Photo Viewpoint + Maggi/Chai Stop (`Scenes 5–6`)** — Four friends on two scooters riding scenic mountain ridges, pulling over for three ordered Viewpoint Polaroids (`1. randomview point srishti.jpg`, `2. me and ishaan explaing mountains.jpg`, `3. all four togethere.jpg`), and hillside Maggi & chai (`maggi and tea.jpg`).
+7. **Neelkanth Mahadev Temple & Market Café (`Scene 7`)** — Unobstructed courtyard darshan with optional local *"Har Har Mahadev"* temple audio gated to reaching the Shivling, connected Market Street Chole Bhature (`food in neelkanth.jpg`), and direct exit to scooters.
+8. **Twin Right Turns to Direct Off-Road Route (`Scene 8`)** — Normal mountain road with two sharp right-hand turns before entering the rugged dirt track straight to **Baal Kuwari Staircase Entrance Gate** (`no intermediate Maggi stop` or transition popup).
+9. **Approximately 400 Stairs at Baal Kuwari (`Scene 9`)** — Climbing ~400 stone steps in 4 hillside flights, with **Ishaan initiating the helping hand-hold** (*"Gotcha."*) and capturing `baalkumari stairs.jpg` midway.
+10. **Baal Kuwari Temple Arrival, Bell & Book Photo (`Scene 10`)** — Reaching the serene summit temple (`baalkumari vieew.jpg` + `book on baalkumari temple me.jpg` tripod-framed barefoot valley reading shot) and descending back down to the scooters.
+11. **Evening Bus Schedule — Stay Reunion & Rooftop Terrace (`Scenes 11–12`)** — Steady downhill return before the evening bus; Srishti reunites with Kanishka & her original friends downstairs, then everyone goes up to the Rooftop Terrace together for a quiet sunset horizon view before revealing *"There's one more little thing…"* (`Open It`).
+12. **Separate Later Epilogue — The Bhai Dooj Tilak (`Scenes 13–14`, Later Phase)** — Interactive virtual Bhai Dooj celebration with Tilak, mithai, *"Bhai Ni Beni Ladki"* finale audio, creator's personal letter, and 3D memory gallery.
 
 ### Design Principles
 - **Low-poly stylized Himalayan aesthetic** — warm, atmospheric, stylized characters and cinematic 3D environments (not a 2D slideshow).
@@ -106,18 +106,18 @@ Created as a Bhai Dooj gift for **Ishaan**: you play in third-person as **Ishaan
 | Scene ID | Title | Type | Act | Est. Duration | Classification |
 |----------|-------|------|-----|--------------|----------------|
 | 0 | Loading, Cozy Lamp & Title | SYSTEM | Prologue | 10–20s | [CORE] |
-| 1 | Kitaabi Dastaan: Online Chats & Calls | NARRATIVE | Prologue | 45s | [CORE] (`Phase 4 Playable`) |
-| 2 | Rishikesh Day 1: Train, Bus, Stay & Evening Ride | CINEMATIC / GAMEPLAY | Prologue | 2 min | [CORE] (`Phase 4 Playable`) |
-| 3 | Day 2 Morning: Bun Maska & Chai | GAMEPLAY | Act 1 | 90s | [CORE] (`Phase 4 Playable`) |
+| 1 | Rishikesh: Where It Began (Mode Chooser) | NARRATIVE | Prologue | 20s | [CORE] (`Welcome to one of our favourite memories` · Delhi/Lucknow call + `Play It Yourself` / `Watch Our Story` + Folder Connect) |
+| 2 | Rishikesh Day 1 Evening: Waterfall, Market Walk & Night Dhaba | CINEMATIC / GAMEPLAY | Prologue | 2.5 min | [CORE] (`Stay Meet w/ Kanishka`, `Interactive Waterfall Boulders`, `Phone Call`, `Sloped Market Walk`, `Busy Dhaba`, `Night Return`) |
+| 3 | Day 2 Morning: Ground-Floor Knock, Bun Maska & Chai | GAMEPLAY | Act 1 | 90s | [CORE] (Door knock + `"Kumbhkaran"`, main-road kulhad chai + `BUN MASKA TEA .jpg`, ~5 min return to scooters) |
 | 4 | Morning Scooter Departure | CINEMATIC | Act 1 | 15s | [CORE] (`Phase 4 Playable`) |
-| 5 | Mountain Road Ride + 3-Photo Viewpoint | GAMEPLAY | Act 1 | 3–5 min | [CORE] (`Shree Solo`, `Shree & Ishaan`, `All Four` + tripod) |
+| 5 | Mountain Road Ride + 3-Photo Viewpoint | GAMEPLAY | Act 1 | 3–5 min | [CORE] (`1. Shree Solo`, `2. Shree & Ishaan`, `3. All Four` + stratified ridges) |
 | 6 | Maggi & Chai Stop | GAMEPLAY | Act 1 | 90–120s | [CORE] (Stall owner chat: [OPTIONAL]) |
-| 7 | Neelkanth Mahadev | GAMEPLAY | Act 2 | 90–120s | [CORE] |
-| 8 | Off-Road to Baal Kuwari & Clearing Maggi #2 | GAMEPLAY | Act 2 | 2–3 min | [CORE] (Right-turn dirt junction, winding climbs & distinct Pahadi Clearing) |
-| 9 | Baal Kuwari: The ~400 Stairs | GAMEPLAY | Act 2 | 2–3 min | [CORE] (4 segmented hillside flights + Ishaan helping animations + landing checkpoints) |
-| 10 | Baal Kuwari Temple Arrival, Bell & Book Photo | CINEMATIC / GAMEPLAY | Act 2 | 90s | [CORE] (Arrival sweep, carved toran, summit Polaroid & Shree reading book photo) |
-| 11 | Evening Safe Return to Rishikesh | GAMEPLAY | Act 3 | 2 min | [CORE] (Time-sensitive yet calm downhill scooter return toward hotel) |
-| 12 | Rishikesh Stay, Terrace & Farewell | GAMEPLAY / CINEMATIC | Act 3 | 90s | [CORE] (Lane approach, connected house/terrace stay, gentle farewell -> Epilogue link) |
+| 7 | Neelkanth Mahadev & Market Café | GAMEPLAY | Act 2 | 2 min | [CORE] (Unobstructed Darshan + Shivling-gated Temple Audio + Market Street Chole Bhature -> scooters) |
+| 8 | Twin Right Turns & Off-Road Route to Baal Kuwari | GAMEPLAY | Act 2 | 2 min | [CORE] (Normal mountain road w/ 2 sharp right turns -> rugged off-road dirt track to staircase gate) |
+| 9 | Baal Kuwari: The ~400 Stairs | GAMEPLAY | Act 2 | 2–3 min | [CORE] (4 segmented hillside flights + Ishaan initiating hand-hold `"Gotcha."` + `baalkumari stairs.jpg`) |
+| 10 | Baal Kuwari Temple Arrival, Bell & Book Photo | CINEMATIC / GAMEPLAY | Act 2 | 90s | [CORE] (Arrival sweep, carved toran, summit Polaroid & tripod barefoot valley book photo) |
+| 11 | Evening Safe Return to Rishikesh | GAMEPLAY | Act 3 | 2 min | [CORE] (Calm downhill scooter return before evening bus) |
+| 12 | Rishikesh Stay Reunion & Rooftop Terrace Sunset | GAMEPLAY / CINEMATIC | Act 3 | 90s | [CORE] (Lane reunion w/ Kanishka & friends -> group Rooftop Terrace sunset -> `"There's one more little thing…"` / `"Open It"`) |
 | 13 | Virtual Bhai Dooj Finale (Ishaan & Shree) | GAMEPLAY | Epilogue | 2–3 min | [CORE] (`Phase 4 Playable`: Kitaabi callback, Tilak, Mithai, serene Eating Together & Personal Letter) |
 | 14 | The Road That Made Us Family — Ending Showcase | ENDING | Epilogue | Open-ended | [CORE] (`Phase 4 Playable`: Polaroid pedestals, Replay Journey, View Memories, Celebrate Again) |
 
@@ -231,28 +231,24 @@ The two scooters stop at a cozy roadside dhaba overlooking the valley. Walking f
 
 ---
 
-### Scene 7 — Neelkanth Mahadev (GAMEPLAY · Act 2)
+### Scene 7 — Neelkanth Mahadev & Market Café (GAMEPLAY · Act 2)
 
-**Camera:** Third-person walk mode; gentle framing zoom near temple sanctum  
+**Camera:** Third-person walk mode; unobstructed wide-angle darshan view framed through the `±2.05m` Bell Archway toward Nandi & Garbhagriha Shivalinga  
 **What happens:**  
-Despite Kumbhkaran's late morning delay, the group reaches **Neelkanth Mahadev Temple**. You explore the stone courtyard and complete sacred interactions `[CORE]`:
-1. **Ring the Temple Bell** (`E` / Tap) → deep resonant chime + subtle visual ripple `[CORE]`.
-2. **Light a Diya (Oil Lamp)** (`E` / Tap) → Srishti lights an unlit clay diya at the temple stand, bringing the warm golden flame to life (`[CORE]` — replaces passive flame-cupping alone; exact stand staging `[PROPOSED]`).
-3. **Darshan Pause** — brief tranquil camera pan showing the temple courtyard framed by mountains `[CORE]` *(camera framing `[PROPOSED]`)*.
+Despite Kumbhkaran's late morning delay, the group reaches **Neelkanth Mahadev Temple**. You explore the stone courtyard (`ring brass bell`, `light clay diya`, and take clear wide-angle darshan with subtle `"Har Har Mahadev"` subtitle & optional local Temple Audio track while world badges stay hidden) `[CORE]`. Afterward, you walk down the connected Market Street bazaar to the Market Café (`x = 2.85, z = 16.5`) to share hot **Chole Bhature** (`food in neelkanth.jpg`), then exit past the market archway directly onto the parked scooters (`z = 23.15`) `[CORE]`.
 
-**Narration card:** `[PROPOSED — Requires User Approval]` *"Der se hi sahi, par Neelkanth Mahadev ke darshan ho hi gaye — Kumbhkaran ki neend ke baad bhi."*  
 **Checkpoint committed** only after Scene 7 mounts ready.  
-**Transition out:** Walk back toward the scooters to set off for the next destination → cut to Scene 8
+**Transition out:** Walk to the parked scooters at Market Exit → directly into Scene 8 (zero interruption popup)
 
 ---
 
-### Scene 8 — Off-Road Route to Baal Kuwari, Maggi Clearing & Scooter Ride to Staircase Gate (GAMEPLAY · Act 2)
+### Scene 8 — Direct Off-Road Route to Baal Kuwari Staircase Gate (GAMEPLAY · Act 2)
 
-**Camera:** Third-person scooter follow along a rugged mountain dirt track (`to_baalkuwari`) → third-person walk mode at a separate roadside Maggi clearing (`maggi_stop`) → continuing post-Maggi mountain scooter ride (`to_baalkuwari_stairs`, sub-stage `driving_to_stairs`) arriving at the Baal Kuwari staircase entrance plaza  
+**Camera:** Third-person scooter follow along a rugged stratified-rock mountain dirt track (`to_baalkuwari`)  
 **What happens:**  
-Leaving **Neelkanth Mahadev Temple** back on their parked scooters, **Ishaan** (with Srishti / `Shree` on Scooter 1) and **Manish & Yash** (on Scooter 2) ride a rugged, uneven mountain off-road dirt track (`segment: 'to_baalkuwari'`) toward the Baal Kuwari region `[CORE]`. Along the way, they pull off at a separate natural forested clearing with an authentic Maggi tapri (`subStage: 'maggi_stop'`) to gather around a wooden table and eat `[CORE]`. Afterwards, all four hop back onto both scooters and ride the continuing rugged mountain dirt route (`segment: 'to_baalkuwari_stairs'`, sub-stage `driving_to_stairs`) directly to the Baal Kuwari staircase gate plaza and turnout bay `[CORE]`. *(Legacy saved `'forest_footpath'` checkpoints migrate automatically onto `'driving_to_stairs'`.)*
+Leaving **Neelkanth Market Exit** directly on their parked scooters, **Ishaan** (with `Shree` on Scooter 1) and **Manish & Yash** (on Scooter 2) ride the rugged, uneven mountain off-road dirt track (`segment: 'to_baalkuwari'`) straight up to the **Baal Kuwari Staircase Entrance Gate** (`no intermediate Maggi stop` or `driving_to_stairs` detour) `[CORE]`.
 
-**Transition out:** Park beside the staircase entrance archway (`Press E`) → Scene 9
+**Transition out:** Park beside the staircase entrance archway (`Climb ~400 Steps Together (E)`) → Scene 9
 
 ---
 

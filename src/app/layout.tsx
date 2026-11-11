@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'The Road That Made Us Family',
+  title: 'Rishikesh · For Ishaan',
   description: 'An interactive 3D mountain scooter journey from Rishikesh to Neelkanth Mahadev.',
 };
 

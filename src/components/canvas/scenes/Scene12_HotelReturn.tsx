@@ -30,6 +30,7 @@ import {
 import {
   WALK_SPEED_MPS,
   findNearestWalkHotspot,
+  stepAutoWalkTowardTarget,
   stepWalkSimulation,
   type WalkHotspot,
   type WalkInputState,
@@ -45,6 +46,8 @@ export interface Scene12HotelReturnProps {
   transitionToken: number;
   simulateMountFailure?: boolean;
   farewellDone: boolean;
+  autoPlayMode?: boolean;
+  onAutoTriggerHotspot?: (hotspotId: string) => void;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onSceneReady: (token: number, sceneId: SceneId) => void;
 }
@@ -93,6 +96,11 @@ const GROUND_CHILL_SLOTS: Record<FriendCompanionId, CompanionTargetSlot> = {
 };
 
 const TERRACE_SREE_POS = { x: -0.95, z: -3.85 } as const;
+const TERRACE_GROUP_ALL_SLOTS: Record<FriendCompanionId, CompanionTargetSlot> = {
+  srishti: { x: 0.48, z: -4.58, facingYaw: 0.12 },
+  friend_black_tee: { x: 1.55, z: -4.38, facingYaw: -0.18 },
+  friend_plaid: { x: 2.38, z: -3.85, facingYaw: -0.32 },
+};
 const CAM_DIST_LANE = 5.3;
 const CAM_DIST_TERRACE = 5.9;
 const STAIR_TRANSIT_DURATION = 1.05;
@@ -108,6 +116,8 @@ export function Scene12_HotelReturn({
   transitionToken,
   simulateMountFailure = false,
   farewellDone,
+  autoPlayMode = false,
+  onAutoTriggerHotspot,
   onNearbyHotspotChange,
   onSceneReady,
 }: Scene12HotelReturnProps) {
@@ -159,7 +169,12 @@ export function Scene12_HotelReturn({
       elapsed: number;
     } | null,
     stairCooldownSec: 0,
+    autoStage: 'walk_farewell' as 'walk_farewell' | 'walk_terrace' | 'terrace_gaze' | 'done',
+    autoGazeSec: 0,
   });
+
+  const handleRigsReadyRef = useRef(0);
+  void handleRigsReadyRef;
 
   const scratch = useMemo(
     () => ({
@@ -174,6 +189,9 @@ export function Scene12_HotelReturn({
     companionRigsRef.current = rigs;
   }, []);
 
+  const initialFarewellRef = useRef(farewellDone);
+  initialFarewellRef.current = farewellDone;
+
   useEffect(() => {
     const sim = simRef.current;
     sim.posX = -0.25;
@@ -186,6 +204,8 @@ export function Scene12_HotelReturn({
     sim.stairTransit = null;
     sim.stairCooldownSec = 0;
     sim.cameraInitialized = false;
+    sim.autoStage = initialFarewellRef.current ? 'walk_terrace' : 'walk_farewell';
+    sim.autoGazeSec = 0;
     setOnTerraceState(false);
     onSceneReady(transitionToken, 12);
   }, [onSceneReady, transitionToken]);
@@ -277,13 +297,89 @@ export function Scene12_HotelReturn({
         sim.stairCooldownSec = 1.4;
         setOnTerraceState(wentUp);
 
-        // Place Shree cleanly onto terrace overlook when Ishaan steps up
+        // Place companions onto terrace overlook when Ishaan steps up
         const shree = companionStatesRef.current.find((a) => a.id === 'srishti');
         if (shree) {
-          shree.posX = wentUp ? TERRACE_SREE_POS.x + 1.2 : -0.95;
-          shree.posZ = wentUp ? TERRACE_SREE_POS.z + 1.0 : 2.05;
+          shree.posX = wentUp ? TERRACE_GROUP_ALL_SLOTS.srishti.x : -0.95;
+          shree.posZ = wentUp ? TERRACE_GROUP_ALL_SLOTS.srishti.z : 2.05;
           shree.velX = 0;
           shree.velZ = 0;
+        }
+        if (wentUp && farewellDone) {
+          const manish = companionStatesRef.current.find((a) => a.id === 'friend_black_tee');
+          const yash = companionStatesRef.current.find((a) => a.id === 'friend_plaid');
+          if (manish) {
+            manish.posX = TERRACE_GROUP_ALL_SLOTS.friend_black_tee.x;
+            manish.posZ = TERRACE_GROUP_ALL_SLOTS.friend_black_tee.z;
+            manish.velX = 0;
+            manish.velZ = 0;
+          }
+          if (yash) {
+            yash.posX = TERRACE_GROUP_ALL_SLOTS.friend_plaid.x;
+            yash.posZ = TERRACE_GROUP_ALL_SLOTS.friend_plaid.z;
+            yash.velX = 0;
+            yash.velZ = 0;
+          }
+        }
+      }
+    } else if (autoPlayMode && sim.autoStage !== 'done') {
+      const bounds = sim.onTerrace ? TERRACE_WALK_BOUNDS : HOTEL_WALK_BOUNDS;
+      const obstacles = sim.onTerrace ? TERRACE_OBSTACLES : HOTEL_OBSTACLES;
+      sim.groundY = sim.onTerrace ? TERRACE_Y : 0;
+
+      if (sim.autoStage === 'walk_farewell' && !farewellDone && !sim.onTerrace) {
+        const spot = HOTEL_HOTSPOTS[1];
+        const res = stepAutoWalkTowardTarget(sim, spot.x, spot.z, delta, bounds, obstacles);
+        strideRatio = res.strideRatio;
+        walkSpeed = res.walkSpeed;
+        if (res.arrived) {
+          sim.autoStage = 'walk_terrace';
+          onAutoTriggerHotspot?.('rejoin_farewell');
+        }
+      } else if (sim.autoStage === 'walk_terrace') {
+        if (!sim.onTerrace) {
+          const spot = HOTEL_HOTSPOTS[0];
+          const res = stepAutoWalkTowardTarget(sim, spot.x, spot.z, delta, bounds, obstacles);
+          strideRatio = res.strideRatio;
+          walkSpeed = res.walkSpeed;
+          if (res.arrived) {
+            sim.stairTransit = { dir: 'up', elapsed: 0 };
+            sim.autoStage = 'terrace_gaze';
+            sim.autoGazeSec = 0;
+          }
+        } else {
+          sim.autoStage = 'terrace_gaze';
+          sim.autoGazeSec = 0;
+        }
+      } else if (sim.autoStage === 'terrace_gaze' && sim.onTerrace) {
+        const scenicTargetX = -0.35;
+        const scenicTargetZ = -3.85;
+        const dx = scenicTargetX - sim.posX;
+        const dz = scenicTargetZ - sim.posZ;
+        const dist = Math.hypot(dx, dz);
+        if (dist > 1.05) {
+          const res = stepAutoWalkTowardTarget(
+            sim,
+            scenicTargetX,
+            scenicTargetZ,
+            delta,
+            bounds,
+            obstacles
+          );
+          strideRatio = res.strideRatio;
+          walkSpeed = res.walkSpeed;
+          if (res.arrived) {
+            sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, 0.05, 6, delta);
+            sim.autoGazeSec += delta;
+          }
+        } else {
+          sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, 0.05, 6, delta);
+          sim.autoGazeSec += delta;
+          sim.orbitYaw = THREE.MathUtils.damp(sim.orbitYaw, 0.25 + sim.autoGazeSec * 0.14, 4, delta);
+          if (sim.autoGazeSec >= (reducedMotion ? 0.9 : 2.6)) {
+            sim.autoStage = 'done';
+            onAutoTriggerHotspot?.('terrace_sunset_finish');
+          }
         }
       }
     } else {
@@ -330,9 +426,23 @@ export function Scene12_HotelReturn({
       reducedMotion,
     });
 
-    // Update companions cleanly per floor: Shree follows up onto terrace with Ishaan while Manish & Yash chill in yard
+    // Once reunited, ALL friends gather together up on the rooftop terrace when ascending
     const isElevated = sim.onTerrace || sim.stairTransit !== null;
-    if (isElevated) {
+    if (isElevated && farewellDone) {
+      stepGroupCompanions({
+        agents: companionStatesRef.current,
+        configs: HOTEL_COMPANION_CONFIGS,
+        playerX: sim.onTerrace ? sim.posX : TERRACE_SREE_POS.x + 1.0,
+        playerZ: sim.onTerrace ? sim.posZ : TERRACE_SREE_POS.z,
+        playerFacingYaw: 0,
+        playerSpeed: 0,
+        bounds: TERRACE_WALK_BOUNDS,
+        obstacles: TERRACE_OBSTACLES,
+        delta,
+        mode: 'gather',
+        explicitTargets: TERRACE_GROUP_ALL_SLOTS,
+      });
+    } else if (isElevated) {
       const shreeAgent = companionStatesRef.current.filter((a) => a.id === 'srishti');
       const groundBoys = companionStatesRef.current.filter((a) => a.id !== 'srishti');
 
@@ -386,15 +496,17 @@ export function Scene12_HotelReturn({
         const cfg = HOTEL_COMPANION_CONFIGS[i];
         const rig = rigs[agent.id as FriendCompanionId];
         if (!rig) return;
-        const agentOnTerrace = isElevated && agent.id === 'srishti';
-        const lookX =
-          farewellDone && agent.id === 'srishti'
+        const agentOnTerrace = isElevated && (farewellDone || agent.id === 'srishti');
+        const lookX = agentOnTerrace
+          ? agent.posX - 0.1
+          : farewellDone && agent.id === 'srishti'
             ? 1.25
             : !isElevated || agent.id === 'srishti'
               ? sim.posX
               : 0;
-        const lookZ =
-          farewellDone && agent.id === 'srishti'
+        const lookZ = agentOnTerrace
+          ? agent.posZ - 3.5
+          : farewellDone && agent.id === 'srishti'
             ? 3.45
             : !isElevated || agent.id === 'srishti'
               ? sim.posZ
@@ -447,7 +559,19 @@ export function Scene12_HotelReturn({
     }
 
     const activeSpots = sim.onTerrace
-      ? TERRACE_HOTSPOTS
+      ? farewellDone
+        ? [
+            {
+              id: 'terrace_sunset_finish',
+              label: 'Enjoy Quiet Sunset Together',
+              x: 0.05,
+              z: -4.55,
+              radius: 2.35,
+              actionType: 'interact' as const,
+            },
+            ...TERRACE_HOTSPOTS,
+          ]
+        : TERRACE_HOTSPOTS
       : HOTEL_HOTSPOTS.filter((h) => !(farewellDone && h.id === 'rejoin_farewell'));
     const nearest = findNearestWalkHotspot(sim.posX, sim.posZ, activeSpots);
     const nextId = nearest?.id ?? null;
@@ -464,6 +588,7 @@ export function Scene12_HotelReturn({
         paused={paused}
         farewellDone={farewellDone}
         onTerrace={onTerraceState}
+        hideOriginFriends={onTerraceState && !farewellDone}
       />
 
       <StylizedPlaceholderCharacter

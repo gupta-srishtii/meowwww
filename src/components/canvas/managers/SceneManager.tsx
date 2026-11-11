@@ -325,8 +325,13 @@ export interface SceneStageProps {
   inputRef: RefObject<DrivingInputState>;
   walkInputRef: RefObject<WalkInputState>;
   day1Phase: Day1Phase;
+  day1TerraceNonce?: number;
+  day1WaterfallSitNonce?: number;
   onAdvanceDay1Phase: (next: Day1Phase) => void;
+  onDay1CallStateChange: (active: boolean) => void;
   onDay1Complete: () => void;
+  morningKnockPhase?: boolean;
+  onMorningKnockComplete?: () => void;
   morningBreakfastActive: boolean;
   morningBreakfastDone: boolean;
   onMorningBreakfastComplete: () => void;
@@ -348,11 +353,13 @@ export interface SceneStageProps {
   litDiya: boolean;
   hadDarshan: boolean;
   capturedNeelkanthFood: boolean;
+  neelkanthCafeActive?: boolean;
   activeDarshanPan: boolean;
   ateTrailheadMaggi: boolean;
   trailheadEatingActive: boolean;
   onTrailheadMaggiComplete: () => void;
   stairTelemetryRefs: StairTelemetryRefs;
+  onStairCaption?: (speaker: string, text: string) => void;
   onEnterStaircaseFromFootpath: () => void;
   onStairHalfwayMilestone: () => void;
   onStairAscentComplete: () => void;
@@ -372,6 +379,7 @@ export interface SceneStageProps {
   onBhaiDoojEatingComplete: () => void;
   collectedPolaroids: readonly string[];
   onInspectMemory: (id: string) => void;
+  onAutoTriggerHotspot?: (hotspotId: string) => void;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onArrivedChange: (arrived: boolean) => void;
   onInViewpointZoneChange: (inZone: boolean) => void;
@@ -388,8 +396,13 @@ export function SceneStage({
   inputRef,
   walkInputRef,
   day1Phase,
+  day1TerraceNonce = 0,
+  day1WaterfallSitNonce = 0,
   onAdvanceDay1Phase,
+  onDay1CallStateChange,
   onDay1Complete,
+  morningKnockPhase = false,
+  onMorningKnockComplete,
   morningBreakfastActive,
   morningBreakfastDone,
   onMorningBreakfastComplete,
@@ -411,11 +424,13 @@ export function SceneStage({
   litDiya,
   hadDarshan,
   capturedNeelkanthFood,
+  neelkanthCafeActive = false,
   activeDarshanPan,
   ateTrailheadMaggi,
   trailheadEatingActive,
   onTrailheadMaggiComplete,
   stairTelemetryRefs,
+  onStairCaption,
   onEnterStaircaseFromFootpath,
   onStairHalfwayMilestone,
   onStairAscentComplete,
@@ -435,12 +450,15 @@ export function SceneStage({
   onBhaiDoojEatingComplete,
   collectedPolaroids,
   onInspectMemory,
+  onAutoTriggerHotspot,
   onNearbyHotspotChange,
   onArrivedChange,
   onInViewpointZoneChange,
   onViewpointArrivedChange,
   onTrafficBrush,
 }: SceneStageProps) {
+  const playMode = useProgressStore((s) => s.playMode);
+  const autoPlayMode = playMode === 'watch';
   const committedSceneId = useProgressStore((s) => s.committedSceneId);
   const requestedSceneId = useProgressStore((s) => s.requestedSceneId);
   const transitionPhase = useProgressStore((s) => s.transitionPhase);
@@ -532,7 +550,11 @@ export function SceneStage({
               paused={scenePaused}
               transitionToken={transitionToken}
               day1Phase={day1Phase}
+              autoPlayMode={autoPlayMode}
+              terraceToggleNonce={day1TerraceNonce}
+              waterfallSitNonce={day1WaterfallSitNonce}
               onAdvanceDay1Phase={onAdvanceDay1Phase}
+              onDay1CallStateChange={onDay1CallStateChange}
               onDay1Complete={onDay1Complete}
               onNearbyHotspotChange={onNearbyHotspotChange}
               onSceneReady={controller.onMountedSceneReady}
@@ -544,8 +566,12 @@ export function SceneStage({
               qualityProfile={qualityProfile}
               paused={scenePaused}
               transitionToken={transitionToken}
+              knockPhase={morningKnockPhase}
               breakfastActive={morningBreakfastActive}
               breakfastDone={morningBreakfastDone}
+              autoPlayMode={autoPlayMode}
+              onKnockComplete={onMorningKnockComplete}
+              onAutoTriggerHotspot={onAutoTriggerHotspot}
               onBreakfastComplete={onMorningBreakfastComplete}
               onNearbyHotspotChange={onNearbyHotspotChange}
               onSceneReady={controller.onMountedSceneReady}
@@ -571,6 +597,8 @@ export function SceneStage({
                 capturedSolo={capturedViewpointSolo}
                 capturedGroup={capturedViewpointGroup}
                 activePhotoMoment={viewpointPhotoMoment}
+                autoPlayMode={autoPlayMode}
+                onAutoTriggerHotspot={onAutoTriggerHotspot}
                 onNearbyHotspotChange={onNearbyHotspotChange}
                 onSceneReady={controller.onMountedSceneReady}
               />
@@ -584,6 +612,7 @@ export function SceneStage({
                 startDistance={roadResumeDistance}
                 viewpointPullOverNonce={viewpointPullOverNonce}
                 transitionToken={transitionToken}
+                autoPlayMode={autoPlayMode}
                 simulateMountFailure={simulateMountFailure}
                 onSceneReady={transitionToken > 0 ? controller.onMountedSceneReady : undefined}
                 onArrivedChange={onArrivedChange}
@@ -605,6 +634,8 @@ export function SceneStage({
               sippedChai={sippedChai}
               capturedPolaroid={capturedDhabaPolaroid}
               foodCinematicActive={foodCinematicActive}
+              autoPlayMode={autoPlayMode}
+              onAutoTriggerHotspot={onAutoTriggerHotspot}
               onFoodCinematicComplete={onFoodCinematicComplete}
               onNearbyHotspotChange={onNearbyHotspotChange}
               onSceneReady={controller.onMountedSceneReady}
@@ -621,7 +652,10 @@ export function SceneStage({
               litDiya={litDiya}
               hadDarshan={hadDarshan}
               capturedFood={capturedNeelkanthFood}
+              eatingCafeActive={neelkanthCafeActive}
               activeDarshanPan={activeDarshanPan}
+              autoPlayMode={autoPlayMode}
+              onAutoTriggerHotspot={onAutoTriggerHotspot}
               onNearbyHotspotChange={onNearbyHotspotChange}
               onSceneReady={controller.onMountedSceneReady}
             />
@@ -635,6 +669,7 @@ export function SceneStage({
               resetNonce={resetNonce}
               startDistance={roadResumeDistance}
               transitionToken={transitionToken}
+              autoPlayMode={autoPlayMode}
               simulateMountFailure={simulateMountFailure}
               ateMaggi={ateTrailheadMaggi}
               eatingActive={trailheadEatingActive}
@@ -656,6 +691,7 @@ export function SceneStage({
               simulateMountFailure={simulateMountFailure}
               stairTelemetryRefs={stairTelemetryRefs}
               onReachHalfwayMilestone={onStairHalfwayMilestone}
+              onStairCaption={onStairCaption}
               onAscentComplete={onStairAscentComplete}
               onDescentComplete={onStairDescentComplete}
               onSceneReady={controller.onMountedSceneReady}
@@ -674,6 +710,8 @@ export function SceneStage({
               capturedPolaroid={capturedBaalKuwariPolaroid}
               capturedBookPolaroid={capturedBookPolaroid}
               bookPhotoActive={bookPhotoActive}
+              autoPlayMode={autoPlayMode}
+              onAutoTriggerHotspot={onAutoTriggerHotspot}
               onNearbyHotspotChange={onNearbyHotspotChange}
               onSceneReady={controller.onMountedSceneReady}
             />
@@ -685,6 +723,7 @@ export function SceneStage({
               resetNonce={resetNonce}
               startDistance={roadResumeDistance}
               transitionToken={transitionToken}
+              autoPlayMode={autoPlayMode}
               simulateMountFailure={simulateMountFailure}
               onSceneReady={controller.onMountedSceneReady}
               onArrivedChange={onArrivedChange}
@@ -700,6 +739,8 @@ export function SceneStage({
               transitionToken={transitionToken}
               simulateMountFailure={simulateMountFailure}
               farewellDone={hotelFarewellDone}
+              autoPlayMode={autoPlayMode}
+              onAutoTriggerHotspot={onAutoTriggerHotspot}
               onNearbyHotspotChange={onNearbyHotspotChange}
               onSceneReady={controller.onMountedSceneReady}
             />

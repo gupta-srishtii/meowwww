@@ -16,6 +16,7 @@ export interface Scene11SafeReturnRideProps {
   resetNonce: number;
   startDistance: number;
   transitionToken: number;
+  autoPlayMode?: boolean;
   simulateMountFailure?: boolean;
   onSceneReady: (token: number, sceneId: SceneId) => void;
   onArrivedChange: (arrived: boolean) => void;
@@ -35,6 +36,7 @@ export function Scene11_SafeReturnRide({
   resetNonce,
   startDistance,
   transitionToken,
+  autoPlayMode = false,
   simulateMountFailure = false,
   onSceneReady,
   onArrivedChange,
@@ -55,6 +57,7 @@ export function Scene11_SafeReturnRide({
       roadSegment="to_hotel_return"
       startDistance={startDistance}
       transitionToken={transitionToken}
+      autoPlayMode={autoPlayMode}
       onSceneReady={(_token, _sceneId) => onSceneReady(transitionToken, 11)}
       onArrivedChange={onArrivedChange}
       onTrafficBrush={onTrafficBrush}

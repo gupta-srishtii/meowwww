@@ -46,7 +46,7 @@ export function ControlsTutorialOverlay({
           Rishikesh Scooty Ride · For You, Ishaan
         </h2>
         <p className="mt-1 text-xs leading-relaxed text-slate-300">
-          Kitaabi Dastaan chats aur calls ke baad finally Rishikesh — apni scooty chalaao, Maggi &amp; chai stops pe ruko, aur hum sabke saath Neelkanth aur Baal Kuwari tak chalo.
+          Rishikesh ke raaste, waterfall, chai stops, Neelkanth aur Baal Kuwari tak — third-person control mein apna safar chalaao.
         </p>
 
         {isTouchDevice ? (

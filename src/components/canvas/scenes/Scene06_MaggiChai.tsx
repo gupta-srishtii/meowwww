@@ -33,6 +33,7 @@ import {
 import {
   WALK_SPEED_MPS,
   findNearestWalkHotspot,
+  stepAutoWalkTowardTarget,
   stepWalkSimulation,
   type WalkHotspot,
   type WalkInputState,
@@ -53,6 +54,8 @@ export interface Scene06MaggiChaiProps {
   sippedChai: boolean;
   capturedPolaroid: boolean;
   foodCinematicActive: boolean;
+  autoPlayMode?: boolean;
+  onAutoTriggerHotspot?: (hotspotId: string) => void;
   onFoodCinematicComplete: () => void;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onSceneReady: (token: number, sceneId: SceneId) => void;
@@ -234,6 +237,8 @@ export function Scene06_MaggiChai({
   sippedChai,
   capturedPolaroid,
   foodCinematicActive,
+  autoPlayMode = false,
+  onAutoTriggerHotspot,
   onFoodCinematicComplete,
   onNearbyHotspotChange,
   onSceneReady,
@@ -310,7 +315,10 @@ export function Scene06_MaggiChai({
     companionRigsRef.current = rigs;
   }, []);
 
+  const autoFiredSetRef = useRef(new Set<string>());
+
   useEffect(() => {
+    autoFiredSetRef.current.clear();
     onSceneReady(transitionToken, 6);
   }, [onSceneReady, transitionToken]);
 
@@ -512,18 +520,45 @@ export function Scene06_MaggiChai({
       );
       camera.lookAt(scratch.smoothedLookAt);
     } else {
-      // Standard third-person walk exploration
-      const moveDist = stepWalkSimulation(
-        sim,
-        walkInputRef.current,
-        delta,
-        DHABA_WALK_BOUNDS,
-        DHABA_OBSTACLES
-      );
-      walkSpeed = Math.hypot(sim.velX, sim.velZ);
-      strideRatio = THREE.MathUtils.clamp(walkSpeed / WALK_SPEED_MPS, 0, 1);
-      if (strideRatio > 0.03) {
-        sim.stridePhase += moveDist * 3.8;
+      if (autoPlayMode && onAutoTriggerHotspot) {
+        const targetId = !sippedChai
+          ? 'chai'
+          : !ateMaggi
+            ? 'maggi'
+            : !capturedPolaroid
+              ? 'polaroid'
+              : 'scooters';
+        const targetSpot = DHABA_HOTSPOTS.find((h) => h.id === targetId);
+        if (targetSpot) {
+          const res = stepAutoWalkTowardTarget(
+            sim,
+            targetSpot.x,
+            targetSpot.z,
+            delta,
+            DHABA_WALK_BOUNDS,
+            DHABA_OBSTACLES
+          );
+          strideRatio = res.strideRatio;
+          walkSpeed = res.walkSpeed;
+          if (res.arrived && !autoFiredSetRef.current.has(targetId)) {
+            autoFiredSetRef.current.add(targetId);
+            onAutoTriggerHotspot(targetId);
+          }
+        }
+      } else {
+        // Standard third-person walk exploration
+        const moveDist = stepWalkSimulation(
+          sim,
+          walkInputRef.current,
+          delta,
+          DHABA_WALK_BOUNDS,
+          DHABA_OBSTACLES
+        );
+        walkSpeed = Math.hypot(sim.velX, sim.velZ);
+        strideRatio = THREE.MathUtils.clamp(walkSpeed / WALK_SPEED_MPS, 0, 1);
+        if (strideRatio > 0.03) {
+          sim.stridePhase += moveDist * 3.8;
+        }
       }
 
       const distToTable = Math.hypot(

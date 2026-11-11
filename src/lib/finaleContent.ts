@@ -43,3 +43,12 @@ export const BHAI_DOOJ_SPECIAL_TRACK_SPEC = {
   note: 'Multiple singer versions exist (e.g., Hosh Barot, Poonam Gondaliya, Pravin Rawat). Attach your preferred local audio file inside Memories or on the Finale card; otherwise a gentle warm procedural theme plays.',
 } as const;
 
+/**
+ * Dedicated local audio slot specification for Neelkanth Mahadev Temple entry & darshan.
+ */
+export const NEELKANTH_TEMPLE_TRACK_SPEC = {
+  requestedName: 'Har Har Mahadev',
+  status: 'awaiting_creator_version',
+  note: 'Attach your preferred local "Har Har Mahadev" devotional audio file via the local audio picker for temple entrance playback; warm temple bell & courtyard ambience play as automatic fallback.',
+} as const;
+

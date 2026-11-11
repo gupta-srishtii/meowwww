@@ -399,6 +399,64 @@ export function stepWalkSimulation(
 }
 
 /**
+ * Shared directed autopilot walk step for "Watch Our Story" mode:
+ * steers Ishaan cleanly around static obstacles toward `(targetX, targetZ)`
+ * and returns `true` once within `arriveRadius`.
+ */
+export function stepAutoWalkTowardTarget(
+  state: {
+    posX: number;
+    posZ: number;
+    velX: number;
+    velZ: number;
+    facingYaw: number;
+    stridePhase: number;
+  },
+  targetX: number,
+  targetZ: number,
+  delta: number,
+  bounds: WalkBounds,
+  obstacles: readonly WalkObstacle[],
+  arriveRadius = 0.72
+): { arrived: boolean; strideRatio: number; walkSpeed: number } {
+  const dx = targetX - state.posX;
+  const dz = targetZ - state.posZ;
+  const dist = Math.hypot(dx, dz);
+  if (dist <= arriveRadius) {
+    state.velX = 0;
+    state.velZ = 0;
+    return { arrived: true, strideRatio: 0, walkSpeed: 0 };
+  }
+
+  const speed = WALK_SPEED_MPS * 0.92;
+  const stepDist = Math.min(dist, speed * delta);
+  const nx = dx / dist;
+  const nz = dz / dist;
+
+  const prevX = state.posX;
+  const prevZ = state.posZ;
+  state.posX += nx * stepDist;
+  state.posZ += nz * stepDist;
+  resolveWalkCollisions(state, WALK_PLAYER_RADIUS, bounds, obstacles);
+
+  const movedX = state.posX - prevX;
+  const movedZ = state.posZ - prevZ;
+  const moved = Math.hypot(movedX, movedZ);
+  state.velX = moved / Math.max(1e-4, delta) * (moved > 1e-4 ? movedX / moved : nx);
+  state.velZ = moved / Math.max(1e-4, delta) * (moved > 1e-4 ? movedZ / moved : nz);
+
+  const desiredYaw = Math.atan2(-nx, -nz);
+  let angleDiff = desiredYaw - state.facingYaw;
+  while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+  while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+  state.facingYaw += angleDiff * (1 - Math.exp(-10 * delta));
+  state.stridePhase += moved * 3.8;
+
+  const strideRatio = THREE.MathUtils.clamp(moved / Math.max(1e-4, delta) / WALK_SPEED_MPS, 0.25, 1);
+  return { arrived: false, strideRatio, walkSpeed: speed };
+}
+
+/**
  * Finds the nearest interactive hotspot within radius of `(posX, posZ)`.
  */
 export function findNearestWalkHotspot(

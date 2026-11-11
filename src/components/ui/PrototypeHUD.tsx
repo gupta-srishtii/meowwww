@@ -59,10 +59,10 @@ export function PrototypeHUD({
     const canEnterDhaba = arrived && roadSegment === 'to_dhaba' && Boolean(onContinueToDhaba);
     const canEnterNeelkanth =
       arrived && roadSegment === 'to_neelkanth' && Boolean(onEnterNeelkanthTemple);
-    const canEnterBaalKuwariMaggi =
-      arrived && roadSegment === 'to_baalkuwari' && Boolean(onEnterBaalKuwariMaggi);
     const canEnterBaalKuwariStairs =
-      arrived && roadSegment === 'to_baalkuwari_stairs' && Boolean(onEnterBaalKuwariStairs);
+      arrived &&
+      (roadSegment === 'to_baalkuwari' || roadSegment === 'to_baalkuwari_stairs') &&
+      Boolean(onEnterBaalKuwariStairs);
     const canEnterHotel =
       arrived && roadSegment === 'to_hotel_return' && Boolean(onEnterHotelCourtyard);
 
@@ -71,7 +71,6 @@ export function PrototypeHUD({
       !canPullOverViewpoint &&
       !canEnterDhaba &&
       !canEnterNeelkanth &&
-      !canEnterBaalKuwariMaggi &&
       !canEnterBaalKuwariStairs &&
       !canEnterHotel
     ) {
@@ -90,7 +89,6 @@ export function PrototypeHUD({
           (canEnterViewpoint ||
             canEnterDhaba ||
             canEnterNeelkanth ||
-            canEnterBaalKuwariMaggi ||
             canEnterBaalKuwariStairs ||
             canEnterHotel))
       ) {
@@ -101,8 +99,6 @@ export function PrototypeHUD({
           onContinueToDhaba?.();
         } else if (canEnterNeelkanth) {
           onEnterNeelkanthTemple?.();
-        } else if (canEnterBaalKuwariMaggi) {
-          onEnterBaalKuwariMaggi?.();
         } else if (canEnterBaalKuwariStairs) {
           onEnterBaalKuwariStairs?.();
         } else if (canEnterHotel) {
@@ -279,34 +275,7 @@ export function PrototypeHUD({
                   </button>
                 </div>
               </>
-            ) : roadSegment === 'to_baalkuwari' ? (
-              <>
-                <p className="text-xs font-semibold tracking-[0.16em] text-amber-300 uppercase">
-                  Roadside Maggi Clearing
-                </p>
-                <p className="text-xs text-slate-300">
-                  Pattharon waala off-road raasta khatam! Chhoti tapri pe garam Maggi khaa ke aage seedhiyon ke gate tak chalenge.
-                </p>
-                <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
-                  {onEnterBaalKuwariMaggi && (
-                    <button
-                      type="button"
-                      onClick={onEnterBaalKuwariMaggi}
-                      className="rounded-xl bg-amber-400 px-4 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-amber-300"
-                    >
-                      Stop at Maggi Clearing (E) →
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={onResetRide}
-                    className="rounded-xl border border-slate-600 bg-slate-800 px-3.5 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-slate-700"
-                  >
-                    Ride Again
-                  </button>
-                </div>
-              </>
-            ) : roadSegment === 'to_baalkuwari_stairs' ? (
+            ) : roadSegment === 'to_baalkuwari' || roadSegment === 'to_baalkuwari_stairs' ? (
               <>
                 <p className="text-xs font-semibold tracking-[0.16em] text-amber-300 uppercase">
                   Baal Kuwari Staircase Entrance

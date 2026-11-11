@@ -14,6 +14,7 @@ import {
 import {
   WALK_SPEED_MPS,
   findNearestWalkHotspot,
+  stepAutoWalkTowardTarget,
   stepWalkSimulation,
   type WalkHotspot,
   type WalkInputState,
@@ -27,28 +28,37 @@ export interface Scene03Day2MorningProps {
   qualityProfile: QualityProfile;
   paused: boolean;
   transitionToken: number;
+  knockPhase?: boolean;
   breakfastActive: boolean;
   breakfastDone: boolean;
+  autoPlayMode?: boolean;
+  onKnockComplete?: () => void;
+  onAutoTriggerHotspot?: (hotspotId: string) => void;
   onBreakfastComplete: () => void;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onSceneReady: (token: number, sceneId: SceneId) => void;
   simulateMountFailure?: boolean;
 }
 
+const KNOCK_DURATION_SEC = 2.6;
 const BREAKFAST_DURATION_SEC = 5.4;
 
 /**
  * Scene 3 — Day 2 Morning outside the Rishikesh Lane Stay:
- * Walking onto the lively morning main road where Ishaan & Shree share Bun Maska & Chai together
- * before heading back to the parked scooters.
+ * Srishti knocks on Ishaan's ground-floor doorway ("Kumbhkaran!"), then walking out
+ * onto the morning main road to share Bun Maska & Chai together before returning briefly (~5 min) to scooters.
  */
 export function Scene03_Day2Morning({
   walkInputRef,
   qualityProfile,
   paused,
   transitionToken,
+  knockPhase = false,
   breakfastActive,
   breakfastDone,
+  autoPlayMode = false,
+  onKnockComplete,
+  onAutoTriggerHotspot,
   onBreakfastComplete,
   onNearbyHotspotChange,
   onSceneReady,
@@ -113,6 +123,8 @@ export function Scene03_Day2Morning({
     orbitPitch: 0.24,
     cameraInitialized: false,
     lastHotspotId: null as string | null,
+    knockTimer: 0,
+    knockDoneSent: false,
     breakfastTimer: 0,
     breakfastDoneSent: false,
   });
@@ -125,6 +137,20 @@ export function Scene03_Day2Morning({
     }),
     []
   );
+
+  useEffect(() => {
+    if (knockPhase) {
+      simRef.current.knockTimer = 0;
+      simRef.current.knockDoneSent = false;
+      simRef.current.posX = -0.45;
+      simRef.current.posZ = 0.22;
+      simRef.current.facingYaw = Math.PI;
+    } else if (!breakfastActive && !breakfastDone) {
+      simRef.current.posX = -0.25;
+      simRef.current.posZ = 1.85;
+      simRef.current.facingYaw = Math.PI;
+    }
+  }, [knockPhase, breakfastActive, breakfastDone]);
 
   useEffect(() => {
     if (breakfastActive) {
@@ -141,7 +167,9 @@ export function Scene03_Day2Morning({
   }, [camera, size.width, size.height]);
 
   const readyTokenRef = useRef(-1);
+  const autoFiredSetRef = useRef(new Set<string>());
   useEffect(() => {
+    autoFiredSetRef.current.clear();
     if (readyTokenRef.current !== transitionToken) {
       readyTokenRef.current = transitionToken;
       onSceneReady(transitionToken, 3);
@@ -157,15 +185,53 @@ export function Scene03_Day2Morning({
     const t = state.clock.elapsedTime;
     let strideRatio = 0;
 
-    if (breakfastActive) {
+    if (knockPhase) {
+      sim.knockTimer += delta;
+      sim.posX = THREE.MathUtils.damp(sim.posX, -0.45, 7, delta);
+      sim.posZ = THREE.MathUtils.damp(sim.posZ, 0.22, 7, delta);
+      sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, Math.PI, 7, delta);
+      if (autoPlayMode && sim.knockTimer >= (reducedMotion ? 0.9 : KNOCK_DURATION_SEC) && !sim.knockDoneSent) {
+        sim.knockDoneSent = true;
+        onKnockComplete?.();
+      }
+    } else if (breakfastActive) {
       sim.breakfastTimer += delta;
-      sim.posX = THREE.MathUtils.damp(sim.posX, -0.58, 7, delta);
-      sim.posZ = THREE.MathUtils.damp(sim.posZ, 7.25, 7, delta);
-      sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, -0.65, 7, delta);
+      sim.posX = THREE.MathUtils.damp(sim.posX, 15.35, 7, delta);
+      sim.posZ = THREE.MathUtils.damp(sim.posZ, 9.05, 7, delta);
+      sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, -0.55, 7, delta);
       const dur = reducedMotion ? 1.0 : BREAKFAST_DURATION_SEC;
       if (sim.breakfastTimer >= dur && !sim.breakfastDoneSent) {
         sim.breakfastDoneSent = true;
         onBreakfastComplete();
+      }
+    } else if (autoPlayMode && onAutoTriggerHotspot) {
+      const targetId = breakfastDone ? 'depart_neelkanth' : 'bun_maska_chai';
+      const targetSpot = DAY2_MORNING_HOTSPOTS.find((h) => h.id === targetId);
+      if (targetSpot) {
+        // Exit hotel lane onto town road first, and return along road to hotel lane before turning in
+        let navX = targetSpot.x;
+        let navZ = targetSpot.z;
+        if (!breakfastDone && sim.posZ < 8.6 && sim.posX < 2.2) {
+          navX = 0.0;
+          navZ = 9.25;
+        } else if (breakfastDone && sim.posX > 2.2) {
+          navX = 0.0;
+          navZ = 9.25;
+        }
+        const res = stepAutoWalkTowardTarget(
+          sim,
+          navX,
+          navZ,
+          delta * 1.75,
+          DAY2_MORNING_WALK_BOUNDS,
+          DAY2_MORNING_OBSTACLES
+        );
+        strideRatio = res.strideRatio;
+        const distFinal = Math.hypot(sim.posX - targetSpot.x, sim.posZ - targetSpot.z);
+        if (distFinal <= 1.15 && !autoFiredSetRef.current.has(targetId)) {
+          autoFiredSetRef.current.add(targetId);
+          onAutoTriggerHotspot(targetId);
+        }
       }
     } else {
       const simPos = {
@@ -216,13 +282,13 @@ export function Scene03_Day2Morning({
       stridePhase: sim.stridePhase,
       elapsed: t,
       delta,
-      idlePose: breakfastActive ? 'sit_sip' : 'default',
+      idlePose: knockPhase ? 'look_around' : breakfastActive ? 'chat_nod' : 'default',
       reducedMotion,
     });
 
-    // Shree waits on main-road morning bench / walks toward scooters after breakfast
-    const shreeX = breakfastDone && !breakfastActive ? -1.95 : -0.18;
-    const shreeZ = breakfastDone && !breakfastActive ? 2.45 : 7.55;
+    // Srishti knocks at ground-floor door during knockPhase, waits down the town road by chai stall, or stands near scooters
+    const shreeX = knockPhase ? -0.32 : breakfastDone && !breakfastActive ? -1.95 : 16.08;
+    const shreeZ = knockPhase ? 1.05 : breakfastDone && !breakfastActive ? 2.45 : 8.95;
     animateCharacterRig({
       refs: {
         group: shreeGroupRef.current,
@@ -237,15 +303,16 @@ export function Scene03_Day2Morning({
       },
       posX: shreeX,
       posZ: shreeZ,
-      facingYaw: breakfastActive ? 0.85 : 0.25,
+      facingYaw: knockPhase ? 0 : breakfastActive ? 0.92 : 0.45,
       strideRatio: 0,
       stridePhase: 0,
       elapsed: t,
       delta,
-      idlePose: breakfastActive ? 'sit_sip' : 'chat_nod',
+      idlePose: knockPhase ? 'group_wave' : 'chat_nod',
       reducedMotion,
     });
 
+    const atTeaSpot = !knockPhase && !breakfastDone;
     animateCharacterRig({
       refs: {
         group: manishGroupRef.current,
@@ -258,9 +325,9 @@ export function Scene03_Day2Morning({
         leftArm: manishLArmRef.current,
         rightArm: manishRArmRef.current,
       },
-      posX: -2.4,
-      posZ: 3.1,
-      facingYaw: -0.4,
+      posX: atTeaSpot ? 14.35 : -2.4,
+      posZ: atTeaSpot ? 8.95 : 3.1,
+      facingYaw: atTeaSpot ? -0.95 : -0.4,
       strideRatio: 0,
       stridePhase: 0,
       elapsed: t,
@@ -280,9 +347,9 @@ export function Scene03_Day2Morning({
         leftArm: yashLArmRef.current,
         rightArm: yashRArmRef.current,
       },
-      posX: -1.35,
-      posZ: 3.35,
-      facingYaw: 0.7,
+      posX: atTeaSpot ? 16.75 : -1.35,
+      posZ: atTeaSpot ? 9.35 : 3.35,
+      facingYaw: atTeaSpot ? 0.9 : 0.7,
       strideRatio: 0,
       stridePhase: 0,
       elapsed: t,
@@ -291,9 +358,12 @@ export function Scene03_Day2Morning({
       reducedMotion,
     });
 
-    if (breakfastActive) {
-      scratch.camPos.set(1.35, 1.88, 9.75);
-      scratch.lookAt.set(-0.75, 1.05, 7.45);
+    if (knockPhase) {
+      scratch.camPos.set(1.55, 1.72, 2.75);
+      scratch.lookAt.set(-0.42, 1.18, 0.45);
+    } else if (breakfastActive) {
+      scratch.camPos.set(17.75, 1.92, 11.45);
+      scratch.lookAt.set(15.45, 1.05, 8.35);
     } else {
       const hDist = Math.cos(sim.orbitPitch) * 5.2;
       const vOff = 1.25 + Math.sin(sim.orbitPitch) * 5.2;
@@ -322,9 +392,10 @@ export function Scene03_Day2Morning({
     const visibleSpots = DAY2_MORNING_HOTSPOTS.filter(
       (h) => !(breakfastDone && h.id === 'bun_maska_chai')
     );
-    const nearest = breakfastActive
-      ? null
-      : findNearestWalkHotspot(sim.posX, sim.posZ, visibleSpots);
+    const nearest =
+      knockPhase || breakfastActive
+        ? null
+        : findNearestWalkHotspot(sim.posX, sim.posZ, visibleSpots);
     const nextId = nearest?.id ?? null;
     if (nextId !== sim.lastHotspotId) {
       sim.lastHotspotId = nextId;
@@ -345,6 +416,7 @@ export function Scene03_Day2Morning({
       />
       <StylizedPlaceholderCharacter
         characterVariant="ishaan"
+        holdingChaiCup={breakfastActive}
         groupRef={playerGroupRef}
         torsoRef={playerTorsoRef}
         headRef={playerHeadRef}
@@ -359,6 +431,7 @@ export function Scene03_Day2Morning({
       />
       <StylizedPlaceholderCharacter
         characterVariant="srishti"
+        holdingChaiCup={breakfastActive}
         groupRef={shreeGroupRef}
         torsoRef={shreeTorsoRef}
         headRef={shreeHeadRef}

@@ -36,6 +36,7 @@ interface AmbientState {
   mode: AmbientAudioMode;
   musicVolume?: number;
   sfxVolume?: number;
+  templeDarshanTriggered?: boolean;
 }
 
 interface MusicMotifSpec {
@@ -152,12 +153,22 @@ class AmbientAudioController {
   private customVolumeTarget = 0;
   private customRampTimerId: number | null = null;
 
+  private templeAudioEl: HTMLAudioElement | null = null;
+  private templeTrackUrl: string | null = null;
+  private templeTrackFailed = false;
+  private templeTrackBlocked = false;
+  private templePlayRequest: { url: string } | null = null;
+  private templeVolumeActual = 0;
+  private templeVolumeTarget = 0;
+  private templeRampTimerId: number | null = null;
+
   private state: Required<AmbientState> = {
     muted: false,
     paused: false,
     mode: 'off',
     musicVolume: 0.7,
     sfxVolume: 0.85,
+    templeDarshanTriggered: false,
   };
 
   private ensureContext(): boolean {
@@ -394,10 +405,145 @@ class AmbientAudioController {
     this.applyLevels();
   }
 
+  private isTempleTrackOverriding(): boolean {
+    return (
+      this.templeTrackUrl !== null &&
+      !this.templeTrackFailed &&
+      this.templeAudioEl !== null &&
+      !this.templeAudioEl.paused &&
+      this.state.mode === 'neelkanth' &&
+      Boolean(this.state.templeDarshanTriggered)
+    );
+  }
+
+  private getTempleTrackDesiredVolume(): number {
+    if (
+      this.state.muted ||
+      this.state.paused ||
+      this.state.mode !== 'neelkanth' ||
+      !this.state.templeDarshanTriggered
+    ) {
+      return 0;
+    }
+    if (this.templeTrackUrl === null || this.templeTrackFailed) {
+      return 0;
+    }
+    return clamp01(this.state.musicVolume) * 0.72;
+  }
+
+  private updateTempleTrackElement(): void {
+    if (typeof window === 'undefined') return;
+
+    this.templeVolumeTarget = this.getTempleTrackDesiredVolume();
+
+    if (!this.templeTrackUrl) {
+      if (this.templeAudioEl) {
+        this.templeAudioEl.pause();
+        this.templeAudioEl.removeAttribute('src');
+        this.templeAudioEl.load();
+      }
+      this.templeVolumeActual = 0;
+      this.templePlayRequest = null;
+      if (this.templeRampTimerId !== null) window.clearInterval(this.templeRampTimerId);
+      this.templeRampTimerId = null;
+      return;
+    }
+
+    if (!this.templeAudioEl) {
+      const audio = new Audio();
+      audio.loop = true;
+      audio.preload = 'auto';
+      audio.volume = 0;
+      audio.addEventListener('error', () => {
+        this.failTempleTrack(false);
+      });
+      this.templeAudioEl = audio;
+    }
+
+    if (this.templeAudioEl.src !== this.templeTrackUrl) {
+      this.templeTrackFailed = false;
+      this.templeTrackBlocked = false;
+      this.templePlayRequest = null;
+      this.templeAudioEl.src = this.templeTrackUrl;
+      this.templeAudioEl.currentTime = 0;
+      this.templeVolumeActual = 0;
+      this.templeAudioEl.volume = 0;
+    }
+
+    if (this.templeVolumeTarget > 0.005 && this.userUnlocked && !this.templeTrackFailed) {
+      if (this.templeAudioEl.paused && !this.templePlayRequest) {
+        const request = { url: this.templeTrackUrl };
+        this.templePlayRequest = request;
+        void this.templeAudioEl
+          .play()
+          .then(() => {
+            if (this.templePlayRequest !== request) return;
+            this.templePlayRequest = null;
+            this.applyLevels();
+          })
+          .catch((error: unknown) => {
+            if (this.templePlayRequest !== request) return;
+            this.templePlayRequest = null;
+            if (this.templeTrackUrl !== request.url) return;
+            const name =
+              typeof error === 'object' && error !== null && 'name' in error ? error.name : '';
+            if (name === 'AbortError' && this.getTempleTrackDesiredVolume() === 0) return;
+            this.failTempleTrack(name === 'NotAllowedError');
+          });
+      }
+    }
+
+    if (this.templeRampTimerId === null) {
+      this.templeRampTimerId = window.setInterval(() => {
+        if (!this.templeAudioEl) {
+          if (this.templeRampTimerId !== null) {
+            window.clearInterval(this.templeRampTimerId);
+            this.templeRampTimerId = null;
+          }
+          return;
+        }
+        const diff = this.templeVolumeTarget - this.templeVolumeActual;
+        if (Math.abs(diff) <= 0.015) {
+          this.templeVolumeActual = this.templeVolumeTarget;
+        } else {
+          this.templeVolumeActual += diff * 0.14;
+        }
+        this.templeAudioEl.volume = Math.max(0, Math.min(1, this.templeVolumeActual));
+
+        if (this.templeVolumeTarget === 0 && this.templeVolumeActual <= 0.01) {
+          this.templeAudioEl.pause();
+          this.templeVolumeActual = 0;
+          if (this.templeRampTimerId !== null) {
+            window.clearInterval(this.templeRampTimerId);
+            this.templeRampTimerId = null;
+          }
+        } else if (Math.abs(this.templeVolumeTarget - this.templeVolumeActual) <= 0.005) {
+          if (this.templeRampTimerId !== null) {
+            window.clearInterval(this.templeRampTimerId);
+            this.templeRampTimerId = null;
+          }
+        }
+      }, 45);
+    }
+  }
+
+  private failTempleTrack(blocked: boolean): void {
+    this.templeTrackFailed = true;
+    this.templeTrackBlocked = blocked;
+    this.templePlayRequest = null;
+    this.templeVolumeTarget = 0;
+    this.templeVolumeActual = 0;
+    if (this.templeAudioEl) {
+      this.templeAudioEl.volume = 0;
+      this.templeAudioEl.pause();
+    }
+    this.applyLevels();
+  }
+
   private scheduleNextMotifNote(): void {
     if (!this.ctx || !this.musicGain || this.ctx.state !== 'running') return;
     if (this.state.muted || this.state.paused || this.state.mode === 'off') return;
-    if (this.isCustomTrackOverriding()) return;
+    if (this.isCustomTrackOverriding() || this.isTempleTrackOverriding()) return;
 
     const spec = MUSIC_MOTIFS[this.state.mode];
     if (!spec) return;
@@ -471,8 +617,13 @@ class AmbientAudioController {
       this.customTrackBlocked = false;
       this.customTrackFailed = false;
     }
+    if (this.templeTrackBlocked) {
+      this.templeTrackBlocked = false;
+      this.templeTrackFailed = false;
+    }
     if (!this.ensureContext() || !this.ctx) {
       this.updateCustomTrackElement();
+      this.updateTempleTrackElement();
       return;
     }
     if (this.ctx.state === 'suspended') {
@@ -481,12 +632,24 @@ class AmbientAudioController {
         .then(() => {
           this.applyLevels();
           this.updateCustomTrackElement();
+          this.updateTempleTrackElement();
         })
         .catch(() => {});
     } else {
       this.applyLevels();
       this.updateCustomTrackElement();
+      this.updateTempleTrackElement();
     }
+  }
+
+  setTempleTrackUrl(url: string | null): void {
+    if (this.templeTrackUrl === url) return;
+    this.templeTrackUrl = url;
+    this.templeTrackFailed = false;
+    this.templeTrackBlocked = false;
+    this.templePlayRequest = null;
+    this.updateTempleTrackElement();
+    this.applyLevels();
   }
 
   setFinaleTrackUrl(url: string | null): void {
@@ -513,6 +676,9 @@ class AmbientAudioController {
       mode: next.mode,
       musicVolume: clamp01(next.musicVolume ?? this.state.musicVolume),
       sfxVolume: clamp01(next.sfxVolume ?? this.state.sfxVolume),
+      templeDarshanTriggered: Boolean(
+        next.templeDarshanTriggered ?? this.state.templeDarshanTriggered
+      ),
     };
     const modeChanged = normalized.mode !== this.state.mode;
     const changed =
@@ -520,7 +686,8 @@ class AmbientAudioController {
       normalized.paused !== this.state.paused ||
       modeChanged ||
       normalized.musicVolume !== this.state.musicVolume ||
-      normalized.sfxVolume !== this.state.sfxVolume;
+      normalized.sfxVolume !== this.state.sfxVolume ||
+      normalized.templeDarshanTriggered !== this.state.templeDarshanTriggered;
 
     this.state = normalized;
     if (modeChanged) {
@@ -530,6 +697,7 @@ class AmbientAudioController {
     if (!changed && !this.initialized) return;
     this.applyLevels();
     this.updateCustomTrackElement();
+    this.updateTempleTrackElement();
   }
 
   private getSfxOutput(): AudioNode | null {
@@ -572,7 +740,7 @@ class AmbientAudioController {
     }
 
     this.masterGain.gain.setTargetAtTime(0.75, now, 0.16);
-    const overrideActive = this.isCustomTrackOverriding();
+    const overrideActive = this.isCustomTrackOverriding() || this.isTempleTrackOverriding();
     this.musicGain.gain.setTargetAtTime(overrideActive ? 0 : musicVol, now, 0.25);
     this.ensureMotifLoop(!overrideActive && musicVol > 0.01);
 
@@ -600,8 +768,9 @@ class AmbientAudioController {
       this.simmerGain.gain.setTargetAtTime(0.036 * ambientScale, now, 0.2);
     } else if (this.state.mode === 'neelkanth') {
       this.windFilter.frequency.setTargetAtTime(290, now, 0.2);
-      this.windGain.gain.setTargetAtTime(0.036 * ambientScale, now, 0.2);
-      this.simmerGain.gain.setTargetAtTime(0.018 * ambientScale, now, 0.2);
+      const darshanBoost = this.state.templeDarshanTriggered ? 1.0 : 0.62;
+      this.windGain.gain.setTargetAtTime(0.036 * darshanBoost * ambientScale, now, 0.2);
+      this.simmerGain.gain.setTargetAtTime(0.018 * darshanBoost * ambientScale, now, 0.2);
     } else if (this.state.mode === 'baalkuwari_stairs') {
       this.windFilter.frequency.setTargetAtTime(360, now, 0.2);
       this.windGain.gain.setTargetAtTime(0.048 * ambientScale, now, 0.2);

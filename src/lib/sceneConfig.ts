@@ -141,11 +141,11 @@ export const SCENE_REGISTRY: Record<SceneId, SceneDefinition> = {
   },
   1: {
     id: 1,
-    slug: 'kitaabi-dastaan',
-    title: 'Kitaabi Dastaan · Online Chats & Calls',
+    slug: 'rishikesh-beginnings',
+    title: 'Rishikesh · Where It Began',
     type: 'NARRATIVE',
     act: 'Prologue',
-    estDuration: '20–30s',
+    estDuration: '12–18s',
     cameraMode: 'cinematic',
     checkpointPolicy: 'on_commit',
     phase1BStage: 'phase4_playable',
@@ -155,10 +155,10 @@ export const SCENE_REGISTRY: Record<SceneId, SceneDefinition> = {
   2: {
     id: 2,
     slug: 'rishikesh-day1',
-    title: 'Travel & Day 1 Stay in Rishikesh',
+    title: 'Day 1 Evening · Waterfall Ride & Night Dhaba',
     type: 'GAMEPLAY',
     act: 'Act 1',
-    estDuration: '45–60s',
+    estDuration: '60–75s',
     cameraMode: 'follow',
     checkpointPolicy: 'on_commit',
     phase1BStage: 'phase4_playable',
@@ -257,10 +257,10 @@ export const SCENE_REGISTRY: Record<SceneId, SceneDefinition> = {
   8: {
     id: 8,
     slug: 'ride-to-baal-kuwari',
-    title: 'Off-Road Track, Maggi Clearing & Forest Trail',
+    title: 'Off-Road Ride to Baal Kuwari Stairs',
     type: 'GAMEPLAY',
     act: 'Act 2',
-    estDuration: '3–4 min',
+    estDuration: '60–90s',
     cameraMode: 'follow',
     checkpointPolicy: 'on_commit',
     phase1BStage: 'phase3_playable',
@@ -268,7 +268,7 @@ export const SCENE_REGISTRY: Record<SceneId, SceneDefinition> = {
     sceneOwnedAssets: [
       {
         id: 'baal-kuwari-approach-env',
-        label: 'Off-Road Mountain Track, Maggi Clearing & Forest Footpath',
+        label: 'Rocky Off-Road Track Direct to Baal Kuwari Staircase Gate',
         url: 'procedural://baal-kuwari-approach',
         ownership: 'scene_owned',
         loadedKind: 'procedural',
@@ -375,7 +375,7 @@ export const SCENE_REGISTRY: Record<SceneId, SceneDefinition> = {
   14: {
     id: 14,
     slug: 'memory-gallery',
-    title: 'The Road That Made Us Family — Finale Showcase',
+    title: 'Rishikesh · Bhai Dooj Finale',
     type: 'ENDING',
     act: 'Epilogue',
     estDuration: 'Open-ended',

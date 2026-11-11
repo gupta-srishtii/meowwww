@@ -31,7 +31,8 @@ export const POLAROID_MEMORY_SPECS: Record<string, PolaroidMemorySpec> = {
     caption: 'Four steaming kulhads and fresh morning buns outside on the Rishikesh road before starting our ride',
     locationTag: 'Rishikesh Main Road · Day 2',
     gradientClass: 'from-amber-200 via-orange-100 to-amber-50',
-    matchedFilename: 'tea stop.jpg',
+    matchedFilename: 'BUN MASKA TEA .jpg',
+    altFilenames: ['tea stop.jpg', 'bun maska tea.jpg', 'bun maska tea .jpg'],
   },
   scene05_viewpoint_shree: {
     id: 'scene05_viewpoint_shree',
@@ -69,8 +70,8 @@ export const POLAROID_MEMORY_SPECS: Record<string, PolaroidMemorySpec> = {
   scene07_neelkanth_food: {
     id: 'scene07_neelkanth_food',
     title: 'Meal Outside Neelkanth',
-    caption: 'Hot chhole bhature in steel thalis outside the Neelkanth market after temple darshan',
-    locationTag: 'Outside Neelkanth Bazaar',
+    caption: 'Hot chhole bhature in steel thalis at the Neelkanth market cafe after temple darshan',
+    locationTag: 'Neelkanth Market Cafe',
     gradientClass: 'from-orange-200 via-amber-100 to-yellow-100',
     matchedFilename: 'food in neelkanth.jpg',
   },
@@ -112,14 +113,34 @@ export interface PrivateMediaSessionState {
   folderLabel: string | null;
   finaleSongName: string | null;
   finaleSongUrl: string | null;
+  templeSongName: string | null;
+  templeSongUrl: string | null;
+  savedHandleNeedsPermission: boolean;
 }
 
 const localObjectUrls = new Map<string, string>();
 let linkedFolderLabel: string | null = null;
 let finaleSongName: string | null = null;
 let finaleSongUrl: string | null = null;
+let templeSongName: string | null = null;
+let templeSongUrl: string | null = null;
+let savedHandleNeedsPermission = false;
 const memoryListeners = new Set<() => void>();
 let memoryRevision = 0;
+
+type DirectoryHandleLike = {
+  name?: string;
+  queryPermission?: (descriptor?: { mode?: 'read' | 'readwrite' }) => Promise<'granted' | 'denied' | 'prompt'>;
+  requestPermission?: (descriptor?: { mode?: 'read' | 'readwrite' }) => Promise<'granted' | 'denied' | 'prompt'>;
+  values: () => AsyncIterable<
+    | { kind: 'file'; name: string; getFile: () => Promise<File> }
+    | (DirectoryHandleLike & { kind: 'directory'; name: string })
+  >;
+};
+
+const MEDIA_DB_NAME = 'rishikesh_bhaidooj_private_media_v1';
+const MEDIA_STORE_NAME = 'directory_handles';
+const MEDIA_HANDLES_KEY = 'saved_dirs';
 
 function notifyMemoryListeners(): void {
   memoryRevision += 1;
@@ -156,10 +177,141 @@ function isLikelyBhaiDoojTrack(name: string): boolean {
   );
 }
 
+function isLikelyTempleTrack(name: string): boolean {
+  const lower = name.toLowerCase();
+  return (
+    isAudioFilename(lower) &&
+    (lower.includes('neelkanth') ||
+      lower.includes('mahadev') ||
+      lower.includes('temple') ||
+      lower.includes('remple') ||
+      lower.includes('shiva') ||
+      lower.includes('bholenath') ||
+      lower.includes('har_har') ||
+      lower.includes('har har'))
+  );
+}
+
+function openMediaHandleDb(): Promise<IDBDatabase | null> {
+  if (typeof window === 'undefined' || typeof indexedDB === 'undefined') {
+    return Promise.resolve(null);
+  }
+  return new Promise((resolve) => {
+    try {
+      const request = indexedDB.open(MEDIA_DB_NAME, 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(MEDIA_STORE_NAME)) {
+          db.createObjectStore(MEDIA_STORE_NAME);
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+async function readSavedDirectoryHandles(): Promise<DirectoryHandleLike[]> {
+  const db = await openMediaHandleDb();
+  if (!db) return [];
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(MEDIA_STORE_NAME, 'readonly');
+      const req = tx.objectStore(MEDIA_STORE_NAME).get(MEDIA_HANDLES_KEY);
+      req.onsuccess = () => {
+        const val = req.result;
+        db.close();
+        if (Array.isArray(val)) {
+          resolve(val.filter((item): item is DirectoryHandleLike => Boolean(item && typeof item.values === 'function')));
+        } else {
+          resolve([]);
+        }
+      };
+      req.onerror = () => {
+        db.close();
+        resolve([]);
+      };
+    } catch {
+      db.close();
+      resolve([]);
+    }
+  });
+}
+
+async function saveDirectoryHandleToDb(handle: DirectoryHandleLike): Promise<void> {
+  const existing = await readSavedDirectoryHandles();
+  const next = [handle, ...existing.filter((item) => item.name !== handle.name)].slice(0, 4);
+  const db = await openMediaHandleDb();
+  if (!db) return;
+  await new Promise<void>((resolve) => {
+    try {
+      const tx = db.transaction(MEDIA_STORE_NAME, 'readwrite');
+      tx.objectStore(MEDIA_STORE_NAME).put(next, MEDIA_HANDLES_KEY);
+      tx.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      tx.onerror = () => {
+        db.close();
+        resolve();
+      };
+    } catch {
+      db.close();
+      resolve();
+    }
+  });
+}
+
+async function clearSavedDirectoryHandles(): Promise<void> {
+  const db = await openMediaHandleDb();
+  if (!db) return;
+  await new Promise<void>((resolve) => {
+    try {
+      const tx = db.transaction(MEDIA_STORE_NAME, 'readwrite');
+      tx.objectStore(MEDIA_STORE_NAME).delete(MEDIA_HANDLES_KEY);
+      tx.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      tx.onerror = () => {
+        db.close();
+        resolve();
+      };
+    } catch {
+      db.close();
+      resolve();
+    }
+  });
+}
+
+async function collectFilesFromDirectoryHandle(rootHandle: DirectoryHandleLike): Promise<File[]> {
+  const collected: File[] = [];
+  const targetNames = getAllTargetFilenames();
+
+  const walkDirectory = async (dir: DirectoryHandleLike, depth: number): Promise<void> => {
+    if (depth > 3) return;
+    for await (const entry of dir.values()) {
+      if (entry.kind === 'file') {
+        const lower = entry.name.toLowerCase();
+        if (targetNames.has(lower) || isLikelyBhaiDoojTrack(lower) || isLikelyTempleTrack(lower)) {
+          collected.push(await entry.getFile());
+        }
+      } else if (entry.kind === 'directory') {
+        await walkDirectory(entry, depth + 1);
+      }
+    }
+  };
+
+  await walkDirectory(rootHandle, 0);
+  return collected;
+}
+
 /**
  * Registers user-selected local image files strictly in browser memory via `URL.createObjectURL`.
  * No files are copied into `public/`, bundled at build time, or uploaded over HTTP.
- * Automatically picks up a matching local Bhai Dooj audio file if present inside the selected folder.
+ * Automatically picks up matching local Bhai Dooj & Temple audio files if present inside the selected folder.
  */
 export function registerLocalPhotoFolder(
   files: FileList | readonly File[],
@@ -168,15 +320,19 @@ export function registerLocalPhotoFolder(
   const targetNames = getAllTargetFilenames();
 
   let matchedFiles = 0;
-  let autoDetectedAudio: File | null = null;
+  let autoDetectedFinaleAudio: File | null = null;
+  let autoDetectedTempleAudio: File | null = null;
 
   for (let i = 0; i < files.length; i += 1) {
     const file = files[i];
     if (!file) continue;
     const key = file.name.toLowerCase();
 
-    if (!autoDetectedAudio && isLikelyBhaiDoojTrack(key)) {
-      autoDetectedAudio = file;
+    if (!autoDetectedFinaleAudio && isLikelyBhaiDoojTrack(key)) {
+      autoDetectedFinaleAudio = file;
+    }
+    if (!autoDetectedTempleAudio && isLikelyTempleTrack(key)) {
+      autoDetectedTempleAudio = file;
     }
 
     if (!targetNames.has(key)) continue;
@@ -191,17 +347,26 @@ export function registerLocalPhotoFolder(
 
   if (matchedFiles > 0) {
     linkedFolderLabel = folderLabel?.trim() || 'Local Trip Folder';
+    savedHandleNeedsPermission = false;
   }
 
-  if (autoDetectedAudio) {
+  if (autoDetectedFinaleAudio) {
     if (finaleSongUrl) {
       URL.revokeObjectURL(finaleSongUrl);
     }
-    finaleSongName = autoDetectedAudio.name;
-    finaleSongUrl = URL.createObjectURL(autoDetectedAudio);
+    finaleSongName = autoDetectedFinaleAudio.name;
+    finaleSongUrl = URL.createObjectURL(autoDetectedFinaleAudio);
   }
 
-  if (matchedFiles > 0 || autoDetectedAudio) {
+  if (autoDetectedTempleAudio) {
+    if (templeSongUrl) {
+      URL.revokeObjectURL(templeSongUrl);
+    }
+    templeSongName = autoDetectedTempleAudio.name;
+    templeSongUrl = URL.createObjectURL(autoDetectedTempleAudio);
+  }
+
+  if (matchedFiles > 0 || autoDetectedFinaleAudio || autoDetectedTempleAudio) {
     notifyMemoryListeners();
   }
   return Object.keys(POLAROID_MEMORY_SPECS).filter(
@@ -229,6 +394,26 @@ export function clearLocalFinaleSong(): void {
   notifyMemoryListeners();
 }
 
+export function registerLocalTempleSong(file: File | null): string | null {
+  if (!file || !isAudioFilename(file.name)) return null;
+  if (templeSongUrl) {
+    URL.revokeObjectURL(templeSongUrl);
+  }
+  templeSongName = file.name;
+  templeSongUrl = URL.createObjectURL(file);
+  notifyMemoryListeners();
+  return templeSongUrl;
+}
+
+export function clearLocalTempleSong(): void {
+  if (templeSongUrl) {
+    URL.revokeObjectURL(templeSongUrl);
+  }
+  templeSongName = null;
+  templeSongUrl = null;
+  notifyMemoryListeners();
+}
+
 export function supportsNativeDirectoryPicker(): boolean {
   return (
     typeof window !== 'undefined' &&
@@ -237,8 +422,98 @@ export function supportsNativeDirectoryPicker(): boolean {
 }
 
 /**
+ * Silently checks IndexedDB for previously authorized private media directories on startup.
+ * Re-links immediately when browser read permission is still granted; otherwise sets `savedHandleNeedsPermission`
+ * so a single user click on "Reconnect Saved Folder" restores everything without re-browsing.
+ */
+export async function tryRestoreSavedMediaDirectory(): Promise<{
+  restored: number;
+  needsPermission: boolean;
+}> {
+  if (!supportsNativeDirectoryPicker()) {
+    return { restored: 0, needsPermission: false };
+  }
+  const handles = await readSavedDirectoryHandles();
+  if (handles.length === 0) {
+    savedHandleNeedsPermission = false;
+    return { restored: 0, needsPermission: false };
+  }
+
+  let restoredCount = 0;
+  let needsPerm = false;
+  for (const handle of handles) {
+    try {
+      const perm = handle.queryPermission
+        ? await handle.queryPermission({ mode: 'read' })
+        : 'prompt';
+      if (perm === 'granted') {
+        const files = await collectFilesFromDirectoryHandle(handle);
+        restoredCount = registerLocalPhotoFolder(files, handle.name ?? null);
+      } else if (perm === 'prompt') {
+        needsPerm = true;
+      }
+    } catch {
+      needsPerm = true;
+    }
+  }
+
+  if (savedHandleNeedsPermission !== needsPerm) {
+    savedHandleNeedsPermission = needsPerm;
+    notifyMemoryListeners();
+  }
+  return { restored: restoredCount, needsPermission: needsPerm };
+}
+
+/**
+ * Re-requests read access on previously persisted directory handles (must run from a user click/gesture).
+ */
+export async function reconnectSavedMediaDirectory(): Promise<{
+  status: 'restored' | 'empty' | 'denied';
+  matchedPhotos: number;
+}> {
+  if (!supportsNativeDirectoryPicker()) {
+    return { status: 'empty', matchedPhotos: 0 };
+  }
+  const handles = await readSavedDirectoryHandles();
+  if (handles.length === 0) {
+    savedHandleNeedsPermission = false;
+    return { status: 'empty', matchedPhotos: 0 };
+  }
+
+  let totalMatched = 0;
+  let grantedAny = false;
+  for (const handle of handles) {
+    try {
+      const current = handle.queryPermission
+        ? await handle.queryPermission({ mode: 'read' })
+        : 'prompt';
+      const perm =
+        current === 'granted'
+          ? 'granted'
+          : handle.requestPermission
+            ? await handle.requestPermission({ mode: 'read' })
+            : 'denied';
+      if (perm === 'granted') {
+        grantedAny = true;
+        const files = await collectFilesFromDirectoryHandle(handle);
+        totalMatched = registerLocalPhotoFolder(files, handle.name ?? null);
+      }
+    } catch {
+      // Skip stale handles cleanly
+    }
+  }
+
+  savedHandleNeedsPermission = false;
+  notifyMemoryListeners();
+  if (!grantedAny) {
+    return { status: 'denied', matchedPhotos: 0 };
+  }
+  return { status: 'restored', matchedPhotos: totalMatched };
+}
+
+/**
  * Opens the browser File System Access directory picker when available so a user can grant
- * one-step folder access (including nested subfolders like `Photos-1-001/`) for this session.
+ * one-step folder access (including nested subfolders like `Photos-1-001/`) and remember the handle.
  */
 export async function pickPrivateMediaDirectory(): Promise<{
   status: 'picked' | 'cancelled' | 'unsupported';
@@ -248,14 +523,6 @@ export async function pickPrivateMediaDirectory(): Promise<{
     return { status: 'unsupported', matchedPhotos: 0 };
   }
 
-  type DirectoryHandleLike = {
-    name?: string;
-    values: () => AsyncIterable<
-      | { kind: 'file'; name: string; getFile: () => Promise<File> }
-      | (DirectoryHandleLike & { kind: 'directory'; name: string })
-    >;
-  };
-
   try {
     const picker = (
       window as unknown as {
@@ -263,25 +530,9 @@ export async function pickPrivateMediaDirectory(): Promise<{
       }
     ).showDirectoryPicker;
     const rootHandle = await picker({ mode: 'read' });
-    const collected: File[] = [];
-    const targetNames = getAllTargetFilenames();
-
-    const walkDirectory = async (dir: DirectoryHandleLike, depth: number): Promise<void> => {
-      if (depth > 3) return;
-      for await (const entry of dir.values()) {
-        if (entry.kind === 'file') {
-          const lower = entry.name.toLowerCase();
-          if (targetNames.has(lower) || isLikelyBhaiDoojTrack(lower)) {
-            collected.push(await entry.getFile());
-          }
-        } else if (entry.kind === 'directory') {
-          await walkDirectory(entry, depth + 1);
-        }
-      }
-    };
-
-    await walkDirectory(rootHandle, 0);
+    const collected = await collectFilesFromDirectoryHandle(rootHandle);
     const matchedPhotos = registerLocalPhotoFolder(collected, rootHandle.name ?? null);
+    await saveDirectoryHandleToDb(rootHandle);
     return { status: 'picked', matchedPhotos };
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
@@ -289,6 +540,23 @@ export async function pickPrivateMediaDirectory(): Promise<{
     }
     return { status: 'unsupported', matchedPhotos: 0 };
   }
+}
+
+/**
+ * Convenience helper for inline UI buttons (e.g. inside unlinked Polaroid toast cards):
+ * reconnects a saved folder handle in 1 click if available, otherwise opens the directory picker.
+ */
+export async function connectPrivateMediaInteractively(): Promise<{
+  status: 'picked' | 'restored' | 'cancelled' | 'unsupported';
+  matchedPhotos: number;
+}> {
+  if (savedHandleNeedsPermission) {
+    const rec = await reconnectSavedMediaDirectory();
+    if (rec.status === 'restored') {
+      return { status: 'restored', matchedPhotos: rec.matchedPhotos };
+    }
+  }
+  return pickPrivateMediaDirectory();
 }
 
 export function clearLocalPhotoUrls(): void {
@@ -300,6 +568,13 @@ export function clearLocalPhotoUrls(): void {
   }
   finaleSongName = null;
   finaleSongUrl = null;
+  if (templeSongUrl) {
+    URL.revokeObjectURL(templeSongUrl);
+  }
+  templeSongName = null;
+  templeSongUrl = null;
+  savedHandleNeedsPermission = false;
+  void clearSavedDirectoryHandles();
   notifyMemoryListeners();
 }
 
@@ -341,6 +616,9 @@ export function getPrivateMediaSessionState(): PrivateMediaSessionState {
     folderLabel: linkedFolderLabel,
     finaleSongName,
     finaleSongUrl,
+    templeSongName,
+    templeSongUrl,
+    savedHandleNeedsPermission,
   };
 }
 

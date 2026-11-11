@@ -29,7 +29,7 @@ export function EndingScreenHUD({
   return (
     <>
       <MinimalTopBar
-        title="The Road That Made Us Family"
+        title="For Ishaan"
         subtitle="Rishikesh · Neelkanth · Baal Kuwari · Bhai Dooj"
         polaroidCount={polaroidCount}
         audioMuted={audioMuted}

@@ -6,7 +6,7 @@ import type {
 import type { SceneId } from '@/lib/sceneConfig';
 
 export type ChapterKey =
-  | 'kitaabi_dastaan'
+  | 'opening_meet'
   | 'rishikesh_day1'
   | 'day2_bun_maska'
   | 'scooter_departure'
@@ -16,8 +16,6 @@ export type ChapterKey =
   | 'neelkanth_road'
   | 'neelkanth_temple'
   | 'baal_kuwari_road'
-  | 'baal_kuwari_maggi'
-  | 'baal_kuwari_stairs_ride'
   | 'baal_kuwari_stairs'
   | 'baal_kuwari_temple'
   | 'evening_return'
@@ -39,18 +37,18 @@ export interface StoryChapterItem {
 
 export const PHASE2_STORY_CHAPTERS: readonly StoryChapterItem[] = [
   {
-    key: 'kitaabi_dastaan',
+    key: 'opening_meet',
     rank: 0,
-    title: 'Kitaabi Dastaan · How We Connected',
-    subtitle: 'Chats aur calls se dosti shuru — phir Rishikesh milne ka plan bana',
+    title: 'Rishikesh · Where It Began',
+    subtitle: 'Do online dost jo pehli baar Rishikesh mein mile — Shree ki rafting ke baad',
     targetSceneId: 1,
     polaroidIds: [],
   },
   {
     key: 'rishikesh_day1',
     rank: 1,
-    title: 'Day 1 · Arrival, Lane Stay & Evening Maggi',
-    subtitle: 'Lucknow se train aur Delhi se bus — shaam ko scooty outing aur Maggi',
+    title: 'Day 1 Evening · Waterfall Ride, Call & Dhaba',
+    subtitle: 'Shaam ki scooty ride aur waterfall — phir phone call aur raat ko dhaba dinner',
     targetSceneId: 2,
     polaroidIds: [],
   },
@@ -124,29 +122,10 @@ export const PHASE2_STORY_CHAPTERS: readonly StoryChapterItem[] = [
     key: 'baal_kuwari_road',
     rank: 9,
     title: 'Off-Road Track to Baal Kuwari',
-    subtitle: 'Neelkanth ke baad pattharon waali kacche raaste pe off-roading ka maza',
+    subtitle: 'Neelkanth market ke baad pattharon waali kacche raaste pe seedhiyon ke gate tak',
     targetSceneId: 8,
     targetSegment: 'to_baalkuwari',
     targetBaalSubStage: 'driving',
-    polaroidIds: [],
-  },
-  {
-    key: 'baal_kuwari_maggi',
-    rank: 10,
-    title: 'Roadside Maggi Clearing',
-    subtitle: 'Seedhiyon se pehle chhoti si clearing mein garam Maggi break',
-    targetSceneId: 8,
-    targetBaalSubStage: 'maggi_stop',
-    polaroidIds: [],
-  },
-  {
-    key: 'baal_kuwari_stairs_ride',
-    rank: 11,
-    title: 'Mountain Ride to Staircase Gate',
-    subtitle: 'Maggi break ke baad dobara scooty chalaake ~400 seedhiyon ke gate tak',
-    targetSceneId: 8,
-    targetSegment: 'to_baalkuwari_stairs',
-    targetBaalSubStage: 'driving_to_stairs',
     polaroidIds: [],
   },
   {
@@ -270,19 +249,15 @@ export function getActiveChapterKey(
   if (sceneId === 11) return 'evening_return';
   if (sceneId === 10) return 'baal_kuwari_temple';
   if (sceneId === 9) return 'baal_kuwari_stairs';
-  if (sceneId === 8) {
-    if (baalKuwariSubStage === 'driving_to_stairs') return 'baal_kuwari_stairs_ride';
-    return baalKuwariSubStage === 'maggi_stop' ? 'baal_kuwari_maggi' : 'baal_kuwari_road';
-  }
+  if (sceneId === 8) return 'baal_kuwari_road';
   if (sceneId === 7) return 'neelkanth_temple';
   if (sceneId === 6) return 'maggi_chai_stop';
   if (sceneId === 4) return 'scooter_departure';
   if (sceneId === 3) return 'day2_bun_maska';
   if (sceneId === 2) return 'rishikesh_day1';
-  if (sceneId === 1) return 'kitaabi_dastaan';
+  if (sceneId === 1) return 'opening_meet';
   if (segment === 'to_neelkanth') return 'neelkanth_road';
-  if (segment === 'to_baalkuwari_stairs') return 'baal_kuwari_stairs_ride';
-  if (segment === 'to_baalkuwari') return 'baal_kuwari_road';
+  if (segment === 'to_baalkuwari_stairs' || segment === 'to_baalkuwari') return 'baal_kuwari_road';
   if (segment === 'to_hotel_return') return 'evening_return';
   if (subStage === 'viewpoint_walk') return 'scenic_viewpoint';
   return 'mountain_road';

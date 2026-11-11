@@ -6,15 +6,21 @@ import {
   getActiveChapterKey,
   type StoryChapterItem,
 } from '@/lib/chapters';
-import { BHAI_DOOJ_SPECIAL_TRACK_SPEC } from '@/lib/finaleContent';
+import {
+  BHAI_DOOJ_SPECIAL_TRACK_SPEC,
+  NEELKANTH_TEMPLE_TRACK_SPEC,
+} from '@/lib/finaleContent';
 import {
   POLAROID_MEMORY_SPECS,
   clearLocalFinaleSong,
+  clearLocalTempleSong,
   getPrivateMediaSessionState,
   getResolvedPolaroidMemory,
   pickPrivateMediaDirectory,
+  reconnectSavedMediaDirectory,
   registerLocalFinaleSong,
   registerLocalPhotoFolder,
+  registerLocalTempleSong,
   supportsNativeDirectoryPicker,
   usePolaroidMemoryRevision,
 } from '@/lib/privateMemoryLoader';
@@ -53,6 +59,7 @@ export function ChapterSelectModal({
   const [localLinkStatus, setLocalLinkStatus] = useState<string | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
   const songInputRef = useRef<HTMLInputElement | null>(null);
+  const templeSongInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -111,6 +118,28 @@ export function ChapterSelectModal({
         ? `Attached finale song "${file.name}" privately in browser memory`
         : 'Please select an audio file (.mp3, .wav, .m4a, .ogg)'
     );
+  };
+
+  const handleTempleSongSelected = (files: FileList | null) => {
+    const file = files?.[0] ?? null;
+    if (!file) return;
+    const url = registerLocalTempleSong(file);
+    setLocalLinkStatus(
+      url
+        ? `Attached temple song "${file.name}" privately in browser memory`
+        : 'Please select an audio file (.mp3, .wav, .m4a, .ogg)'
+    );
+  };
+
+  const handleReconnectClick = async () => {
+    const rec = await reconnectSavedMediaDirectory();
+    if (rec.status === 'restored') {
+      setLocalLinkStatus(
+        `Reconnected ${rec.matchedPhotos}/${totalPolaroidsCount} trip photos from saved folder`
+      );
+      return;
+    }
+    await handlePickDirectoryClick();
   };
 
   return (
@@ -172,7 +201,7 @@ export function ChapterSelectModal({
 
         {activeTab === 'chapters' ? (
           <ul className="mt-3 max-h-[56vh] space-y-2 overflow-y-auto pr-1">
-            {PHASE2_STORY_CHAPTERS.map((chapter) => {
+            {PHASE2_STORY_CHAPTERS.map((chapter, index) => {
               const isCurrent = chapter.key === activeKey;
               const isUnlocked = chapter.rank <= furthestChapterRank;
               const collectedInChapter = chapter.polaroidIds.filter((id) =>
@@ -194,7 +223,7 @@ export function ChapterSelectModal({
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-xs font-semibold text-white">
-                          {chapter.rank + 1}. {chapter.title}
+                          {index + 1}. {chapter.title}
                         </span>
                         {isCurrent && (
                           <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
@@ -255,13 +284,65 @@ export function ChapterSelectModal({
                   } as InputHTMLAttributes<HTMLInputElement>)}
                   onChange={(e) => handleFolderSelected(e.target.files)}
                 />
-                <button
-                  type="button"
-                  onClick={() => void handlePickDirectoryClick()}
-                  className="shrink-0 rounded-lg border border-amber-300/50 bg-amber-950/50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-200 transition hover:bg-amber-900/60"
-                >
-                  {mediaSession.hasLinkedPhotos ? 'Re-link Photos Folder' : 'Link Local Folder'}
-                </button>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {mediaSession.savedHandleNeedsPermission && (
+                    <button
+                      type="button"
+                      onClick={() => void handleReconnectClick()}
+                      className="shrink-0 rounded-lg border border-emerald-400/50 bg-emerald-950/50 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-200 transition hover:bg-emerald-900/60"
+                    >
+                      Reconnect Saved
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void handlePickDirectoryClick()}
+                    className="shrink-0 rounded-lg border border-amber-300/50 bg-amber-950/50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-200 transition hover:bg-amber-900/60"
+                  >
+                    {mediaSession.hasLinkedPhotos ? 'Re-link Photos Folder' : 'Link Local Folder'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/80 pt-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-medium text-slate-200">
+                    Neelkanth Temple Audio · {NEELKANTH_TEMPLE_TRACK_SPEC.requestedName}
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-slate-400">
+                    {mediaSession.templeSongName
+                      ? `Attached: ${mediaSession.templeSongName} (plays softly during temple entry & darshan).`
+                      : `Warm temple bells play by default. Attach "${NEELKANTH_TEMPLE_TRACK_SPEC.requestedName}" locally if desired.`}
+                  </p>
+                </div>
+                <input
+                  ref={templeSongInputRef}
+                  type="file"
+                  accept="audio/*,.mp3,.wav,.m4a,.ogg,.aac,.flac,.webm"
+                  className="hidden"
+                  onChange={(e) => handleTempleSongSelected(e.target.files)}
+                />
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {mediaSession.templeSongName && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        clearLocalTempleSong();
+                        setLocalLinkStatus('Switched back to temple bells & courtyard ambience');
+                      }}
+                      className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] font-medium text-slate-300 hover:bg-slate-800"
+                    >
+                      Clear
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => templeSongInputRef.current?.click()}
+                    className="rounded-lg border border-amber-400/50 bg-amber-950/50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-200 transition hover:bg-amber-900/60"
+                  >
+                    {mediaSession.templeSongName ? 'Change Song' : 'Attach Temple Audio'}
+                  </button>
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/80 pt-2">
@@ -398,9 +479,22 @@ export function ChapterSelectModal({
                     </p>
                     <p className="text-xs font-medium text-slate-800">{previewMem.caption}</p>
                     {previewMem.matchedFilename && (
-                      <p className="text-[10px] text-slate-600/80">
-                        Link local folder to preview personal photo here
-                      </p>
+                      <div className="space-y-1.5 pt-1">
+                        <p className="text-[10px] text-slate-600/80">
+                          Needs local folder access for &ldquo;{previewMem.matchedFilename}&rdquo;
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void (mediaSession.savedHandleNeedsPermission
+                              ? handleReconnectClick()
+                              : handlePickDirectoryClick())
+                          }
+                          className="rounded-lg bg-slate-900 px-3 py-1 text-[11px] font-semibold text-amber-100 hover:bg-slate-800"
+                        >
+                          Connect Photos
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}
