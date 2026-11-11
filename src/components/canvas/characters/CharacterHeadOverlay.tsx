@@ -84,11 +84,45 @@ function getConversationalBubble(
         ],
       };
     }
-    if (sceneId === 2 || sceneId === 3) {
-      return { srishti: [], ishaan: [] };
+    if (sceneId === 2) {
+      return {
+        srishti: [
+          'Rafting ke baad Rishikesh ghoomne ka alag hi maza hai!',
+          'Ye stream kitni shaant hai... paani bohot thanda hai!',
+          'Shaam ki chai aur steaming Maggi — perfect combo!',
+        ],
+        ishaan: [
+          'Yahan thodi der rukte hain... pattharon pe baithte hain.',
+          'Pahadon ki shaam mast thandi hoti hai.',
+          'Dhaba chalenge raat ko, Manish aur Yash bhi wait kar rahe hain.',
+        ],
+      };
+    }
+    if (sceneId === 3) {
+      return {
+        srishti: [
+          'Uth jao Kumbhkaran Ishaan! Subah ho gayi!',
+          'Bun maska aur chai ki khushboo aa rahi hai aage stall se.',
+        ],
+        ishaan: [
+          'Bas do minute aur sone do na Shree...',
+          'Pahadon ki subah aur kadak chai — absolute peace.',
+        ],
+      };
     }
     if (sceneId === 9) {
-      return { srishti: [], ishaan: [] };
+      return {
+        srishti: [
+          'Kitni seedhiyan bachi hain, Ishaan? Abhi toh 50 bhi nahi hui!',
+          'Pahadon pe chadhna aasan lagta tha door se...',
+          'Top par view nahi mila achha toh dekhna!',
+        ],
+        ishaan: [
+          'Bas 400 hi toh hain, chalte raho fitness trainer Shree!',
+          'Ye lo paani piyo, aage steep mod hai.',
+          'Speed dekho Manish aur Yash ki, unse aage nikalna hai.',
+        ],
+      };
     }
     if (sceneId === 10) {
       return {

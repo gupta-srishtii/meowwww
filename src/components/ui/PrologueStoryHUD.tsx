@@ -240,7 +240,7 @@ export function PrologueStoryHUD({
           <div className="pointer-events-none fixed inset-x-0 bottom-4 z-20 flex justify-center px-4">
             <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-amber-300/45 bg-slate-950/88 px-5 py-2.5 shadow-2xl backdrop-blur-md">
               <span className="text-xs text-amber-100">
-                Cool green hills &amp; gentle water flowing over stones...
+                Ishaan: &ldquo;Yahan thodi der rukte hain.&rdquo; &middot; Cool green hills &amp; gentle water flowing over stones...
               </span>
               {onSkipDay1Phase && (
                 <button

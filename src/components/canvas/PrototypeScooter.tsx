@@ -22,6 +22,7 @@ export interface PrototypeScooterProps {
   castShadow?: boolean;
   hideRiders?: boolean;
   driverOnly?: boolean;
+  soloRiderVariant?: 'srishti' | 'ishaan';
   outfitMode?: 'default' | 'day1';
 }
 
@@ -329,6 +330,7 @@ export function PrototypeScooter({
   castShadow = false,
   hideRiders = false,
   driverOnly = false,
+  soloRiderVariant,
   outfitMode = 'default',
 }: PrototypeScooterProps) {
   const isLead = variant === 'lead';
@@ -542,7 +544,15 @@ export function PrototypeScooter({
       {/* Named sockets preserved for future GLB rig swaps. */}
       <group name="attach_seat_driver" position={[0, 0.73, 0.13]}>
         {!hideRiders &&
-          (isLead ? (
+          (soloRiderVariant === 'srishti' ? (
+            <SeatedRider
+              riderVariant="srishti"
+              helmetColor="#f1f5f9"
+              isFrontPose
+              castShadow={castShadow}
+              outfitMode={outfitMode}
+            />
+          ) : isLead ? (
             <SeatedRider
               riderVariant="ishaan"
               helmetColor="#334155"
@@ -564,6 +574,7 @@ export function PrototypeScooter({
       <group name="attach_seat_pillion" position={[0, 0.76, 0.52]}>
         {!hideRiders &&
           !driverOnly &&
+          !soloRiderVariant &&
           (isLead ? (
             <SeatedRider
               riderVariant="srishti"

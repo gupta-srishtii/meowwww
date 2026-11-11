@@ -479,7 +479,7 @@ export function Scene09_BaalKuwariStairs({
       yashLat = -0.52;
 
       if (help1Weight > 0.25) {
-        phaseLabel = 'Steep pitch #1 · Ishaan initiates & holds Shree’s hand';
+        phaseLabel = 'Hillside stall (~30 steps) · Paani ki bottle le li!';
         camYawShift = 0.78;
         camDist = 4.15;
         camHeightOffset = 1.65;
@@ -487,22 +487,22 @@ export function Scene09_BaalKuwariStairs({
           sim.gotchaCaptionSent = true;
         }
       } else if (help2Weight > 0.25) {
-        phaseLabel = 'Steep pitch #2 · Holding hands across Flight 3';
+        phaseLabel = 'Steep hillside curve · Climbing steadily together';
         camYawShift = 0.82;
         camDist = 4.05;
         camHeightOffset = 1.68;
       } else if (mappedTime >= BREATHER_START_T - 0.3 && mappedTime <= BREATHER_END_T + 0.2) {
-        phaseLabel = 'Halfway (~200 steps) · Catching breath & laughing over the pines';
+        phaseLabel = 'Halfway rest (~200 steps) · Thoda saans le lo, fir upar chalte hain';
         camYawShift = -0.48;
         camDist = 5.6;
         camHeightOffset = 2.1;
       } else if (mappedTime >= SUMMIT_CREST_T - 0.5) {
-        phaseLabel = 'All 400 steps climbed · Baal Kuwari Temple gate ahead!';
+        phaseLabel = 'Almost at the top · Baal Kuwari Temple gate ahead!';
         camYawShift = 0.24;
         camDist = 5.8;
         camHeightOffset = 2.2;
       } else {
-        phaseLabel = 'Climbing the ~400 winding Baal Kuwari stone steps together';
+        phaseLabel = 'Walking up the ~400 winding stone steps together';
         camYawShift = 0.34 + Math.sin(mappedTime * 0.24) * 0.22;
       }
 

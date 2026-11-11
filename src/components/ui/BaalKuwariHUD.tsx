@@ -142,47 +142,34 @@ export function BaalKuwariHUD({
 
       {isStairCinematic && (
         <div className="pointer-events-none fixed inset-x-0 bottom-6 z-20 flex justify-center px-4">
-          <div className="pointer-events-auto flex w-full max-w-md flex-col gap-2 rounded-2xl border border-amber-300/40 bg-slate-950/85 px-4 py-2.5 text-center shadow-2xl backdrop-blur-md">
-            <div className="flex items-center justify-between gap-2 text-[11px]">
-              <span
-                ref={stairTelemetryRefs?.stepCountEl}
-                className="font-semibold text-amber-200 tabular-nums"
+          <div className="pointer-events-auto flex items-center justify-between gap-3 rounded-full border border-amber-300/35 bg-slate-950/80 px-4 py-2 shadow-xl backdrop-blur-md">
+            <span
+              ref={stairTelemetryRefs?.stepCountEl}
+              className="text-xs font-semibold text-amber-200 tabular-nums"
+            >
+              {mode === 'stairs' ? `~0 / ${totalSteps} steps` : `Descending · ~${totalSteps} steps`}
+            </span>
+            <span className="hidden h-3 w-px bg-slate-700 sm:inline-block" />
+            <p
+              ref={stairTelemetryRefs?.phaseLabelEl}
+              className="text-xs font-medium text-slate-200"
+            >
+              {mode === 'stairs'
+                ? 'Climbing the winding stone steps together...'
+                : 'Walking back down safely...'}
+            </p>
+            {/* Hidden ref hooks so Scene09 logic continues to update safely without visual bloat */}
+            <span ref={stairTelemetryRefs?.flightEl} className="hidden" />
+            <div className="hidden"><div ref={stairTelemetryRefs?.barFillEl} /></div>
+            {onSkipStairCinematic && (
+              <button
+                type="button"
+                onClick={onSkipStairCinematic}
+                className="ml-1 rounded-full border border-slate-600 bg-slate-800/90 px-3 py-1 text-[11px] font-semibold text-slate-200 transition hover:bg-slate-700 hover:text-white"
               >
-                {mode === 'stairs' ? `Steps: ~0 / ${totalSteps}` : `Descending · ~${totalSteps} steps`}
-              </span>
-              <span
-                ref={stairTelemetryRefs?.flightEl}
-                className="text-[10px] font-medium text-slate-300"
-              >
-                {mode === 'stairs' ? 'Flight 1 of 4' : 'Flight 4 of 4'}
-              </span>
-            </div>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
-              <div
-                ref={stairTelemetryRefs?.barFillEl}
-                className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-300 transition-[width] duration-150"
-                style={{ width: '0%' }}
-              />
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
-              <p
-                ref={stairTelemetryRefs?.phaseLabelEl}
-                className="text-xs font-medium text-amber-100"
-              >
-                {mode === 'stairs'
-                  ? 'Climbing the ~400 winding Baal Kuwari stone steps together...'
-                  : 'Heading down fast and laughing all the way down...'}
-              </p>
-              {onSkipStairCinematic && (
-                <button
-                  type="button"
-                  onClick={onSkipStairCinematic}
-                  className="rounded-lg border border-slate-600 bg-slate-800/90 px-2.5 py-1 text-[11px] font-semibold text-slate-200 transition hover:bg-slate-700 hover:text-white"
-                >
-                  Skip (Space)
-                </button>
-              )}
-            </div>
+                Skip (Space)
+              </button>
+            )}
           </div>
         </div>
       )}

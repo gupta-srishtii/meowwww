@@ -89,7 +89,7 @@ export const POLAROID_MEMORY_SPECS: Record<string, PolaroidMemorySpec> = {
   scene09_stairs_landing: {
     id: 'scene09_stairs_landing',
     title: 'Baal Kuwari: ~400 Steps',
-    caption: 'Side by side up the steep stone steps — hand held, zero complaints',
+    caption: 'Side by side up the steep stone steps — climbing steadily, laughing and catching breath together',
     locationTag: 'Hillside Stairway',
     gradientClass: 'from-emerald-200 via-amber-100 to-sky-200',
     matchedFilename: 'baalkumari stairs.jpg',
@@ -110,6 +110,14 @@ export const POLAROID_MEMORY_SPECS: Record<string, PolaroidMemorySpec> = {
     locationTag: 'Summit Backyard',
     gradientClass: 'from-amber-100 via-sky-100 to-emerald-200',
     matchedFilename: 'book on baalkumari temple me.jpg',
+  },
+  scene13_bhaidooj_tilak: {
+    id: 'scene13_bhaidooj_tilak',
+    title: 'Bhai Dooj · Tilak & Blessing',
+    caption: 'Traditional festive tilak, mithai, and a lifelong bond of sibling love and adventure',
+    locationTag: 'Virtual Bhai Dooj Finale',
+    gradientClass: 'from-amber-300 via-rose-200 to-amber-100',
+    matchedFilename: null,
   },
 };
 

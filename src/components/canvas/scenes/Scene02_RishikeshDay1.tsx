@@ -1232,7 +1232,7 @@ export function Scene02_RishikeshDay1({
           position={[0.0, sampleMarketStreetY(10.2) + 0.02, 10.2]}
           rotation={[-0.04, 0, 0]}
         >
-          <PrototypeScooter variant="lead" castShadow={shadowsEnabled} outfitMode="day1" />
+          <PrototypeScooter variant="lead" soloRiderVariant="srishti" castShadow={shadowsEnabled} outfitMode="day1" />
         </group>
       </>
     );
