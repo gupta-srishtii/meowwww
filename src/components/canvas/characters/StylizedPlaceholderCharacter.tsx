@@ -18,7 +18,7 @@ export type CharacterVariant =
   | 'friend_plaid'
   | 'traveler';
 
-export type CharacterOutfitMode = 'default' | 'day1';
+export type CharacterOutfitMode = 'default' | 'day1' | 'festive';
 
 export interface StylizedPlaceholderCharacterProps {
   characterVariant?: CharacterVariant;
@@ -90,15 +90,17 @@ export function StylizedPlaceholderCharacter({
   const denimTex = useMemo(() => getDenimTexture(), []);
   const plaidTex = useMemo(() => getPlaidShirtTexture(), []);
   const isDay1Outfit = outfitMode === 'day1';
+  const isFestive = outfitMode === 'festive';
 
   if (characterVariant === 'srishti') {
     const skinTone = '#dfa980';
-    const denimColor = '#1f497d';
-    const topTex = isDay1Outfit ? day1KurtiTex : floralPeplumTex;
-    const topColor = isDay1Outfit ? '#fef08a' : '#ece7dc';
-    const sleeveColor = isDay1Outfit ? '#fde047' : '#ebe6da';
-    const trimColor = isDay1Outfit ? '#facc15' : '#c8d0db';
-    const skirtColor = isDay1Outfit ? '#fde047' : '#e7e1d5';
+    const denimColor = isFestive ? '#fef08a' : '#1f497d';
+    const topTex = isFestive ? null : isDay1Outfit ? day1KurtiTex : floralPeplumTex;
+    const topColor = isFestive ? '#be185d' : isDay1Outfit ? '#fef08a' : '#ece7dc';
+    const sleeveColor = isFestive ? '#be185d' : isDay1Outfit ? '#fde047' : '#ebe6da';
+    const trimColor = isFestive ? '#f59e0b' : isDay1Outfit ? '#facc15' : '#c8d0db';
+    const skirtColor = isFestive ? '#be185d' : isDay1Outfit ? '#fde047' : '#e7e1d5';
+    const shoeColor = isFestive ? '#d97706' : '#18181b';
 
     return (
       <group ref={groupRef} position={position} rotation={[0, rotationY, 0]} scale={scale}>
@@ -125,19 +127,19 @@ export function StylizedPlaceholderCharacter({
               <cylinderGeometry args={[0.043, 0.072, 0.31, 14]} />
               <meshStandardMaterial color="#1a3e6f" map={denimTex ?? undefined} roughness={0.85} />
             </mesh>
-            {/* Frayed ankle cuff */}
+            {/* Frayed ankle cuff / Churidar gather */}
             <mesh position={[0, -0.305, 0]}>
               <cylinderGeometry args={[0.073, 0.076, 0.022, 14]} />
-              <meshStandardMaterial color="#93b4d8" roughness={0.95} />
+              <meshStandardMaterial color={isFestive ? '#fef08a' : '#93b4d8'} roughness={0.95} />
             </mesh>
-            {/* Dark sculpted low-top sneaker */}
+            {/* Footwear: low-top sneaker OR festive embroidered jutti */}
             <mesh position={[0, -0.336, -0.026]} castShadow={castShadow}>
               <boxGeometry args={[0.076, 0.056, 0.155]} />
-              <meshStandardMaterial color="#18181b" roughness={0.85} />
+              <meshStandardMaterial color={shoeColor} roughness={0.85} />
             </mesh>
             <mesh position={[0, -0.358, -0.028]}>
               <boxGeometry args={[0.08, 0.018, 0.162]} />
-              <meshStandardMaterial color="#27272a" roughness={0.92} />
+              <meshStandardMaterial color={isFestive ? '#b45309' : '#27272a'} roughness={0.92} />
             </mesh>
           </group>
         </group>
@@ -151,19 +153,19 @@ export function StylizedPlaceholderCharacter({
           <group ref={rightKneeRef} position={[0, -0.35, 0]}>
             <mesh position={[0, -0.155, 0]} castShadow={castShadow}>
               <cylinderGeometry args={[0.043, 0.072, 0.31, 14]} />
-              <meshStandardMaterial color="#1a3e6f" map={denimTex ?? undefined} roughness={0.85} />
+              <meshStandardMaterial color={isFestive ? '#fef08a' : '#1a3e6f'} map={denimTex ?? undefined} roughness={0.85} />
             </mesh>
             <mesh position={[0, -0.305, 0]}>
               <cylinderGeometry args={[0.073, 0.076, 0.022, 14]} />
-              <meshStandardMaterial color="#93b4d8" roughness={0.95} />
+              <meshStandardMaterial color={isFestive ? '#fef08a' : '#93b4d8'} roughness={0.95} />
             </mesh>
             <mesh position={[0, -0.336, -0.026]} castShadow={castShadow}>
               <boxGeometry args={[0.076, 0.056, 0.155]} />
-              <meshStandardMaterial color="#18181b" roughness={0.85} />
+              <meshStandardMaterial color={shoeColor} roughness={0.85} />
             </mesh>
             <mesh position={[0, -0.358, -0.028]}>
               <boxGeometry args={[0.08, 0.018, 0.162]} />
-              <meshStandardMaterial color="#27272a" roughness={0.92} />
+              <meshStandardMaterial color={isFestive ? '#b45309' : '#27272a'} roughness={0.92} />
             </mesh>
           </group>
         </group>
@@ -207,7 +209,7 @@ export function StylizedPlaceholderCharacter({
             />
           </mesh>
 
-          {!isDay1Outfit && (
+          {!isDay1Outfit && !isFestive && (
             <>
               {/* Signature square open back cut + upper-back tie string bow (`ishaan and srishti.jpg`) */}
               <mesh position={[0, 0.34, 0.086]}>
@@ -229,8 +231,32 @@ export function StylizedPlaceholderCharacter({
             </>
           )}
 
-          {/* Curved crossbody olive-grey sling bag & cobalt strip (`IMG_20250614_215645.jpg`, `20250612_132915.jpg`) */}
-          <SlingBagAccessory variant="standing" bagRef={bagRef} castShadow={castShadow} />
+          {/* Draped festive dupatta across chest & over shoulders */}
+          {isFestive && (
+            <group position={[0, 0.26, 0]}>
+              <mesh position={[0, 0.06, -0.092]} rotation={[-0.14, 0, 0.1]}>
+                <boxGeometry args={[0.26, 0.14, 0.038]} />
+                <meshStandardMaterial color="#fbbf24" roughness={0.7} />
+              </mesh>
+              <mesh position={[-0.12, -0.02, 0.01]} rotation={[0.08, 0, -0.15]}>
+                <boxGeometry args={[0.068, 0.44, 0.135]} />
+                <meshStandardMaterial color="#fbbf24" roughness={0.7} />
+              </mesh>
+              <mesh position={[0.12, 0.02, 0.01]} rotation={[0.08, 0, 0.15]}>
+                <boxGeometry args={[0.068, 0.38, 0.135]} />
+                <meshStandardMaterial color="#fbbf24" roughness={0.7} />
+              </mesh>
+              <mesh position={[-0.12, -0.22, 0.01]}>
+                <boxGeometry args={[0.072, 0.024, 0.14]} />
+                <meshStandardMaterial color="#f59e0b" metalness={0.5} roughness={0.35} />
+              </mesh>
+            </group>
+          )}
+
+          {/* Curved crossbody olive-grey sling bag & cobalt strip (omitted during festive ritual) */}
+          {!isFestive && (
+            <SlingBagAccessory variant="standing" bagRef={bagRef} castShadow={castShadow} />
+          )}
 
           {/* Slender neck */}
           <mesh position={[0, 0.43, 0]} castShadow={castShadow}>
@@ -464,9 +490,11 @@ export function StylizedPlaceholderCharacter({
   const isPlaidFriend = characterVariant === 'friend_plaid';
 
   const resolvedShirtColor = isIshaan
-    ? isDay1Outfit
-      ? '#166534'
-      : '#f1f5f9'
+    ? isFestive
+      ? '#1e3a8a'
+      : isDay1Outfit
+        ? '#166534'
+        : '#f1f5f9'
     : isBlackTeeFriend
       ? '#18181b'
       : isPlaidFriend
@@ -474,14 +502,16 @@ export function StylizedPlaceholderCharacter({
         : jacketColor;
 
   const resolvedPantsColor = isIshaan
-    ? '#22262e'
+    ? isFestive
+      ? '#f8fafc'
+      : '#22262e'
     : isBlackTeeFriend
       ? '#8b929a'
       : isPlaidFriend
         ? '#eae4d7'
         : pantsColor;
 
-  const isShortSleeve = isIshaan || isBlackTeeFriend;
+  const isShortSleeve = (isIshaan && !isFestive) || isBlackTeeFriend;
   const skinColor = '#dca882';
 
   return (
@@ -504,7 +534,7 @@ export function StylizedPlaceholderCharacter({
           <cylinderGeometry args={[0.058, 0.051, 0.37, 12]} />
           <meshStandardMaterial color={resolvedPantsColor} roughness={0.85} />
         </mesh>
-        {isIshaan && (
+        {isIshaan && !isFestive && (
           <>
             <mesh position={[-0.056, -0.18, 0.008]}>
               <boxGeometry args={[0.008, 0.35, 0.012]} />
@@ -521,7 +551,7 @@ export function StylizedPlaceholderCharacter({
             <cylinderGeometry args={[0.049, 0.044, 0.32, 12]} />
             <meshStandardMaterial color={resolvedPantsColor} roughness={0.85} />
           </mesh>
-          {isIshaan && (
+          {isIshaan && !isFestive && (
             <>
               <mesh position={[-0.048, -0.155, 0.008]}>
                 <boxGeometry args={[0.008, 0.3, 0.012]} />
@@ -535,17 +565,30 @@ export function StylizedPlaceholderCharacter({
           )}
           {/* Footwear matched from photo reference */}
           {isIshaan ? (
-            /* Grey & cream casual slide sandals (`ishaan and srishti.jpg`) */
-            <group position={[0, -0.352, -0.026]}>
-              <mesh castShadow={castShadow}>
-                <boxGeometry args={[0.09, 0.025, 0.175]} />
-                <meshStandardMaterial color="#e5e7eb" roughness={0.88} />
-              </mesh>
-              <mesh position={[0, 0.018, -0.018]}>
-                <boxGeometry args={[0.092, 0.028, 0.068]} />
-                <meshStandardMaterial color="#64748b" roughness={0.82} />
-              </mesh>
-            </group>
+            isFestive ? (
+              <group position={[0, -0.352, -0.026]}>
+                <mesh castShadow={castShadow}>
+                  <boxGeometry args={[0.086, 0.038, 0.175]} />
+                  <meshStandardMaterial color="#78350f" roughness={0.7} />
+                </mesh>
+                <mesh position={[0, 0.015, -0.075]} rotation={[-0.25, 0, 0]}>
+                  <boxGeometry args={[0.04, 0.025, 0.04]} />
+                  <meshStandardMaterial color="#f59e0b" metalness={0.4} roughness={0.4} />
+                </mesh>
+              </group>
+            ) : (
+              /* Grey & cream casual slide sandals (`ishaan and srishti.jpg`) */
+              <group position={[0, -0.352, -0.026]}>
+                <mesh castShadow={castShadow}>
+                  <boxGeometry args={[0.09, 0.025, 0.175]} />
+                  <meshStandardMaterial color="#e5e7eb" roughness={0.88} />
+                </mesh>
+                <mesh position={[0, 0.018, -0.018]}>
+                  <boxGeometry args={[0.092, 0.028, 0.068]} />
+                  <meshStandardMaterial color="#64748b" roughness={0.82} />
+                </mesh>
+              </group>
+            )
           ) : (
             <group position={[0, -0.345, -0.028]}>
               <mesh castShadow={castShadow}>
@@ -572,7 +615,7 @@ export function StylizedPlaceholderCharacter({
           <cylinderGeometry args={[0.058, 0.051, 0.37, 12]} />
           <meshStandardMaterial color={resolvedPantsColor} roughness={0.85} />
         </mesh>
-        {isIshaan && (
+        {isIshaan && !isFestive && (
           <>
             <mesh position={[0.056, -0.18, 0.008]}>
               <boxGeometry args={[0.008, 0.35, 0.012]} />
@@ -589,7 +632,7 @@ export function StylizedPlaceholderCharacter({
             <cylinderGeometry args={[0.049, 0.044, 0.32, 12]} />
             <meshStandardMaterial color={resolvedPantsColor} roughness={0.85} />
           </mesh>
-          {isIshaan && (
+          {isIshaan && !isFestive && (
             <>
               <mesh position={[0.048, -0.155, 0.008]}>
                 <boxGeometry args={[0.008, 0.3, 0.012]} />
@@ -602,16 +645,29 @@ export function StylizedPlaceholderCharacter({
             </>
           )}
           {isIshaan ? (
-            <group position={[0, -0.352, -0.026]}>
-              <mesh castShadow={castShadow}>
-                <boxGeometry args={[0.09, 0.025, 0.175]} />
-                <meshStandardMaterial color="#e5e7eb" roughness={0.88} />
-              </mesh>
-              <mesh position={[0, 0.018, -0.018]}>
-                <boxGeometry args={[0.092, 0.028, 0.068]} />
-                <meshStandardMaterial color="#64748b" roughness={0.82} />
-              </mesh>
-            </group>
+            isFestive ? (
+              <group position={[0, -0.352, -0.026]}>
+                <mesh castShadow={castShadow}>
+                  <boxGeometry args={[0.086, 0.038, 0.175]} />
+                  <meshStandardMaterial color="#78350f" roughness={0.7} />
+                </mesh>
+                <mesh position={[0, 0.015, -0.075]} rotation={[-0.25, 0, 0]}>
+                  <boxGeometry args={[0.04, 0.025, 0.04]} />
+                  <meshStandardMaterial color="#f59e0b" metalness={0.4} roughness={0.4} />
+                </mesh>
+              </group>
+            ) : (
+              <group position={[0, -0.352, -0.026]}>
+                <mesh castShadow={castShadow}>
+                  <boxGeometry args={[0.09, 0.025, 0.175]} />
+                  <meshStandardMaterial color="#e5e7eb" roughness={0.88} />
+                </mesh>
+                <mesh position={[0, 0.018, -0.018]}>
+                  <boxGeometry args={[0.092, 0.028, 0.068]} />
+                  <meshStandardMaterial color="#64748b" roughness={0.82} />
+                </mesh>
+              </group>
+            )
           ) : (
             <group position={[0, -0.345, -0.028]}>
               <mesh castShadow={castShadow}>
@@ -655,6 +711,34 @@ export function StylizedPlaceholderCharacter({
               <meshStandardMaterial color="#86efac" roughness={0.65} />
             </mesh>
           </group>
+        )}
+
+        {isIshaan && isFestive && (
+          <>
+            {/* Long ethnic kurta lower hem extending over white churidar */}
+            <mesh position={[0, -0.08, 0]} scale={[1.14, 1, 0.8]} castShadow={castShadow}>
+              <cylinderGeometry args={[0.138, 0.165, 0.28, 14]} />
+              <meshStandardMaterial color={resolvedShirtColor} roughness={0.78} />
+            </mesh>
+            {/* Mandarin / Nehru collar */}
+            <mesh position={[0, 0.51, 0]} castShadow={castShadow}>
+              <cylinderGeometry args={[0.058, 0.058, 0.045, 12]} />
+              <meshStandardMaterial color={resolvedShirtColor} roughness={0.78} />
+            </mesh>
+            {/* Front button placket with gold buttons */}
+            <group position={[0, 0.35, -0.12]}>
+              <mesh>
+                <boxGeometry args={[0.024, 0.22, 0.008]} />
+                <meshStandardMaterial color="#172554" roughness={0.75} />
+              </mesh>
+              {[-0.07, -0.02, 0.03, 0.08].map((by) => (
+                <mesh key={by} position={[0, by, -0.006]}>
+                  <sphereGeometry args={[0.006, 6, 6]} />
+                  <meshStandardMaterial color="#f59e0b" metalness={0.6} roughness={0.3} />
+                </mesh>
+              ))}
+            </group>
+          </>
         )}
 
         {/* Neck */}

@@ -441,6 +441,7 @@ export function Scene13_BhaiDoojFinale({
       {/* Only Ishaan & Shree seated on warm floor gaddis around the puja chowki */}
       <StylizedPlaceholderCharacter
         characterVariant="ishaan"
+        outfitMode="festive"
         groupRef={ishaanGroupRef}
         torsoRef={ishaanTorsoRef}
         headRef={ishaanHeadRef}
@@ -461,6 +462,7 @@ export function Scene13_BhaiDoojFinale({
 
       <StylizedPlaceholderCharacter
         characterVariant="srishti"
+        outfitMode="festive"
         groupRef={shreeGroupRef}
         torsoRef={shreeTorsoRef}
         headRef={shreeHeadRef}

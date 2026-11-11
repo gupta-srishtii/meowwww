@@ -2054,7 +2054,10 @@ export default function Experience() {
           hotelFarewellDone={hotelFarewellDone}
           bhaiDoojPhase={bhaiDoojPhase}
           bhaiDoojTilakApplied={bhaiDoojTilakApplied}
-          onBhaiDoojTilakApplied={() => setBhaiDoojTilakApplied(true)}
+          onBhaiDoojTilakApplied={() => {
+            setBhaiDoojTilakApplied(true);
+            capturePolaroidAndSave('scene13_bhaidooj_tilak');
+          }}
           onBhaiDoojTilakComplete={() => setBhaiDoojPhase('sweet_offer')}
           onBhaiDoojEatingComplete={() => setBhaiDoojPhase('playful_laugh')}
           onBhaiDoojLaughComplete={() => setBhaiDoojPhase('jhula_swing')}

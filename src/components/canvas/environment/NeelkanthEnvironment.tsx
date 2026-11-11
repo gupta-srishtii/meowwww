@@ -145,13 +145,13 @@ function smoothStep01(t: number): number {
  * Clamped safely below stone foundations inside the courtyard & approach apron corridor.
  */
 function sampleNeelkanthTerrainY(x: number, z: number): number {
-  // Temple + bazaar stone platform spans x in [-9.4, 9.4], z in [-9.6, 22.8];
-  // approach road & parking apron spans |x| < 11.2, z in [22.5, 34].
+  // Temple + bazaar stone platform spans x in [-15.5, 15.5], z in [-11.0, 36.5];
+  // approach road & parking apron spans |x| < 15.8, z in [25.5, 36.5].
   const onParkingApron = z > 25.5 ? 1 : 0;
-  const deckHalfX = onParkingApron ? 11.2 : 9.4;
+  const deckHalfX = onParkingApron ? 15.8 : 15.2;
   const sideDist = Math.max(0, Math.abs(x) - deckHalfX);
-  const rearDist = z < -9.6 ? -9.6 - z : 0;
-  const frontSlopeDist = z > 36 ? z - 36 : 0;
+  const rearDist = z < -11.0 ? -11.0 - z : 0;
+  const frontSlopeDist = z > 36.5 ? z - 36.5 : 0;
 
   const naturalUndulation =
     Math.sin(x * 0.12 + z * 0.09) * 0.85 +
@@ -167,23 +167,23 @@ function sampleNeelkanthTerrainY(x: number, z: number): number {
   const rawY = baseFloor + (sideRise + rearRise + naturalUndulation * 0.72) * hillBlend - frontDip;
 
   // Guarantee terrain never clips above the stone terrace or paved arrival road.
-  if (Math.abs(x) < 9.4 && z > -9.6 && z < 35.5) {
-    return -0.36;
+  if (Math.abs(x) < 15.2 && z > -11.0 && z < 36.5) {
+    return -2.5;
   }
   return rawY;
 }
 
 const NEELKANTH_BOULDER_COORDS: readonly [number, number, number][] = [
-  [-11.0, 9.2, 0.72],
-  [-11.8, 3.8, 0.95],
-  [-11.4, -4.6, 0.85],
-  [-10.6, -10.4, 0.9],
-  [10.8, 10.6, 0.76],
-  [11.6, 4.1, 0.88],
-  [11.2, -3.5, 0.82],
-  [10.5, -10.8, 0.92],
-  [-5.2, -11.4, 0.78],
-  [4.8, -11.6, 0.84],
+  [-16.8, 9.2, 0.72],
+  [-17.2, 3.8, 0.95],
+  [-16.9, -4.6, 0.85],
+  [-16.5, -10.4, 0.9],
+  [16.8, 10.6, 0.76],
+  [17.4, 4.1, 0.88],
+  [16.9, -3.5, 0.82],
+  [16.6, -10.8, 0.92],
+  [-5.2, -12.4, 0.78],
+  [4.8, -12.6, 0.84],
 ];
 
 export function NeelkanthEnvironment({
@@ -238,7 +238,7 @@ export function NeelkanthEnvironment({
         z = -12.6 - ((slot * 4.2) % 24);
       } else {
         const side = i % 2 === 0 ? -1 : 1;
-        x = side * (11.6 + (i % 7) * 4.2 + ((i * 3) % 5) * 0.4);
+        x = side * (16.2 + (i % 7) * 4.2 + ((i * 3) % 5) * 0.4);
         z = -28 + ((i * 5.3) % 50);
       }
       const groundY = sampleNeelkanthTerrainY(x, z);
@@ -328,35 +328,35 @@ export function NeelkanthEnvironment({
       />
 
       {/* Solid stepped sandstone retaining foundation & hillside anchor beneath temple + bazaar + market cafe + exit parking */}
-      <mesh position={[0, -2.55, 6.2]} receiveShadow={shadowsEnabled}>
-        <boxGeometry args={[18.2, 4.9, 31.6]} />
+      <mesh position={[0, -2.55, 12.0]} receiveShadow={shadowsEnabled}>
+        <boxGeometry args={[30.6, 4.9, 44.0]} />
         <meshStandardMaterial color="#736655" roughness={0.95} />
       </mesh>
       <mesh position={[0, -2.4, 26.2]} receiveShadow={shadowsEnabled}>
-        <boxGeometry args={[21.6, 4.6, 9.2]} />
+        <boxGeometry args={[31.6, 4.6, 12.2]} />
         <meshStandardMaterial color="#675c4e" roughness={0.96} />
       </mesh>
       {/* Rear Garbhagriha stone sanctuary plinth extension (`z = -6.9..-9.5`) & flanking battered retaining walls */}
       <mesh position={[0, -0.12, -8.25]} receiveShadow={shadowsEnabled}>
-        <boxGeometry args={[12.8, 0.24, 3.0]} />
+        <boxGeometry args={[16.8, 0.24, 3.0]} />
         <meshStandardMaterial color="#877867" roughness={0.92} />
       </mesh>
-      <mesh position={[-9.45, -2.45, 6.2]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
-        <boxGeometry args={[0.9, 4.85, 37.8]} />
+      <mesh position={[-15.25, -2.45, 12.0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+        <boxGeometry args={[0.9, 4.85, 44.0]} />
         <meshStandardMaterial color="#665b4c" roughness={0.94} />
       </mesh>
-      <mesh position={[9.45, -2.45, 9.0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
-        <boxGeometry args={[0.9, 4.85, 37.8]} />
+      <mesh position={[15.25, -2.45, 12.0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+        <boxGeometry args={[0.9, 4.85, 44.0]} />
         <meshStandardMaterial color="#665b4c" roughness={0.94} />
       </mesh>
-      <mesh position={[0, -2.45, -9.85]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
-        <boxGeometry args={[19.8, 4.85, 1.0]} />
+      <mesh position={[0, -2.45, -10.0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+        <boxGeometry args={[30.6, 4.85, 1.0]} />
         <meshStandardMaterial color="#665b4c" roughness={0.94} />
       </mesh>
 
       {/* Zone A+B+C Flagstone Paving spanning Courtyard (`-8.6..+4.2`) & Full Cobblestone Bazaar Street (`+4.2..+27.8`) */}
-      <mesh position={[0, -0.1, 9.6]} receiveShadow={shadowsEnabled}>
-        <boxGeometry args={[18.8, 0.2, 36.8]} />
+      <mesh position={[0, -0.1, 12.0]} receiveShadow={shadowsEnabled}>
+        <boxGeometry args={[30.4, 0.2, 44.0]} />
         <meshStandardMaterial
           color="#a89c8a"
           map={stoneTex ?? undefined}

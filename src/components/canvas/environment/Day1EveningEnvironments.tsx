@@ -13,6 +13,7 @@ import {
 } from '@/components/canvas/environment/DistantHimalayanRidges';
 import { HotspotBeaconSparkle } from '@/components/canvas/environment/HotspotBeaconSparkle';
 import { PrototypeScooter } from '@/components/canvas/PrototypeScooter';
+import { StylizedPlaceholderCharacter } from '@/components/canvas/characters/StylizedPlaceholderCharacter';
 import type { WalkBounds, WalkHotspot } from '@/hooks/useWalkController';
 import { getOffroadDirtTrackTexture } from '@/lib/proceduralTextures';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
@@ -94,7 +95,7 @@ export const DAY1_MARKET_WALK_BOUNDS: WalkBounds = {
 export const DAY1_MARKET_HOTSPOTS: readonly WalkHotspot[] = [
   {
     id: 'join_dhaba',
-    label: 'Park & Join Manish & Yash at the Dhaba',
+    label: 'Park & Meet Ishaan, Manish & Yash Outside Dhaba',
     x: 0,
     z: -9.4,
     radius: 2.35,
@@ -1009,6 +1010,36 @@ export function Day1MarketWalkEnvironment({
           <meshStandardMaterial color="#b45309" emissive="#f59e0b" emissiveIntensity={0.65} />
         </mesh>
       </group>
+      {/* Outside Dhaba: Ishaan, Manish & Yash waiting outside on the sidewalk */}
+      <group position={[-1.75, sampleMarketStreetY(-9.5), -9.5]} rotation={[0, 0.22, 0]}>
+        <PrototypeScooter variant="lead" castShadow={shadowsEnabled} hideRiders outfitMode="day1" />
+      </group>
+      <group position={[2.15, sampleMarketStreetY(-9.7), -9.7]} rotation={[0, -0.28, 0]}>
+        <PrototypeScooter variant="companion" castShadow={shadowsEnabled} hideRiders outfitMode="day1" />
+      </group>
+      <group position={[-0.75, sampleMarketStreetY(-9.6), -9.6]} rotation={[0, 0.18, 0]}>
+        <StylizedPlaceholderCharacter
+          characterVariant="ishaan"
+          outfitMode="day1"
+          castShadow={shadowsEnabled}
+          showNameTag
+        />
+      </group>
+      <group position={[0.65, sampleMarketStreetY(-9.6), -9.5]} rotation={[0, -0.24, 0]}>
+        <StylizedPlaceholderCharacter
+          characterVariant="friend_black_tee"
+          castShadow={shadowsEnabled}
+          showNameTag
+        />
+      </group>
+      <group position={[1.42, sampleMarketStreetY(-9.8), -9.8]} rotation={[0, -0.38, 0]}>
+        <StylizedPlaceholderCharacter
+          characterVariant="friend_plaid"
+          castShadow={shadowsEnabled}
+          showNameTag
+        />
+      </group>
+
       <HotspotBeaconSparkle
         position={[DAY1_MARKET_HOTSPOTS[0].x, sampleMarketStreetY(DAY1_MARKET_HOTSPOTS[0].z) + 0.06, DAY1_MARKET_HOTSPOTS[0].z]}
         color="#fbbf24"

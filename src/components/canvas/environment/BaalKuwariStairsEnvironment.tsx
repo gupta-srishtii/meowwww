@@ -360,6 +360,126 @@ const MAX_STAIR_POSTS = 24;
 const MAX_STAIR_TREADS = 4 * 42;
 const FLAG_COLORS = ['#ef4444', '#f59e0b', '#f8fafc', '#22c55e', '#3b82f6'];
 
+function RoadsideWaterStall({
+  position,
+  rotationY = 0,
+  castShadow = false,
+}: {
+  position: [number, number, number];
+  rotationY?: number;
+  castShadow?: boolean;
+}) {
+  return (
+    <group position={position} rotation={[0, rotationY, 0]}>
+      {/* Stone / Timber foundation pad */}
+      <mesh position={[0, -0.05, 0]} receiveShadow={castShadow}>
+        <boxGeometry args={[1.9, 0.1, 1.5]} />
+        <meshStandardMaterial color="#4a3f35" roughness={0.92} />
+      </mesh>
+
+      {/* Main wooden stall counter */}
+      <mesh position={[0, 0.42, 0.15]} castShadow={castShadow} receiveShadow={castShadow}>
+        <boxGeometry args={[1.65, 0.84, 0.65]} />
+        <meshStandardMaterial color="#6b4423" roughness={0.88} />
+      </mesh>
+      {/* Counter top shelf */}
+      <mesh position={[0, 0.85, 0.15]} castShadow={castShadow}>
+        <boxGeometry args={[1.75, 0.04, 0.75]} />
+        <meshStandardMaterial color="#50331a" roughness={0.82} />
+      </mesh>
+
+      {/* 4 Canopy Support Poles */}
+      {[-0.78, 0.78].map((px) =>
+        [-0.45, 0.45].map((pz) => (
+          <mesh key={`pole-${px}-${pz}`} position={[px, 1.15, pz]} castShadow={castShadow}>
+            <cylinderGeometry args={[0.035, 0.035, 2.3, 8]} />
+            <meshStandardMaterial color="#543722" roughness={0.9} />
+          </mesh>
+        ))
+      )}
+
+      {/* Canvas Awning / Canopy */}
+      <mesh position={[0, 2.3, 0]} rotation={[-0.1, 0, 0]} castShadow={castShadow}>
+        <boxGeometry args={[1.9, 0.04, 1.6]} />
+        <meshStandardMaterial color="#166534" roughness={0.85} />
+      </mesh>
+      {/* Front scalloped / hanging awning flap */}
+      <mesh position={[0, 2.2, 0.78]} castShadow={castShadow}>
+        <boxGeometry args={[1.9, 0.22, 0.03]} />
+        <meshStandardMaterial color="#f59e0b" roughness={0.85} />
+      </mesh>
+
+      {/* Wooden crate with water bottles on counter */}
+      <mesh position={[-0.42, 0.94, 0.15]} castShadow={castShadow}>
+        <boxGeometry args={[0.55, 0.14, 0.38]} />
+        <meshStandardMaterial color="#854d0e" roughness={0.9} />
+      </mesh>
+
+      {/* Crate Water Bottles */}
+      {[-0.18, -0.06, 0.06, 0.18].map((bx, bIdx) =>
+        [-0.1, 0.1].map((bz, zIdx) => (
+          <group key={`crate-bot-${bIdx}-${zIdx}`} position={[-0.42 + bx, 1.05, 0.15 + bz]}>
+            <mesh castShadow={castShadow}>
+              <cylinderGeometry args={[0.038, 0.038, 0.22, 10]} />
+              <meshStandardMaterial color="#38bdf8" roughness={0.2} transparent opacity={0.85} />
+            </mesh>
+            <mesh position={[0, 0.12, 0]}>
+              <cylinderGeometry args={[0.016, 0.016, 0.035, 8]} />
+              <meshStandardMaterial color="#1d4ed8" roughness={0.4} />
+            </mesh>
+          </group>
+        ))
+      )}
+
+      {/* Standalone cold water bottles & packaged snacks on right counter */}
+      <group position={[0.42, 0.98, 0.15]}>
+        <mesh position={[-0.1, 0, 0]} castShadow={castShadow}>
+          <cylinderGeometry args={[0.042, 0.042, 0.24, 10]} />
+          <meshStandardMaterial color="#0284c7" roughness={0.18} transparent opacity={0.9} />
+        </mesh>
+        <mesh position={[-0.1, 0.13, 0]}>
+          <cylinderGeometry args={[0.018, 0.018, 0.035, 8]} />
+          <meshStandardMaterial color="#2563eb" roughness={0.3} />
+        </mesh>
+        <mesh position={[0.1, 0, 0.04]} castShadow={castShadow}>
+          <cylinderGeometry args={[0.042, 0.042, 0.24, 10]} />
+          <meshStandardMaterial color="#38bdf8" roughness={0.2} transparent opacity={0.85} />
+        </mesh>
+        {/* Biscuits / Glucose snack pack */}
+        <mesh position={[0.08, -0.04, -0.12]} castShadow={castShadow}>
+          <boxGeometry args={[0.22, 0.08, 0.12]} />
+          <meshStandardMaterial color="#eab308" roughness={0.7} />
+        </mesh>
+      </group>
+
+      {/* Local Pahadi Stallkeeper standing behind counter */}
+      <group position={[0, 0, -0.32]}>
+        {/* Body / Kurta */}
+        <mesh position={[0, 0.9, 0]} castShadow={castShadow}>
+          <cylinderGeometry args={[0.18, 0.16, 0.65, 10]} />
+          <meshStandardMaterial color="#991b1b" roughness={0.85} />
+        </mesh>
+        {/* Pahadi cap / Topi */}
+        <mesh position={[0, 1.34, 0]} castShadow={castShadow}>
+          <cylinderGeometry args={[0.12, 0.12, 0.12, 10]} />
+          <meshStandardMaterial color="#1e293b" roughness={0.9} />
+        </mesh>
+        {/* Head */}
+        <mesh position={[0, 1.25, 0]} castShadow={castShadow}>
+          <sphereGeometry args={[0.11, 10, 10]} />
+          <meshStandardMaterial color="#fcd34d" roughness={0.75} />
+        </mesh>
+      </group>
+
+      {/* Wooden Signboard */}
+      <mesh position={[0, 2.5, 0.05]} castShadow={castShadow}>
+        <boxGeometry args={[1.3, 0.26, 0.04]} />
+        <meshStandardMaterial color="#fde68a" roughness={0.8} />
+      </mesh>
+    </group>
+  );
+}
+
 export interface BaalKuwariStairsEnvironmentProps {
   qualityProfile: QualityProfile;
   paused: boolean;
@@ -725,6 +845,13 @@ export function BaalKuwariStairsEnvironment({
           </group>
         );
       })}
+
+      {/* Roadside Cold Water & Refreshment Stall at Flight 1, Step ~30 */}
+      <RoadsideWaterStall
+        position={[-3.8, 1.8, -6.15]}
+        rotationY={0.32}
+        castShadow={shadowsEnabled}
+      />
 
       {/* Summit Archway crowning Step 400 */}
       <group position={[summitWaypoint.x, summitWaypoint.y, summitWaypoint.z]}>
