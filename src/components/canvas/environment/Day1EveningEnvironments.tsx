@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { FabricGeometry } from '../characters/FabricGeometry';
 import {
   buildConnectedHillGeometry,
   ConnectedHillTerrain,
@@ -989,7 +990,7 @@ export function Day1MarketWalkEnvironment({
             <meshStandardMaterial color={p.pants} roughness={0.88} />
           </mesh>
           <mesh position={[0, 1.02, 0]} castShadow={shadowsEnabled}>
-            <cylinderGeometry args={[0.16, 0.14, 0.54, 10]} />
+            <FabricGeometry top={0.16} bottom={0.14} height={0.54} />
             <meshStandardMaterial color={p.top} roughness={0.82} />
           </mesh>
           <mesh position={[0, 1.43, 0]}>
@@ -1285,7 +1286,7 @@ export function Day1NightDhabaEnvironment({
       <group position={[-2.9, 0, -2.6]} rotation={[0, 0.25, 0]}>
         <group position={[0.15, 0, -0.35]}>
           <mesh position={[0, 1.0, 0]}>
-            <cylinderGeometry args={[0.17, 0.15, 0.56, 10]} />
+            <FabricGeometry top={0.17} bottom={0.15} height={0.56} />
             <meshStandardMaterial color="#f1f5f9" roughness={0.85} />
           </mesh>
           <mesh position={[0, 1.43, 0]}>
@@ -1356,7 +1357,7 @@ export function Day1NightDhabaEnvironment({
               </mesh>
               {/* Torso seated flush at y=0.72 */}
               <mesh position={[0, 0.72, 0]} castShadow={shadowsEnabled}>
-                <cylinderGeometry args={[0.15, 0.14, 0.48, 9]} />
+                <FabricGeometry top={0.15} bottom={0.14} height={0.48} />
                 <meshStandardMaterial color={p.top} roughness={0.82} />
               </mesh>
               <mesh position={[0, 1.1, 0]}>

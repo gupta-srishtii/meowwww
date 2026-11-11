@@ -184,6 +184,14 @@ export function animateCharacterRig({
   } = refs;
   if (!group) return;
 
+  // Let the tunic hem gather above the thighs rather than pass through a seat.
+  const hem = torso?.children.find(child => child.name === 'garment-hem');
+  if (hem) {
+    const seated = idlePose.startsWith('sit_') && strideRatio <= 0.03;
+    hem.position.y = THREE.MathUtils.damp(hem.position.y, seated ? 0.035 : hem.userData.standingY, 10, delta);
+    hem.scale.y = THREE.MathUtils.damp(hem.scale.y, seated ? 0.64 : 1, 10, delta);
+  }
+
   group.position.x = posX;
   group.position.z = posZ;
   group.rotation.y = facingYaw;

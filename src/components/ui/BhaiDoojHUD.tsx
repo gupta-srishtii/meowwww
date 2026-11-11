@@ -49,26 +49,26 @@ export function BhaiDoojHUD({
 
   return (
     <>
-      <MinimalTopBar
+      {phase !== 'complete' && <MinimalTopBar
         title="Happy Bhai Dooj"
         polaroidCount={polaroidCount}
         audioMuted={audioMuted}
         onToggleAudioMute={onToggleAudioMute}
         onOpenChapters={onOpenChapters}
         onPause={onPause}
-      />
+      />}
 
       {/* Large floating transparent celebratory lettering over the marigold Jhula */}
       {showHappyHeading && (
-        <div className="pointer-events-none fixed inset-x-0 top-3.5 z-10 flex justify-center px-4 sm:top-4">
-          <h1 className="bg-transparent text-center font-serif text-3xl font-bold tracking-[0.22em] text-amber-200 uppercase drop-shadow-[0_4px_20px_rgba(0,0,0,0.72)] sm:text-5xl">
+        <div className="pointer-events-none fixed inset-x-0 top-[12%] z-10 flex justify-center px-6">
+          <h1 className="bg-transparent text-center font-serif text-[clamp(1.2rem,4.5vw,3rem)] font-bold tracking-[0.12em] text-amber-200 uppercase drop-shadow-[0_4px_20px_rgba(0,0,0,0.72)]">
             HAPPY BHAI DOOJ
           </h1>
         </div>
       )}
 
       {/* Subtle audio attach / autoplay unlock pill when needed */}
-      {trackBlocked ? (
+      {trackBlocked && phase !== 'complete' ? (
         <button
           type="button"
           onClick={() => ambientAudio.unlock()}

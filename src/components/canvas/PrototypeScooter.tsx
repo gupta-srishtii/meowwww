@@ -2,6 +2,7 @@
 
 import { useMemo, type RefObject } from 'react';
 import type * as THREE from 'three';
+import { FabricGeometry, SoftBoxGeometry } from './characters/FabricGeometry';
 import { SlingBagAccessory } from '@/components/canvas/characters/SlingBagAccessory';
 import {
   getDenimTexture,
@@ -93,9 +94,7 @@ function SeatedRider({
 
       {/* Left & right thighs angled forward */}
       <mesh position={[-0.11, 0.015, -0.14]} rotation={[0.38, 0, 0.08]} castShadow={castShadow}>
-        <cylinderGeometry
-          args={[isSrishti ? 0.048 : 0.056, isSrishti ? 0.044 : 0.052, 0.28, 12]}
-        />
+        <FabricGeometry top={isSrishti ? 0.048 : 0.056} bottom={isSrishti ? 0.044 : 0.052} height={0.28} />
         <meshStandardMaterial
           color={pantsColor}
           map={isSrishti ? denimTex ?? undefined : undefined}
@@ -103,9 +102,7 @@ function SeatedRider({
         />
       </mesh>
       <mesh position={[0.11, 0.015, -0.14]} rotation={[0.38, 0, -0.08]} castShadow={castShadow}>
-        <cylinderGeometry
-          args={[isSrishti ? 0.048 : 0.056, isSrishti ? 0.044 : 0.052, 0.28, 12]}
-        />
+        <FabricGeometry top={isSrishti ? 0.048 : 0.056} bottom={isSrishti ? 0.044 : 0.052} height={0.28} />
         <meshStandardMaterial
           color={pantsColor}
           map={isSrishti ? denimTex ?? undefined : undefined}
@@ -152,25 +149,25 @@ function SeatedRider({
       {isIshaan ? (
         <>
           <mesh position={[-0.13, -0.375, -0.27]} castShadow={castShadow}>
-            <boxGeometry args={[0.085, 0.032, 0.16]} />
+            <SoftBoxGeometry size={[0.085, 0.032, 0.16]} />
             <meshStandardMaterial color="#e5e7eb" roughness={0.88} />
           </mesh>
           <mesh position={[0.13, -0.375, -0.27]} castShadow={castShadow}>
-            <boxGeometry args={[0.085, 0.032, 0.16]} />
+            <SoftBoxGeometry size={[0.085, 0.032, 0.16]} />
             <meshStandardMaterial color="#e5e7eb" roughness={0.88} />
           </mesh>
         </>
       ) : (
         <>
           <mesh position={[-0.13, -0.37, -0.27]} castShadow={castShadow}>
-            <boxGeometry args={[0.082, 0.056, 0.158]} />
+            <SoftBoxGeometry size={[0.082, 0.056, 0.158]} />
             <meshStandardMaterial
               color={isBlackTee ? '#f8fafc' : isPlaid ? '#78513c' : '#18181b'}
               roughness={0.85}
             />
           </mesh>
           <mesh position={[0.13, -0.37, -0.27]} castShadow={castShadow}>
-            <boxGeometry args={[0.082, 0.056, 0.158]} />
+            <SoftBoxGeometry size={[0.082, 0.056, 0.158]} />
             <meshStandardMaterial
               color={isBlackTee ? '#f8fafc' : isPlaid ? '#78513c' : '#18181b'}
               roughness={0.85}
@@ -184,7 +181,7 @@ function SeatedRider({
         <group position={[0, 0.29, -0.02]} rotation={[-0.08, 0, 0]}>
           {/* Fitted waist-to-ribcage bodice */}
           <mesh position={[0, 0.06, 0]} scale={[1.05, 1, 0.78]} castShadow={castShadow}>
-            <cylinderGeometry args={[0.115, 0.088, 0.26, 14]} />
+            <FabricGeometry top={0.115} bottom={0.088} height={0.26} />
             <meshStandardMaterial
               color={topColor}
               map={srishtiTex ?? undefined}
@@ -193,7 +190,7 @@ function SeatedRider({
           </mesh>
           {/* Short kurti / peplum flare */}
           <mesh position={[0, -0.11, 0.01]} scale={[1.08, 1, 0.88]} castShadow={castShadow}>
-            <cylinderGeometry args={[0.092, 0.18, 0.2, 16]} />
+            <FabricGeometry top={0.092} bottom={0.18} height={0.2} />
             <meshStandardMaterial
               color={isDay1 ? '#fde047' : '#e6dfd2'}
               map={srishtiTex ?? undefined}
@@ -225,7 +222,7 @@ function SeatedRider({
           scale={[1.1, 1, 0.8]}
           castShadow={castShadow}
         >
-          <cylinderGeometry args={[0.148, 0.13, 0.42, 14]} />
+          <FabricGeometry top={0.148} bottom={0.13} height={0.42} />
           <meshStandardMaterial
             color={topColor}
             map={isPlaid ? plaidTex ?? undefined : undefined}

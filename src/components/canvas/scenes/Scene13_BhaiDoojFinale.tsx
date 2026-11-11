@@ -42,7 +42,7 @@ export interface Scene13BhaiDoojFinaleProps {
 const TILAK_DURATION_SEC = 2.8;
 const EATING_TOGETHER_DURATION_SEC = 4.2;
 const PLAYFUL_LAUGH_DURATION_SEC = 3.2;
-const JHULA_SWING_HOLD_SEC = 5.4;
+const JHULA_SWING_HOLD_SEC = 9.2;
 
 /** Smooth bell pulse rising from 0 -> 1 around center `mid` and easing cleanly back to 0. */
 function easeBell(u: number, start: number, end: number): number {
@@ -104,6 +104,7 @@ export function Scene13_BhaiDoojFinale({
 
   const simRef = useRef({
     timer: 0,
+    elapsed: 0,
     tilakMarkFired: false,
     tilakDoneSent: false,
     eatingDoneSent: false,
@@ -182,7 +183,8 @@ export function Scene13_BhaiDoojFinale({
     if (delta <= 0) return;
 
     const sim = simRef.current;
-    const t = state.clock.elapsedTime;
+    // Pause freezes body motion, swing and camera on the same local clock.
+    const t = (sim.elapsed = (sim.elapsed ?? 0) + delta);
     sim.timer += delta;
 
     // Gentle phase state timers
@@ -228,7 +230,10 @@ export function Scene13_BhaiDoojFinale({
     }
 
     const onSwing = phase === 'jhula_swing' || phase === 'complete';
-    const swingAngle = onSwing ? Math.sin(t * 1.4) * 0.15 : Math.sin(t * 0.8) * 0.025;
+    const transfer = onSwing ? (phase === 'complete' || reducedMotion ? 1 : THREE.MathUtils.smoothstep(sim.timer, 0, 1.8)) : 0;
+    const mountingSwing = onSwing && transfer < 0.92;
+    const seatBlend = THREE.MathUtils.smoothstep(transfer, 0.65, 1);
+    const swingAngle = onSwing && !reducedMotion ? Math.sin(t * 1.05) * 0.075 * seatBlend : 0;
     if (swingGroupRef.current) {
       swingGroupRef.current.rotation.x = swingAngle;
     }
@@ -254,12 +259,12 @@ export function Scene13_BhaiDoojFinale({
         rightArm: ishaanRArmRef.current,
         rightForearm: ishaanRForearmRef.current,
       },
-      posX: onSwing ? 0.36 : 0.56 - 0.14 * tilakReachWeight,
+      posX: onSwing ? THREE.MathUtils.lerp(0.56, 0.36, transfer) : 0.56 - 0.14 * tilakReachWeight,
       posZ: onSwing ? jhulaSeatZ : -0.16,
-      groundY: onSwing ? jhulaSeatY : -0.02,
+      groundY: onSwing ? jhulaSeatY : -0.0525,
       facingYaw: onSwing ? Math.PI + 0.08 : THREE.MathUtils.lerp(1.85, 1.52, tilakReachWeight),
-      strideRatio: 0,
-      stridePhase: 0,
+      strideRatio: mountingSwing ? 0.55 : 0,
+      stridePhase: t * 7,
       torsoBaseY: 0.84,
       elapsed: t,
       delta,
@@ -282,12 +287,12 @@ export function Scene13_BhaiDoojFinale({
         rightArm: shreeRArmRef.current,
         rightForearm: shreeRForearmRef.current,
       },
-      posX: onSwing ? -0.36 : -0.56 + 0.14 * tilakReachWeight,
+      posX: onSwing ? THREE.MathUtils.lerp(-0.56, -0.36, transfer) : -0.56 + 0.14 * tilakReachWeight,
       posZ: onSwing ? jhulaSeatZ : -0.16,
       groundY: onSwing ? jhulaSeatY : -0.02,
       facingYaw: onSwing ? Math.PI - 0.08 : THREE.MathUtils.lerp(-1.85, -1.52, tilakReachWeight),
-      strideRatio: 0,
-      stridePhase: 0,
+      strideRatio: mountingSwing ? 0.55 : 0,
+      stridePhase: t * 7,
       torsoBaseY: 0.78,
       elapsed: t,
       delta,
@@ -297,13 +302,24 @@ export function Scene13_BhaiDoojFinale({
     });
 
     if (onSwing) {
-      // Transform each seated pelvis with the actual bench pivot and cushion top.
-      for (const group of [ishaanGroupRef.current, shreeGroupRef.current]) {
+      // Rotate the roots by the SAME pivot matrix as the bench. Thigh undersides
+      // rest on the cushion; knees extend past its front (+Z) edge.
+      for (const [group, hip, radius] of [
+        [ishaanGroupRef.current, 0.74, 0.058],
+        [shreeGroupRef.current, 0.72, 0.052],
+      ] as const) {
         if (!group) continue;
-        const localRootY = -1.855 - 0.70 * group.scale.y;
-        group.position.y = 2.55 + Math.cos(swingAngle) * localRootY;
-        group.position.z = -1.75 - Math.sin(swingAngle) * localRootY;
-        group.rotation.x = swingAngle;
+        const localRootY = -1.855 - (hip - radius) * group.scale.y;
+        const localRootZ = -0.045;
+        group.position.y = THREE.MathUtils.lerp(-0.27 * (1 - THREE.MathUtils.smoothstep(transfer, 0, 0.22)), 2.55 + Math.cos(swingAngle) * localRootY - Math.sin(swingAngle) * localRootZ, seatBlend);
+        group.position.z = THREE.MathUtils.lerp(-0.16, -1.75 + Math.sin(swingAngle) * localRootY + Math.cos(swingAngle) * localRootZ, transfer);
+        group.rotation.set(swingAngle, THREE.MathUtils.lerp(0, Math.PI, seatBlend), 0);
+      }
+      for (const thigh of [ishaanLLegRef.current, ishaanRLegRef.current, shreeLLegRef.current, shreeRLegRef.current]) {
+        if (thigh) thigh.rotation.x = THREE.MathUtils.lerp(thigh.rotation.x, Math.PI / 2, seatBlend);
+      }
+      for (const knee of [ishaanLKneeRef.current, ishaanRKneeRef.current, shreeLKneeRef.current, shreeRKneeRef.current]) {
+        if (knee) knee.rotation.x = THREE.MathUtils.lerp(knee.rotation.x, -Math.PI / 2, seatBlend);
       }
     } else {
       if (ishaanGroupRef.current) ishaanGroupRef.current.rotation.x = 0;
@@ -410,19 +426,25 @@ export function Scene13_BhaiDoojFinale({
       }
     }
 
-    // Warm intimate framing focused solely on Ishaan & Shree by the chowki or swinging on the jhula
+    // Gentle phase-specific cinematic framing; all targets use the damped camera.
     if (phase === 'applying_tilak') {
-      scratch.camPos.set(0.05, 1.46, 2.38);
+      scratch.camPos.set(1.35, 1.52, 2.15);
       scratch.lookAt.set(0.04, 0.92, -0.14);
+    } else if (phase === 'sweet_offer' || phase === 'eating_together') {
+      scratch.camPos.set(-1.35, 1.48, 2.48);
+      scratch.lookAt.set(0.0, 0.90, -0.12);
     } else if (phase === 'playful_laugh') {
-      scratch.camPos.set(0.0, 1.44, 2.65);
+      scratch.camPos.set(1.0, 1.52, 2.95);
       scratch.lookAt.set(0.0, 0.94, -0.14);
-    } else if (phase === 'jhula_swing' || phase === 'complete') {
-      scratch.camPos.set(Math.sin(t * 0.25) * 0.42, 1.72, 2.72);
-      scratch.lookAt.set(0.0, 1.56, -1.75);
+    } else if (phase === 'jhula_swing') {
+      scratch.camPos.set(reducedMotion ? 1.5 : 1.5 + Math.sin(sim.timer * 0.32) * 0.45, 2.05, 3.65);
+      scratch.lookAt.set(0.0, 1.45, -1.65);
+    } else if (phase === 'complete') {
+      scratch.camPos.set(0.65, 2.45, 5.5);
+      scratch.lookAt.set(0.0, 1.5, -1.5);
     } else {
-      scratch.camPos.set(0.0, 1.5, 2.82);
-      scratch.lookAt.set(0.0, 0.82, 0.02);
+      scratch.camPos.set(-0.7, 2.25, 5.3);
+      scratch.lookAt.set(0.0, 1.25, -1.0);
     }
 
     if (!sim.camInitialized || reducedMotion) {

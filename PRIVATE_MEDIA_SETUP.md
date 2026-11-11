@@ -26,14 +26,14 @@ You can retain your original filenames or use the suggested opaque names. Do not
 | scene02_day1_stream_video | stream-1.mp4 | DAY 1 1.mp4 |
 | scene02_day1_stream_video_2 | stream-2.mp4 | DAY 1 2 .mp4 |
 | scene03_tea_stop | breakfast.jpg | BUN MASKA TEA .jpg |
-| scene05_viewpoint_shree | viewpoint-1.jpg | Shree overlook photo |
-| scene05_viewpoint_solo | viewpoint-2.jpg | Shree and Ishaan mountain photo |
-| scene05_viewpoint_group | viewpoint-3.jpg | All four together |
-| scene06_dhaba | maggi.jpg | Maggi and tea |
-| scene07_neelkanth_food | temple-meal.jpg | Food in Neelkanth |
-| scene09_stairs_landing | stairs.jpg | Baal Kuwari stairs |
-| scene10_baalkuwari | summit.jpg | Baal Kuwari view |
-| scene10_baalkuwari_book | book.jpg | Book at Baal Kuwari |
+| scene05_viewpoint_shree | viewpoint-1.jpg | randomview point srishti.jpg |
+| scene05_viewpoint_solo | viewpoint-2.jpg | me and ishaan explaing mountains.jpg |
+| scene05_viewpoint_group | viewpoint-3.jpg | all four togethere.jpg |
+| scene06_dhaba | maggi.jpg | maggi and tea.jpg |
+| scene07_neelkanth_food | temple-meal.jpg | food in neelkanth.jpg |
+| scene09_stairs_landing | stairs.jpg | baalkumari stairs.jpg (aliases in the local loader also work locally) |
+| scene10_baalkuwari | summit.jpg | baalkumari vieew.jpg |
+| scene10_baalkuwari_book | book.jpg | book on baalkumari temple me.jpg |
 | temple_song | temple.mp3 | Approved Har Har Mahadev recording |
 | finale_song | finale.mp3 | Approved Bhai Dooj recording |
 
@@ -64,3 +64,32 @@ Provider references: [private buckets](https://supabase.com/docs/guides/storage/
 Local QA: typecheck, all 22 regression tests, and production build passed. An accelerated browser run completed all 14 scenes without interaction prompts blocking progress; targeted manual darshan, dining, water purchase, and virtual tilak capture passed.
 The nine original photo frames rendered, both original Day 1 videos played, and both original audio files played through browser-only local linking, without copying or uploading files. Audio playback was checked programmatically, not by listening.
 The local production gate was browser-tested with synthetic credentials. Storage signing/Range tests use a mocked provider; real cloud playback, phone performance, and hosted delivery limits still require deployment verification after approval.
+
+## Exact configuration for the existing Vercel project
+
+Keep repository `gupta-srishtii/meowwww`, branch `main`, Next.js, and root `./` as already selected.
+The Supabase display name "rishikesh memories" is not a bucket name or URL. Copy that project's HTTPS URL into the server environment.
+
+| Vercel variable | Value / purpose |
+| --- | --- |
+| SUPABASE_URL | The project's HTTPS URL, without a trailing slash |
+| SUPABASE_SERVICE_ROLE_KEY | That project's server-only service-role key; never use NEXT_PUBLIC_ |
+| PRIVATE_MEDIA_BUCKET | trip-memories (recommended private bucket; code reads this variable rather than hardcoding a bucket) |
+| PRIVATE_MEDIA_OBJECTS | JSON mapping below, adjusted to exact uploaded object keys |
+| EXPERIENCE_ACCESS_CODE | Independent random gift code, at least 16 characters; give only this to Ishaan |
+| EXPERIENCE_SESSION_SECRET | Different random secret, at least 32 characters; server-only |
+| EXPERIENCE_ENABLED | false until activation is approved; true is required to open the gift |
+
+No other production variable is required by the private-media integration. `REQUIRE_ACCESS_IN_DEVELOPMENT` is optional and only controls the local developer gate.
+
+A flat bucket layout is sufficient (no public folder or Git changes):
+
+```json
+{"scene02_day1_stream_video":"stream-1.mp4","scene02_day1_stream_video_2":"stream-2.mp4","scene03_tea_stop":"breakfast.jpg","scene05_viewpoint_shree":"viewpoint-1.jpg","scene05_viewpoint_solo":"viewpoint-2.jpg","scene05_viewpoint_group":"viewpoint-3.jpg","scene06_dhaba":"maggi.jpg","scene07_neelkanth_food":"temple-meal.jpg","scene09_stairs_landing":"stairs.jpg","scene10_baalkuwari":"summit.jpg","scene10_baalkuwari_book":"book.jpg","temple_song":"temple.mp3","finale_song":"finale.mp3"}
+```
+
+After approval and rights confirmation, upload originals through Supabase Dashboard > Storage > the private bucket. Use the object names above, or map actual uploaded paths exactly (including case, spaces and subfolders). If needed, rename the stored objects to these opaque names; leave local originals untouched. Keep correct image/video/audio MIME types. Never upload private folders to Vercel or put them under public/.
+
+Still required: configure all seven production values, upload the approved 13 originals, then verify photo loading, video seeking and songs on a real device before activation. The Play/Watch click unlocks browser audio after entering the gift code. A browser can still require the song playback button after a policy rejection.
+
+Server-side authentication protects the experience, catalog and every media GET/HEAD request. Unknown objects are rejected, provider URLs expire after five minutes, and public buckets are refused. Live Supabase objects, credentials, MIME types, upload rights, Vercel environment scope and Git auto-deploy settings cannot be verified from repository code. Keep auto-deployment off until approval. No deployment or upload is performed by these instructions.

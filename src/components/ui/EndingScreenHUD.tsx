@@ -1,6 +1,5 @@
 'use client';
 
-import { MinimalTopBar } from '@/components/ui/MinimalHudChrome';
 
 export interface EndingScreenHUDProps {
   audioMuted?: boolean;
@@ -24,15 +23,6 @@ export function EndingScreenHUD({
 }: EndingScreenHUDProps) {
   return (
     <>
-      <MinimalTopBar
-        title="For Ishaan"
-        polaroidCount={polaroidCount}
-        audioMuted={audioMuted}
-        onToggleAudioMute={onToggleAudioMute}
-        onOpenChapters={onOpenChapters}
-        onPause={onPause}
-      />
-
       <div className="pointer-events-none fixed right-4 bottom-4 z-20 flex items-center gap-2 sm:right-6 sm:bottom-6">
         <button
           type="button"

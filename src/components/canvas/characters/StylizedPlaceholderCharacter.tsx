@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo, type RefObject } from 'react';
-import type * as THREE from 'three';
+import * as THREE from 'three';
+import { FabricGeometry, SoftBoxGeometry, DrapedFabricGeometry } from './FabricGeometry';
 import { CharacterHeadOverlay } from '@/components/canvas/characters/CharacterHeadOverlay';
 import { SlingBagAccessory } from '@/components/canvas/characters/SlingBagAccessory';
 import {
@@ -115,32 +116,32 @@ export function StylizedPlaceholderCharacter({
         {/* Contoured feminine pelvis in washed indigo denim */}
         <mesh position={[0, 0.75, 0]} scale={[1.08, 1, 0.85]} castShadow={castShadow}>
           <cylinderGeometry args={[0.118, 0.138, 0.14, 16]} />
-          <meshStandardMaterial color={denimColor} map={denimTex ?? undefined} roughness={0.84} />
+          <meshStandardMaterial color={denimColor} map={!isFestive ? denimTex ?? undefined : undefined} roughness={0.84} />
         </mesh>
 
         {/* Left articulated leg -> flared raw-hem indigo denim -> rounded dark sneaker */}
         <group ref={leftLegRef} position={[-0.08, 0.72, 0]}>
           <mesh position={[0, -0.175, 0]} castShadow={castShadow}>
-            <cylinderGeometry args={[0.052, 0.044, 0.36, 14]} />
-            <meshStandardMaterial color={denimColor} map={denimTex ?? undefined} roughness={0.84} />
+            <FabricGeometry top={0.052} bottom={0.044} height={0.36} />
+            <meshStandardMaterial color={denimColor} map={!isFestive ? denimTex ?? undefined : undefined} roughness={0.84} />
           </mesh>
           <group ref={leftKneeRef} position={[0, -0.35, 0]}>
             <mesh position={[0, -0.155, 0]} castShadow={castShadow}>
-              <cylinderGeometry args={[0.043, 0.072, 0.31, 14]} />
-              <meshStandardMaterial color="#1a3e6f" map={denimTex ?? undefined} roughness={0.85} />
+              <FabricGeometry top={0.043} bottom={isFestive ? 0.036 : 0.072} height={0.31} />
+              <meshStandardMaterial color={isFestive ? '#fef08a' : '#1a3e6f'} map={!isFestive ? denimTex ?? undefined : undefined} roughness={0.85} />
             </mesh>
             {/* Frayed ankle cuff / Churidar gather */}
             <mesh position={[0, -0.305, 0]}>
-              <cylinderGeometry args={[0.073, 0.076, 0.022, 14]} />
+              <FabricGeometry top={isFestive ? 0.037 : 0.073} bottom={isFestive ? 0.04 : 0.076} height={0.022} folds={0.0015} />
               <meshStandardMaterial color={isFestive ? '#fef08a' : '#93b4d8'} roughness={0.95} />
             </mesh>
             {/* Footwear: low-top sneaker OR festive embroidered jutti */}
             <mesh position={[0, -0.336, -0.026]} castShadow={castShadow}>
-              <boxGeometry args={[0.076, 0.056, 0.155]} />
+              <SoftBoxGeometry size={[0.076, 0.056, 0.155]} />
               <meshStandardMaterial color={shoeColor} roughness={0.85} />
             </mesh>
             <mesh position={[0, -0.358, -0.028]}>
-              <boxGeometry args={[0.08, 0.018, 0.162]} />
+              <SoftBoxGeometry size={[0.08, 0.018, 0.162]} />
               <meshStandardMaterial color={isFestive ? '#b45309' : '#27272a'} roughness={0.92} />
             </mesh>
           </group>
@@ -149,24 +150,24 @@ export function StylizedPlaceholderCharacter({
         {/* Right articulated leg */}
         <group ref={rightLegRef} position={[0.08, 0.72, 0]}>
           <mesh position={[0, -0.175, 0]} castShadow={castShadow}>
-            <cylinderGeometry args={[0.052, 0.044, 0.36, 14]} />
-            <meshStandardMaterial color={denimColor} map={denimTex ?? undefined} roughness={0.84} />
+            <FabricGeometry top={0.052} bottom={0.044} height={0.36} />
+            <meshStandardMaterial color={denimColor} map={!isFestive ? denimTex ?? undefined : undefined} roughness={0.84} />
           </mesh>
           <group ref={rightKneeRef} position={[0, -0.35, 0]}>
             <mesh position={[0, -0.155, 0]} castShadow={castShadow}>
-              <cylinderGeometry args={[0.043, 0.072, 0.31, 14]} />
-              <meshStandardMaterial color={isFestive ? '#fef08a' : '#1a3e6f'} map={denimTex ?? undefined} roughness={0.85} />
+              <FabricGeometry top={0.043} bottom={isFestive ? 0.036 : 0.072} height={0.31} />
+              <meshStandardMaterial color={isFestive ? '#fef08a' : '#1a3e6f'} map={!isFestive ? denimTex ?? undefined : undefined} roughness={0.85} />
             </mesh>
             <mesh position={[0, -0.305, 0]}>
-              <cylinderGeometry args={[0.073, 0.076, 0.022, 14]} />
+              <FabricGeometry top={isFestive ? 0.037 : 0.073} bottom={isFestive ? 0.04 : 0.076} height={0.022} folds={0.0015} />
               <meshStandardMaterial color={isFestive ? '#fef08a' : '#93b4d8'} roughness={0.95} />
             </mesh>
             <mesh position={[0, -0.336, -0.026]} castShadow={castShadow}>
-              <boxGeometry args={[0.076, 0.056, 0.155]} />
+              <SoftBoxGeometry size={[0.076, 0.056, 0.155]} />
               <meshStandardMaterial color={shoeColor} roughness={0.85} />
             </mesh>
             <mesh position={[0, -0.358, -0.028]}>
-              <boxGeometry args={[0.08, 0.018, 0.162]} />
+              <SoftBoxGeometry size={[0.08, 0.018, 0.162]} />
               <meshStandardMaterial color={isFestive ? '#b45309' : '#27272a'} roughness={0.92} />
             </mesh>
           </group>
@@ -176,7 +177,7 @@ export function StylizedPlaceholderCharacter({
         <group ref={torsoRef} position={[0, 0.78, 0]}>
           {/* Natural waist-to-ribcage bodice */}
           <mesh position={[0, 0.24, 0]} scale={[1.05, 1, 0.78]} castShadow={castShadow}>
-            <cylinderGeometry args={[0.118, 0.088, 0.28, 16]} />
+            <FabricGeometry top={0.118} bottom={0.088} height={0.28} />
             <meshStandardMaterial
               color={topColor}
               map={topTex ?? undefined}
@@ -202,8 +203,8 @@ export function StylizedPlaceholderCharacter({
             />
           </mesh>
           {/* Flared short kurti / peplum hem */}
-          <mesh position={[0, -0.005, 0.006]} scale={[1.08, 1, 0.88]} castShadow={castShadow}>
-            <cylinderGeometry args={[0.094, 0.19, 0.24, 18]} />
+          <mesh name="garment-hem" userData={{ standingY: -0.005 }} position={[0, -0.005, 0.006]} scale={[1.08, 1, 0.88]} castShadow={castShadow}>
+            <FabricGeometry top={0.094} bottom={0.19} height={0.24} />
             <meshStandardMaterial
               color={skirtColor}
               map={topTex ?? undefined}
@@ -233,27 +234,17 @@ export function StylizedPlaceholderCharacter({
             </>
           )}
 
-          {/* Draped festive dupatta across chest & over shoulders */}
-          {isFestive && (
-            <group position={[0, 0.26, 0]}>
-              <mesh position={[0, 0.06, -0.092]} rotation={[-0.14, 0, 0.1]}>
-                <boxGeometry args={[0.26, 0.14, 0.038]} />
-                <meshStandardMaterial color="#fbbf24" roughness={0.7} />
-              </mesh>
-              <mesh position={[-0.12, -0.02, 0.01]} rotation={[0.08, 0, -0.15]}>
-                <boxGeometry args={[0.068, 0.44, 0.135]} />
-                <meshStandardMaterial color="#fbbf24" roughness={0.7} />
-              </mesh>
-              <mesh position={[0.12, 0.02, 0.01]} rotation={[0.08, 0, 0.15]}>
-                <boxGeometry args={[0.068, 0.38, 0.135]} />
-                <meshStandardMaterial color="#fbbf24" roughness={0.7} />
-              </mesh>
-              <mesh position={[-0.12, -0.22, 0.01]}>
-                <boxGeometry args={[0.072, 0.024, 0.14]} />
-                <meshStandardMaterial color="#f59e0b" metalness={0.5} roughness={0.35} />
-              </mesh>
-            </group>
-          )}
+          {/* Thin pleated fabric follows the torso, with soft shoulder tails. */}
+          {isFestive && <group>
+            <mesh position={[0, 0.30, -0.14]} rotation={[0.08, 0, 0.05]}>
+              <DrapedFabricGeometry width={0.29} height={0.12} depth={0.008} shoulderDrape />
+              <meshStandardMaterial color="#fbbf24" side={THREE.DoubleSide} roughness={0.92} />
+            </mesh>
+            {[-1, 1].map(side => <mesh key={side} position={[side * 0.125, 0.15, -0.118]} rotation={[0.08, side * 0.18, side * 0.08]}>
+              <DrapedFabricGeometry width={0.075} height={0.40} depth={0.008} />
+              <meshStandardMaterial color="#facc15" side={THREE.DoubleSide} roughness={0.9} />
+            </mesh>)}
+          </group>}
 
           {/* Curved crossbody olive-grey sling bag & cobalt strip (omitted during festive ritual) */}
           {!isFestive && (
@@ -277,7 +268,7 @@ export function StylizedPlaceholderCharacter({
               />
             </mesh>
             <mesh position={[0, -0.085, 0]} castShadow={castShadow}>
-              <cylinderGeometry args={[0.036, 0.044, 0.18, 12]} />
+              <FabricGeometry top={0.036} bottom={0.044} height={0.18} />
               <meshStandardMaterial
                 color={sleeveColor}
                 map={topTex ?? undefined}
@@ -319,7 +310,7 @@ export function StylizedPlaceholderCharacter({
               />
             </mesh>
             <mesh position={[0, -0.085, 0]} castShadow={castShadow}>
-              <cylinderGeometry args={[0.036, 0.044, 0.18, 12]} />
+              <FabricGeometry top={0.036} bottom={0.044} height={0.18} />
               <meshStandardMaterial
                 color={sleeveColor}
                 map={topTex ?? undefined}
@@ -404,6 +395,7 @@ export function StylizedPlaceholderCharacter({
               <meshStandardMaterial color={skinTone} roughness={0.72} />
             </mesh>
 
+            <mesh position={[0, -0.04, -0.113]} rotation={[0, 0, Math.PI]}><torusGeometry args={[0.021, 0.0025, 4, 12, Math.PI]} /><meshStandardMaterial color="#985d4c" roughness={0.8} /></mesh>
             {/* Warm stylized eyes & soft brows (facing -Z) */}
             <mesh position={[-0.04, 0.012, -0.11]}>
               <sphereGeometry args={[0.012, 8, 8]} />
@@ -533,7 +525,7 @@ export function StylizedPlaceholderCharacter({
       {/* Left articulated leg + optional twin white jogger stripe (`Ishaan`) + verified footwear */}
       <group ref={leftLegRef} position={[-0.092, 0.74, 0]}>
         <mesh position={[0, -0.18, 0]} castShadow={castShadow}>
-          <cylinderGeometry args={[0.058, 0.051, 0.37, 12]} />
+          <FabricGeometry top={0.058} bottom={0.051} height={0.37} />
           <meshStandardMaterial color={resolvedPantsColor} roughness={0.85} />
         </mesh>
         {isIshaan && !isFestive && (
@@ -570,7 +562,7 @@ export function StylizedPlaceholderCharacter({
             isFestive ? (
               <group position={[0, -0.352, -0.026]}>
                 <mesh castShadow={castShadow}>
-                  <boxGeometry args={[0.086, 0.038, 0.175]} />
+                  <SoftBoxGeometry size={[0.086, 0.038, 0.175]} />
                   <meshStandardMaterial color="#78350f" roughness={0.7} />
                 </mesh>
                 <mesh position={[0, 0.015, -0.075]} rotation={[-0.25, 0, 0]}>
@@ -582,7 +574,7 @@ export function StylizedPlaceholderCharacter({
               /* Grey & cream casual slide sandals (`ishaan and srishti.jpg`) */
               <group position={[0, -0.352, -0.026]}>
                 <mesh castShadow={castShadow}>
-                  <boxGeometry args={[0.09, 0.025, 0.175]} />
+                  <SoftBoxGeometry size={[0.09, 0.025, 0.175]} />
                   <meshStandardMaterial color="#e5e7eb" roughness={0.88} />
                 </mesh>
                 <mesh position={[0, 0.018, -0.018]}>
@@ -594,7 +586,7 @@ export function StylizedPlaceholderCharacter({
           ) : (
             <group position={[0, -0.345, -0.028]}>
               <mesh castShadow={castShadow}>
-                <boxGeometry args={[0.09, 0.062, 0.178]} />
+                <SoftBoxGeometry size={[0.09, 0.062, 0.178]} />
                 <meshStandardMaterial
                   color={
                     isBlackTeeFriend ? '#f8fafc' : isPlaidFriend ? '#78513c' : '#0f172a'
@@ -603,7 +595,7 @@ export function StylizedPlaceholderCharacter({
                 />
               </mesh>
               <mesh position={[0, -0.025, 0]}>
-                <boxGeometry args={[0.094, 0.02, 0.182]} />
+                <SoftBoxGeometry size={[0.094, 0.02, 0.182]} />
                 <meshStandardMaterial color="#e7e5e4" roughness={0.9} />
               </mesh>
             </group>
@@ -614,7 +606,7 @@ export function StylizedPlaceholderCharacter({
       {/* Right articulated leg */}
       <group ref={rightLegRef} position={[0.092, 0.74, 0]}>
         <mesh position={[0, -0.18, 0]} castShadow={castShadow}>
-          <cylinderGeometry args={[0.058, 0.051, 0.37, 12]} />
+          <FabricGeometry top={0.058} bottom={0.051} height={0.37} />
           <meshStandardMaterial color={resolvedPantsColor} roughness={0.85} />
         </mesh>
         {isIshaan && !isFestive && (
@@ -650,7 +642,7 @@ export function StylizedPlaceholderCharacter({
             isFestive ? (
               <group position={[0, -0.352, -0.026]}>
                 <mesh castShadow={castShadow}>
-                  <boxGeometry args={[0.086, 0.038, 0.175]} />
+                  <SoftBoxGeometry size={[0.086, 0.038, 0.175]} />
                   <meshStandardMaterial color="#78350f" roughness={0.7} />
                 </mesh>
                 <mesh position={[0, 0.015, -0.075]} rotation={[-0.25, 0, 0]}>
@@ -661,7 +653,7 @@ export function StylizedPlaceholderCharacter({
             ) : (
               <group position={[0, -0.352, -0.026]}>
                 <mesh castShadow={castShadow}>
-                  <boxGeometry args={[0.09, 0.025, 0.175]} />
+                  <SoftBoxGeometry size={[0.09, 0.025, 0.175]} />
                   <meshStandardMaterial color="#e5e7eb" roughness={0.88} />
                 </mesh>
                 <mesh position={[0, 0.018, -0.018]}>
@@ -673,7 +665,7 @@ export function StylizedPlaceholderCharacter({
           ) : (
             <group position={[0, -0.345, -0.028]}>
               <mesh castShadow={castShadow}>
-                <boxGeometry args={[0.09, 0.062, 0.178]} />
+                <SoftBoxGeometry size={[0.09, 0.062, 0.178]} />
                 <meshStandardMaterial
                   color={
                     isBlackTeeFriend ? '#f8fafc' : isPlaidFriend ? '#78513c' : '#0f172a'
@@ -682,7 +674,7 @@ export function StylizedPlaceholderCharacter({
                 />
               </mesh>
               <mesh position={[0, -0.025, 0]}>
-                <boxGeometry args={[0.094, 0.02, 0.182]} />
+                <SoftBoxGeometry size={[0.094, 0.02, 0.182]} />
                 <meshStandardMaterial color="#e7e5e4" roughness={0.9} />
               </mesh>
             </group>
@@ -693,7 +685,7 @@ export function StylizedPlaceholderCharacter({
       {/* Upper Torso + Sleeves + Articulated Forearm/Chai Cup */}
       <group ref={torsoRef} position={[0, 0.82, 0]}>
         <mesh position={[0, 0.25, 0]} scale={[1.14, 1, 0.78]} castShadow={castShadow}>
-          <cylinderGeometry args={[0.155, 0.132, 0.5, 14]} />
+          <FabricGeometry top={0.155} bottom={0.132} height={0.5} />
           <meshStandardMaterial
             color={resolvedShirtColor}
             map={isPlaidFriend ? plaidTex ?? undefined : undefined}
@@ -718,8 +710,8 @@ export function StylizedPlaceholderCharacter({
         {isIshaan && isFestive && (
           <>
             {/* Long ethnic kurta lower hem extending over white churidar */}
-            <mesh position={[0, -0.08, 0]} scale={[1.14, 1, 0.8]} castShadow={castShadow}>
-              <cylinderGeometry args={[0.138, 0.165, 0.28, 14]} />
+            <mesh name="garment-hem" userData={{ standingY: -0.08 }} position={[0, -0.08, 0]} scale={[1.14, 1, 0.8]} castShadow={castShadow}>
+              <FabricGeometry top={0.138} bottom={0.165} height={0.28} />
               <meshStandardMaterial color={resolvedShirtColor} roughness={0.78} />
             </mesh>
             {/* Mandarin / Nehru collar */}
@@ -743,6 +735,7 @@ export function StylizedPlaceholderCharacter({
           </>
         )}
 
+        {!isFestive && <mesh position={[0, 0.50, 0]} rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.057, 0.008, 5, 16]} /><meshStandardMaterial color={resolvedShirtColor} roughness={0.9} /></mesh>}
         {/* Neck */}
         <mesh position={[0, 0.53, 0]} castShadow={castShadow}>
           <cylinderGeometry args={[0.048, 0.054, 0.1, 12]} />
@@ -751,10 +744,11 @@ export function StylizedPlaceholderCharacter({
 
         {/* Left Arm */}
         <group ref={leftArmRef} position={[-0.205, 0.44, 0]}>
+          <mesh position={[0, -0.012, 0]} castShadow={castShadow}><sphereGeometry args={[0.049, 12, 8]} /><meshStandardMaterial color={resolvedShirtColor} map={isPlaidFriend ? plaidTex ?? undefined : undefined} roughness={0.84} /></mesh>
           {isShortSleeve ? (
             <>
               <mesh position={[0, -0.075, 0]} castShadow={castShadow}>
-                <cylinderGeometry args={[0.048, 0.045, 0.15, 10]} />
+                <FabricGeometry top={0.048} bottom={0.045} height={0.15} />
                 <meshStandardMaterial color={resolvedShirtColor} roughness={0.78} />
               </mesh>
               <mesh position={[0, -0.255, 0]} castShadow={castShadow}>
@@ -764,7 +758,7 @@ export function StylizedPlaceholderCharacter({
             </>
           ) : (
             <mesh position={[0, -0.185, 0]} castShadow={castShadow}>
-              <cylinderGeometry args={[0.044, 0.036, 0.37, 10]} />
+              <FabricGeometry top={0.044} bottom={0.036} height={0.37} />
               <meshStandardMaterial
                 color={resolvedShirtColor}
                 map={isPlaidFriend ? plaidTex ?? undefined : undefined}
@@ -780,8 +774,9 @@ export function StylizedPlaceholderCharacter({
 
         {/* Right Arm + Forearm + Optional Kulhad */}
         <group ref={rightArmRef} position={[0.205, 0.44, 0]}>
+          <mesh position={[0, -0.012, 0]} castShadow={castShadow}><sphereGeometry args={[0.049, 12, 8]} /><meshStandardMaterial color={resolvedShirtColor} map={isPlaidFriend ? plaidTex ?? undefined : undefined} roughness={0.84} /></mesh>
           <mesh position={[0, -0.09, 0]} castShadow={castShadow}>
-            <cylinderGeometry args={[0.047, 0.043, 0.18, 10]} />
+            <FabricGeometry top={0.047} bottom={0.043} height={0.18} />
             <meshStandardMaterial
               color={resolvedShirtColor}
               map={isPlaidFriend ? plaidTex ?? undefined : undefined}
@@ -792,7 +787,7 @@ export function StylizedPlaceholderCharacter({
             <mesh position={[0, -0.095, 0]} castShadow={castShadow}>
               <cylinderGeometry args={[0.036, 0.03, 0.19, 10]} />
               <meshStandardMaterial
-                color={isPlaidFriend ? resolvedShirtColor : skinColor}
+                color={isPlaidFriend || isFestive ? resolvedShirtColor : skinColor}
                 map={isPlaidFriend ? plaidTex ?? undefined : undefined}
                 roughness={0.76}
               />
@@ -867,6 +862,7 @@ export function StylizedPlaceholderCharacter({
             <sphereGeometry args={[0.132, 16, 14]} />
             <meshStandardMaterial color={skinColor} roughness={0.74} />
           </mesh>
+          <mesh position={[0, -0.04, -0.12]} rotation={[0, 0, Math.PI]}><torusGeometry args={[0.022, 0.0025, 4, 12, Math.PI]} /><meshStandardMaterial color="#985d4c" roughness={0.8} /></mesh>
           <mesh position={[-0.04, 0.01, -0.115]}>
             <sphereGeometry args={[0.012, 8, 8]} />
             <meshStandardMaterial color="#18181b" roughness={0.35} />

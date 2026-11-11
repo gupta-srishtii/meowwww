@@ -156,6 +156,8 @@ function useRigRefs(): HumanRigRefs & {
  * 3) `return_and_kanishka`: Return at dusk -> Srishti spends relaxed evening time with Kanishka as evening turns to ~9 PM night -> Ishaan calls for dhaba dinner.
  * 4) `market_street_walk` -> `night_dhaba_dinner` -> `night_hotel_return`.
  */
+const STREAM_SITTING_SPOTS = Object.fromEntries(Object.entries(DAY1_WATERFALL_ROCK_SEATS).map(([id, seat]) => [id, { ...seat, x: seat.x - Math.sin(seat.yaw) * 0.19, z: seat.z - Math.cos(seat.yaw) * 0.19 }])) as typeof DAY1_WATERFALL_ROCK_SEATS;
+
 export function Scene02_RishikeshDay1({
   walkInputRef,
   qualityProfile,
@@ -363,17 +365,17 @@ export function Scene02_RishikeshDay1({
         }
 
         const sitT = Math.max(0, Math.min(1, (walkElapsed - WATERFALL_WALK_IN_DURATION_SEC) / 5.4));
-        const rockSeatIshaan = DAY1_WATERFALL_ROCK_SEATS.ishaan;
-        const rockSeatShree = DAY1_WATERFALL_ROCK_SEATS.srishti;
-        const rockSeatManish = DAY1_WATERFALL_ROCK_SEATS.friend_black_tee;
-        const rockSeatYash = DAY1_WATERFALL_ROCK_SEATS.friend_plaid;
+        const rockSeatIshaan = STREAM_SITTING_SPOTS.ishaan;
+        const rockSeatShree = STREAM_SITTING_SPOTS.srishti;
+        const rockSeatManish = STREAM_SITTING_SPOTS.friend_black_tee;
+        const rockSeatYash = STREAM_SITTING_SPOTS.friend_plaid;
 
         animateCharacterRig({
           refs: manishRig,
           posX: rockSeatManish.x,
           posZ: rockSeatManish.z,
           facingYaw: rockSeatManish.yaw,
-          groundY: rockSeatManish.rockTopY - 0.52,
+          groundY: rockSeatManish.rockTopY - 0.45,
           strideRatio: 0,
           stridePhase: 0,
           elapsed: sim.elapsed,
@@ -386,7 +388,7 @@ export function Scene02_RishikeshDay1({
           posX: rockSeatYash.x,
           posZ: rockSeatYash.z,
           facingYaw: rockSeatYash.yaw,
-          groundY: rockSeatYash.rockTopY - 0.52,
+          groundY: rockSeatYash.rockTopY - 0.45,
           strideRatio: 0,
           stridePhase: 0,
           elapsed: sim.elapsed,
@@ -448,7 +450,7 @@ export function Scene02_RishikeshDay1({
             posX: rockSeatIshaan.x,
             posZ: rockSeatIshaan.z,
             facingYaw: rockSeatIshaan.yaw,
-            groundY: rockSeatIshaan.rockTopY - 0.52,
+            groundY: rockSeatIshaan.rockTopY - 0.45,
             strideRatio: 0,
             stridePhase: 0,
             elapsed: sim.elapsed,
@@ -461,7 +463,7 @@ export function Scene02_RishikeshDay1({
             posX: rockSeatShree.x,
             posZ: rockSeatShree.z,
             facingYaw: rockSeatShree.yaw,
-            groundY: rockSeatShree.rockTopY - 0.52,
+            groundY: rockSeatShree.rockTopY - 0.45,
             strideRatio: 0,
             stridePhase: 0,
             elapsed: sim.elapsed,
@@ -567,7 +569,7 @@ export function Scene02_RishikeshDay1({
         posX: DAY1_MAGGI_SEATS.ishaan.x,
         posZ: DAY1_MAGGI_SEATS.ishaan.z,
         facingYaw: DAY1_MAGGI_SEATS.ishaan.yaw,
-        groundY: -0.25,
+        groundY: 0,
         strideRatio: 0,
         stridePhase: 0,
         elapsed: sim.elapsed,
@@ -580,7 +582,7 @@ export function Scene02_RishikeshDay1({
         posX: DAY1_MAGGI_SEATS.srishti.x,
         posZ: DAY1_MAGGI_SEATS.srishti.z,
         facingYaw: DAY1_MAGGI_SEATS.srishti.yaw,
-        groundY: -0.25,
+        groundY: 0,
         strideRatio: 0,
         stridePhase: 0,
         elapsed: sim.elapsed,
@@ -594,7 +596,7 @@ export function Scene02_RishikeshDay1({
         posX: DAY1_MAGGI_SEATS.friend_black_tee.x,
         posZ: DAY1_MAGGI_SEATS.friend_black_tee.z,
         facingYaw: DAY1_MAGGI_SEATS.friend_black_tee.yaw,
-        groundY: -0.25,
+        groundY: 0,
         strideRatio: 0,
         stridePhase: 0,
         elapsed: sim.elapsed,
@@ -608,7 +610,7 @@ export function Scene02_RishikeshDay1({
         posX: DAY1_MAGGI_SEATS.friend_plaid.x,
         posZ: DAY1_MAGGI_SEATS.friend_plaid.z,
         facingYaw: DAY1_MAGGI_SEATS.friend_plaid.yaw,
-        groundY: -0.25,
+        groundY: 0,
         strideRatio: 0,
         stridePhase: 0,
         elapsed: sim.elapsed,
@@ -1052,14 +1054,14 @@ export function Scene02_RishikeshDay1({
               position={
                 waterfallSeated
                   ? [
-                      DAY1_WATERFALL_ROCK_SEATS.ishaan.x,
-                      DAY1_WATERFALL_ROCK_SEATS.ishaan.rockTopY - 0.52,
-                      DAY1_WATERFALL_ROCK_SEATS.ishaan.z,
+                      STREAM_SITTING_SPOTS.ishaan.x,
+                      STREAM_SITTING_SPOTS.ishaan.rockTopY - 0.45,
+                      STREAM_SITTING_SPOTS.ishaan.z,
                     ]
                   : [-2.15, 0.02, -1.35]
               }
               rotationY={
-                waterfallSeated ? DAY1_WATERFALL_ROCK_SEATS.ishaan.yaw : -Math.PI * 0.48
+                waterfallSeated ? STREAM_SITTING_SPOTS.ishaan.yaw : -Math.PI * 0.48
               }
               castShadow={shadowsEnabled}
             />
@@ -1079,13 +1081,13 @@ export function Scene02_RishikeshDay1({
               position={
                 waterfallSeated
                   ? [
-                      DAY1_WATERFALL_ROCK_SEATS.srishti.x,
-                      DAY1_WATERFALL_ROCK_SEATS.srishti.rockTopY - 0.52,
-                      DAY1_WATERFALL_ROCK_SEATS.srishti.z,
+                      STREAM_SITTING_SPOTS.srishti.x,
+                      STREAM_SITTING_SPOTS.srishti.rockTopY - 0.45,
+                      STREAM_SITTING_SPOTS.srishti.z,
                     ]
                   : [1.15, 0.02, -1.75]
               }
-              rotationY={waterfallSeated ? DAY1_WATERFALL_ROCK_SEATS.srishti.yaw : -1.2}
+              rotationY={waterfallSeated ? STREAM_SITTING_SPOTS.srishti.yaw : -1.2}
               castShadow={shadowsEnabled}
             />
             <StylizedPlaceholderCharacter
@@ -1102,11 +1104,11 @@ export function Scene02_RishikeshDay1({
               rightArmRef={manishRig.rightArmRef}
               rightForearmRef={manishRig.rightForearmRef}
               position={[
-                DAY1_WATERFALL_ROCK_SEATS.friend_black_tee.x,
-                DAY1_WATERFALL_ROCK_SEATS.friend_black_tee.rockTopY - 0.52,
-                DAY1_WATERFALL_ROCK_SEATS.friend_black_tee.z,
+                STREAM_SITTING_SPOTS.friend_black_tee.x,
+                STREAM_SITTING_SPOTS.friend_black_tee.rockTopY - 0.45,
+                STREAM_SITTING_SPOTS.friend_black_tee.z,
               ]}
-              rotationY={DAY1_WATERFALL_ROCK_SEATS.friend_black_tee.yaw}
+              rotationY={STREAM_SITTING_SPOTS.friend_black_tee.yaw}
               castShadow={shadowsEnabled}
             />
             <StylizedPlaceholderCharacter
@@ -1123,11 +1125,11 @@ export function Scene02_RishikeshDay1({
               rightArmRef={yashRig.rightArmRef}
               rightForearmRef={yashRig.rightForearmRef}
               position={[
-                DAY1_WATERFALL_ROCK_SEATS.friend_plaid.x,
-                DAY1_WATERFALL_ROCK_SEATS.friend_plaid.rockTopY - 0.52,
-                DAY1_WATERFALL_ROCK_SEATS.friend_plaid.z,
+                STREAM_SITTING_SPOTS.friend_plaid.x,
+                STREAM_SITTING_SPOTS.friend_plaid.rockTopY - 0.45,
+                STREAM_SITTING_SPOTS.friend_plaid.z,
               ]}
-              rotationY={DAY1_WATERFALL_ROCK_SEATS.friend_plaid.yaw}
+              rotationY={STREAM_SITTING_SPOTS.friend_plaid.yaw}
               castShadow={shadowsEnabled}
             />
           </>
@@ -1154,7 +1156,7 @@ export function Scene02_RishikeshDay1({
           leftArmRef={ishaanRig.leftArmRef}
           rightArmRef={ishaanRig.rightArmRef}
           rightForearmRef={ishaanRig.rightForearmRef}
-          position={[DAY1_MAGGI_SEATS.ishaan.x, -0.25, DAY1_MAGGI_SEATS.ishaan.z]}
+          position={[DAY1_MAGGI_SEATS.ishaan.x, 0, DAY1_MAGGI_SEATS.ishaan.z]}
           rotationY={DAY1_MAGGI_SEATS.ishaan.yaw}
           holdingFork
           castShadow={shadowsEnabled}
@@ -1172,7 +1174,7 @@ export function Scene02_RishikeshDay1({
           leftArmRef={shreeRig.leftArmRef}
           rightArmRef={shreeRig.rightArmRef}
           rightForearmRef={shreeRig.rightForearmRef}
-          position={[DAY1_MAGGI_SEATS.srishti.x, -0.25, DAY1_MAGGI_SEATS.srishti.z]}
+          position={[DAY1_MAGGI_SEATS.srishti.x, 0, DAY1_MAGGI_SEATS.srishti.z]}
           rotationY={DAY1_MAGGI_SEATS.srishti.yaw}
           castShadow={shadowsEnabled}
         />
@@ -1191,7 +1193,7 @@ export function Scene02_RishikeshDay1({
           rightForearmRef={manishRig.rightForearmRef}
           position={[
             DAY1_MAGGI_SEATS.friend_black_tee.x,
-            -0.25,
+            0,
             DAY1_MAGGI_SEATS.friend_black_tee.z,
           ]}
           rotationY={DAY1_MAGGI_SEATS.friend_black_tee.yaw}
@@ -1213,7 +1215,7 @@ export function Scene02_RishikeshDay1({
           rightForearmRef={yashRig.rightForearmRef}
           position={[
             DAY1_MAGGI_SEATS.friend_plaid.x,
-            -0.25,
+            0,
             DAY1_MAGGI_SEATS.friend_plaid.z,
           ]}
           rotationY={DAY1_MAGGI_SEATS.friend_plaid.yaw}
@@ -1256,7 +1258,7 @@ export function Scene02_RishikeshDay1({
           leftArmRef={ishaanRig.leftArmRef}
           rightArmRef={ishaanRig.rightArmRef}
           rightForearmRef={ishaanRig.rightForearmRef}
-          position={[DAY1_NIGHT_DHABA_SEATS.ishaan.x, -0.25, DAY1_NIGHT_DHABA_SEATS.ishaan.z]}
+          position={[DAY1_NIGHT_DHABA_SEATS.ishaan.x, 0, DAY1_NIGHT_DHABA_SEATS.ishaan.z]}
           rotationY={DAY1_NIGHT_DHABA_SEATS.ishaan.yaw}
           holdingFork
           castShadow={shadowsEnabled}
@@ -1274,7 +1276,7 @@ export function Scene02_RishikeshDay1({
           leftArmRef={shreeRig.leftArmRef}
           rightArmRef={shreeRig.rightArmRef}
           rightForearmRef={shreeRig.rightForearmRef}
-          position={[DAY1_NIGHT_DHABA_SEATS.srishti.x, -0.25, DAY1_NIGHT_DHABA_SEATS.srishti.z]}
+          position={[DAY1_NIGHT_DHABA_SEATS.srishti.x, 0, DAY1_NIGHT_DHABA_SEATS.srishti.z]}
           rotationY={DAY1_NIGHT_DHABA_SEATS.srishti.yaw}
           castShadow={shadowsEnabled}
         />
@@ -1293,7 +1295,7 @@ export function Scene02_RishikeshDay1({
           rightForearmRef={manishRig.rightForearmRef}
           position={[
             DAY1_NIGHT_DHABA_SEATS.friend_black_tee.x,
-            -0.25,
+            0,
             DAY1_NIGHT_DHABA_SEATS.friend_black_tee.z,
           ]}
           rotationY={DAY1_NIGHT_DHABA_SEATS.friend_black_tee.yaw}
@@ -1315,7 +1317,7 @@ export function Scene02_RishikeshDay1({
           rightForearmRef={yashRig.rightForearmRef}
           position={[
             DAY1_NIGHT_DHABA_SEATS.friend_plaid.x,
-            -0.25,
+            0,
             DAY1_NIGHT_DHABA_SEATS.friend_plaid.z,
           ]}
           rotationY={DAY1_NIGHT_DHABA_SEATS.friend_plaid.yaw}

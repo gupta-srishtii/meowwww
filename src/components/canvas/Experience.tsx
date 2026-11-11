@@ -10,6 +10,7 @@ import {
 import type { Day1Phase } from '@/components/canvas/scenes/Scene02_RishikeshDay1';
 import type { ViewpointPhotoMoment } from '@/components/canvas/scenes/Scene05_ViewpointStop';
 import type { BhaiDoojPhase } from '@/components/canvas/scenes/Scene13_BhaiDoojFinale';
+import type { SceneId } from '@/lib/sceneConfig';
 import { DevPhase1BPanel } from '@/components/ui/DevPhase1BPanel';
 import { FallbackStorybookView } from '@/components/ui/FallbackStorybookView';
 import { ChapterSelectModal } from '@/components/ui/ChapterSelectModal';
@@ -1000,9 +1001,26 @@ export default function Experience() {
     executeWalkHotspotById(nearbyHotspot.id);
   }, [executeWalkHotspotById, nearbyHotspot]);
 
+  const pendingAutoHotspot = useRef<{ id: string; scene: SceneId; stage: string } | null>(null);
+  useEffect(() => {
+    const pending = pendingAutoHotspot.current;
+    if (activeNarration !== null || !pending) return;
+    pendingAutoHotspot.current = null;
+    const state = useProgressStore.getState();
+    if (state.committedSceneId === pending.scene && state.roadSubStage === pending.stage) {
+      executeWalkHotspotById(pending.id);
+    }
+  }, [activeNarration, committedSceneId, roadSubStage, executeWalkHotspotById]);
+
   const handleAutoTriggerHotspot = useCallback(
     (hotspotId: string) => {
-      if (useProgressStore.getState().activeNarration !== null) return;
+      const state = useProgressStore.getState();
+      if (state.activeNarration !== null) {
+        // Scenes consume their one-shot trigger on arrival. Queue it while a
+        // narration closes instead of losing it and permanently stalling Watch.
+        pendingAutoHotspot.current = { id: hotspotId, scene: state.committedSceneId, stage: state.roadSubStage };
+        return;
+      }
       executeWalkHotspotById(hotspotId);
     },
     [executeWalkHotspotById]

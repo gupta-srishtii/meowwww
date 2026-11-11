@@ -1,7 +1,8 @@
 'use client';
 
 import type { RefObject } from 'react';
-import type * as THREE from 'three';
+import * as THREE from 'three';
+import { FabricGeometry, SoftBoxGeometry, DrapedFabricGeometry } from './FabricGeometry';
 
 export interface StallCookCharacterProps {
   variant?: 'owner' | 'helper';
@@ -63,32 +64,32 @@ export function StallCookCharacter({
         <meshStandardMaterial color={pantsColor} roughness={0.86} />
       </mesh>
       <mesh position={[-0.095, 0.036, -0.025]} castShadow={castShadow}>
-        <boxGeometry args={[0.09, 0.07, 0.17]} />
+        <SoftBoxGeometry size={[0.09, 0.07, 0.17]} />
         <meshStandardMaterial color="#18181b" roughness={0.9} />
       </mesh>
       <mesh position={[0.095, 0.036, -0.025]} castShadow={castShadow}>
-        <boxGeometry args={[0.09, 0.07, 0.17]} />
+        <SoftBoxGeometry size={[0.09, 0.07, 0.17]} />
         <meshStandardMaterial color="#18181b" roughness={0.9} />
       </mesh>
 
       {/* Torso + Apron + Gamcha (owner) + Articulated Cooking Arms */}
       <group ref={torsoRef} position={[0, 0.82, 0]}>
         <mesh position={[0, 0.25, 0]} scale={[1.15, 1, 0.78]} castShadow={castShadow}>
-          <cylinderGeometry args={[0.158, 0.135, 0.5, 12]} />
+          <FabricGeometry top={0.158} bottom={0.135} height={0.5} />
           <meshStandardMaterial color={shirtColor} roughness={0.8} />
         </mesh>
 
         {/* Modest cloth work apron */}
         <mesh position={[0, 0.12, -0.118]} castShadow={castShadow}>
-          <boxGeometry args={[0.25, 0.52, 0.024]} />
-          <meshStandardMaterial color={apronColor} roughness={0.88} />
+          <DrapedFabricGeometry width={0.25} height={0.52} depth={0.008} />
+          <meshStandardMaterial color={apronColor} side={THREE.DoubleSide} roughness={0.88} />
         </mesh>
 
         {/* Owner shoulder gamcha / kitchen towel */}
         {isOwner && (
           <mesh position={[-0.12, 0.39, 0.01]} rotation={[0.08, 0, -0.1]} castShadow={castShadow}>
-            <boxGeometry args={[0.085, 0.28, 0.165]} />
-            <meshStandardMaterial color="#9f3e34" roughness={0.86} />
+            <DrapedFabricGeometry width={0.085} height={0.28} depth={0.014} />
+            <meshStandardMaterial color="#9f3e34" side={THREE.DoubleSide} roughness={0.86} />
           </mesh>
         )}
 

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Html } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { FabricGeometry, DrapedFabricGeometry } from '../characters/FabricGeometry';
 import {
   buildConnectedHillGeometry,
   ConnectedHillTerrain,
@@ -1037,23 +1038,23 @@ export function HotelReturnEnvironment({
             rotation={[0, f.rotY, 0]}
           >
             <mesh position={[-0.08, 0.4, 0]} castShadow={shadowsEnabled}>
-              <cylinderGeometry args={[0.068, 0.06, 0.78, 8]} />
+              <FabricGeometry top={0.068} bottom={0.06} height={0.78} />
               <meshStandardMaterial color={f.trousers} roughness={0.88} />
             </mesh>
             <mesh position={[0.08, 0.4, 0]} castShadow={shadowsEnabled}>
-              <cylinderGeometry args={[0.068, 0.06, 0.78, 8]} />
+              <FabricGeometry top={0.068} bottom={0.06} height={0.78} />
               <meshStandardMaterial color={f.trousers} roughness={0.88} />
             </mesh>
             <mesh position={[0, 1.03, 0]} castShadow={shadowsEnabled}>
-              <cylinderGeometry args={[0.17, 0.145, 0.54, 10]} />
+              <FabricGeometry top={0.17} bottom={0.145} height={0.54} />
               <meshStandardMaterial color={f.shirt} roughness={0.82} />
             </mesh>
             {/* Kanishka warm cream shawl/dupatta accent across torso + compact badge */}
             {idx === 0 && (
               <>
                 <mesh position={[0, 1.08, 0.04]} rotation={[0.1, 0, -0.35]}>
-                  <boxGeometry args={[0.38, 0.14, 0.24]} />
-                  <meshStandardMaterial color="#fef3c7" roughness={0.85} />
+                  <DrapedFabricGeometry width={0.38} height={0.23} depth={0.025} />
+                  <meshStandardMaterial color="#fef3c7" side={THREE.DoubleSide} roughness={0.9} />
                 </mesh>
                 <Html
                   center

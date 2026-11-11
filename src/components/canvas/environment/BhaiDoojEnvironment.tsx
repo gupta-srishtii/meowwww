@@ -3,6 +3,8 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { DrapedFabricGeometry, SoftBoxGeometry } from '../characters/FabricGeometry';
+import { FestiveDecor } from './FestiveDecor';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
 
@@ -14,6 +16,7 @@ export interface BhaiDoojEnvironmentProps {
 }
 
 const FAIRY_LIGHTS_X = [-2.6, -1.95, -1.3, -0.65, 0, 0.65, 1.3, 1.95, 2.6];
+const LIGHT_WIRE = new THREE.CatmullRomCurve3(FAIRY_LIGHTS_X.map(x => new THREE.Vector3(x, Math.cos(x / 2.6 * Math.PI / 2) * -0.24 + 3.05, -3.35)));
 
 /**
  * Warm festive courtyard veranda for the Bhai Dooj celebration:
@@ -75,10 +78,11 @@ export function BhaiDoojEnvironment({
         shadow-bias={-0.0005}
       />
 
+      <FestiveDecor />
       {/* Warm polished hardwood floor */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow={shadowsEnabled}>
         <planeGeometry args={[14, 12]} />
-        <meshStandardMaterial color="#5b3421" roughness={0.78} />
+        <meshStandardMaterial color="#5b3421" roughness={0.55} />
       </mesh>
 
       {/* Woven crimson-and-gold ceremonial floor rug */}
@@ -117,8 +121,8 @@ export function BhaiDoojEnvironment({
       {/* Draped warm saffron/crimson festive side curtains flanking altar wall */}
       {[-3.65, 3.65].map((dx) => (
         <mesh key={`curtain-${dx}`} position={[dx, 2.3, -3.37]} castShadow={shadowsEnabled}>
-          <boxGeometry args={[0.78, 3.4, 0.08]} />
-          <meshStandardMaterial color="#9f1239" roughness={0.9} />
+          <DrapedFabricGeometry width={0.95} height={3.4} depth={0.055} />
+          <meshStandardMaterial color="#9f1239" side={THREE.DoubleSide} roughness={0.9} />
         </mesh>
       ))}
       {/* Brass mandala/sunburst frame centered high on backdrop wall */}
@@ -132,6 +136,7 @@ export function BhaiDoojEnvironment({
       </mesh>
 
       {/* Warm string fairy lights draped across backdrop & jhula header */}
+      <mesh><tubeGeometry args={[LIGHT_WIRE, 32, 0.006, 4, false]} /><meshStandardMaterial color="#8b6530" roughness={0.8} /></mesh>
       {FAIRY_LIGHTS_X.map((fx, idx) => {
         const sag = Math.cos((fx / 2.6) * (Math.PI / 2)) * -0.24 + 3.05;
         return (
@@ -145,17 +150,11 @@ export function BhaiDoojEnvironment({
           </mesh>
         );
       })}
-      {[-2.8, 2.8].map((mx) =>
-        [1.55, 1.88, 2.21, 2.54, 2.87].map((my, idx) => (
-          <mesh key={`${mx}-${my}`} position={[mx, my, -3.36]}>
-            <sphereGeometry args={[0.072, 10, 10]} />
-            <meshStandardMaterial
-              color={idx % 2 === 0 ? '#f59e0b' : '#ea580c'}
-              roughness={0.75}
-            />
-          </mesh>
-        ))
-      )}
+      <mesh position={[0, 3.35, -3.30]}>
+        <DrapedFabricGeometry width={5.9} height={0.34} depth={0.05} />
+        <meshStandardMaterial color="#c48635" side={THREE.DoubleSide} roughness={0.88} />
+      </mesh>
+      <mesh position={[0, 0.12, -3.15]}><boxGeometry args={[6.3, 0.12, 0.2]} /><meshStandardMaterial color="#ac753a" metalness={0.25} roughness={0.5} /></mesh>
 
       {/* Ornate Flower-Draped Traditional Wooden Jhula (Swing) at `[0, 0, -1.75]` */}
       <group position={[0, 0, -1.75]}>
@@ -206,17 +205,21 @@ export function BhaiDoojEnvironment({
               ))}
             </group>
           ))}
+          {[-0.73, 0.73].map(x => <group key={x}>
+            <mesh position={[x, -1.68, 0]}><SoftBoxGeometry size={[0.055, 0.08, 0.48]} /><meshStandardMaterial color="#844321" roughness={0.52} /></mesh>
+            <mesh position={[x * 0.87, -1.73, -0.13]} rotation={[0, 0, x * 0.12]}><SoftBoxGeometry size={[0.16, 0.24, 0.13]} /><meshStandardMaterial color="#d49a32" roughness={0.92} /></mesh>
+          </group>)}
           {/* Carved seat plank & crimson-gold brocade cushion (`world seat y = 2.55 - 1.92 = 0.63`) */}
           <mesh position={[0, -1.94, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
             <boxGeometry args={[1.76, 0.08, 0.58]} />
             <meshStandardMaterial color="#6d3a1e" roughness={0.8} />
           </mesh>
           <mesh position={[0, -1.89, 0.01]} castShadow={shadowsEnabled}>
-            <boxGeometry args={[1.64, 0.07, 0.5]} />
+            <SoftBoxGeometry size={[1.64, 0.07, 0.5]} />
             <meshStandardMaterial color="#b91c1c" roughness={0.85} />
           </mesh>
-          <mesh position={[0, -1.56, -0.26]} castShadow={shadowsEnabled}>
-            <boxGeometry args={[1.68, 0.34, 0.07]} />
+          <mesh name="jhula-backrest" position={[0, -1.56, -0.29]} castShadow={shadowsEnabled}>
+            <SoftBoxGeometry size={[1.68, 0.34, 0.07]} />
             <meshStandardMaterial color="#7c2d12" roughness={0.82} />
           </mesh>
         </group>
@@ -246,7 +249,7 @@ export function BhaiDoojEnvironment({
           ))}
           {/* Lush brocade crimson top cushion + gold trim */}
           <mesh position={[0, 0.33, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
-            <boxGeometry args={[0.56, 0.1, 0.52]} />
+            <SoftBoxGeometry size={[0.56, 0.1, 0.52]} />
             <meshStandardMaterial color="#b91c1c" roughness={0.84} />
           </mesh>
           <mesh position={[0, 0.295, 0]}>

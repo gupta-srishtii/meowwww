@@ -3,6 +3,7 @@
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { FabricGeometry, DrapedFabricGeometry } from '../characters/FabricGeometry';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 export interface NeelkanthMarketAndCrowdProps {
@@ -44,13 +45,13 @@ function DevoteeNpc({
         <meshStandardMaterial color={pantsColor} roughness={0.86} />
       </mesh>
       <mesh position={[0, 1.0, 0]} scale={[1.1, 1, 0.78]} castShadow={castShadow}>
-        <cylinderGeometry args={[0.14, 0.12, 0.5, 10]} />
+        <FabricGeometry top={0.14} bottom={0.12} height={0.5} />
         <meshStandardMaterial color={shirtColor} roughness={0.82} />
       </mesh>
       {hasStoleOrDupatta && (
         <mesh position={[-0.1, 1.04, -0.02]} rotation={[0.05, 0, 0.12]}>
-          <boxGeometry args={[0.06, 0.45, 0.16]} />
-          <meshStandardMaterial color={hasStoleOrDupatta} roughness={0.85} />
+          <DrapedFabricGeometry width={0.075} height={0.45} depth={0.008} />
+          <meshStandardMaterial color={hasStoleOrDupatta} side={THREE.DoubleSide} roughness={0.9} />
         </mesh>
       )}
       <mesh position={[-0.17, 1.02, -0.06]} rotation={[holdingThali ? 0.85 : 0.08, 0, -0.06]}>
