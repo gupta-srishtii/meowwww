@@ -50,6 +50,7 @@ export interface ProgressStoreState {
   transitionPhase: TransitionPhase;
   transitionError: string | null;
   transitionToken: number;
+  sceneMountToken: number;
   retryNonce: number;
   mountAttemptedForTransition: boolean;
   saveOnNextCommit: boolean;
@@ -146,6 +147,7 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
   transitionPhase: 'idle',
   transitionError: null,
   transitionToken: 0,
+  sceneMountToken: 0,
   retryNonce: 0,
   mountAttemptedForTransition: false,
   saveOnNextCommit: false,
@@ -205,6 +207,7 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
     const state = get();
     if (token !== state.transitionToken) return;
     set({
+      sceneMountToken: token,
       transitionPhase: 'mounting',
       transitionError: null,
       mountAttemptedForTransition: true,
@@ -288,6 +291,7 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
     const state = get();
     const safeSceneId = state.committedSceneId;
     set({
+      sceneMountToken: token,
       requestedSceneId: safeSceneId,
       retryNonce: state.retryNonce + 1,
       devFailureMode: 'none',
@@ -475,6 +479,7 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
       version: CHECKPOINT_VERSION,
       committedSceneId: state.committedSceneId,
       collectedPolaroids: [...state.collectedPolaroids],
+      furthestChapterRank: state.furthestChapterRank,
       stairStepCount: state.stairStepCount > 0 ? state.stairStepCount : undefined,
       baalKuwariStairDirection: state.baalKuwariStairDirection,
       mountainRoadSegment: state.mountainRoadSegment,
@@ -506,6 +511,7 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
       collectedPolaroids: [...data.collectedPolaroids],
       furthestChapterRank: Math.max(
         state.furthestChapterRank,
+        data.furthestChapterRank ?? 0,
         inferChapterRank(data.committedSceneId, seg, sub, data.collectedPolaroids, baalSub)
       ),
       stairStepCount: data.stairStepCount ?? 0,
@@ -556,6 +562,7 @@ export const useProgressStore = create<ProgressStoreState>((set, get) => ({
         collectedPolaroids: [...result.data!.collectedPolaroids],
         furthestChapterRank: Math.max(
           state.furthestChapterRank,
+          result.data!.furthestChapterRank ?? 0,
           inferChapterRank(
             result.data!.committedSceneId,
             seg,

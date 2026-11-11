@@ -442,7 +442,8 @@ export function SceneStage({
   const committedSceneId = useProgressStore((s) => s.committedSceneId);
   const requestedSceneId = useProgressStore((s) => s.requestedSceneId);
   const transitionPhase = useProgressStore((s) => s.transitionPhase);
-  const transitionToken = useProgressStore((s) => s.transitionToken);
+  // Keep outgoing readiness callbacks unchanged until the new mount is expected.
+  const transitionToken = useProgressStore((s) => s.sceneMountToken);
   const retryNonce = useProgressStore((s) => s.retryNonce);
   const mountAttemptedForTransition = useProgressStore((s) => s.mountAttemptedForTransition);
   const devFailureMode = useProgressStore((s) => s.devFailureMode);
@@ -513,7 +514,7 @@ export function SceneStage({
         resetKey={boundaryResetKey}
         onSceneError={controller.onMountedSceneError}
       >
-        <Suspense fallback={null}>
+        <Suspense key={transitionToken} fallback={null}>
           {mountedSceneId === 1 ? (
             <Scene01_KitaabiDastaan
               qualityProfile={qualityProfile}

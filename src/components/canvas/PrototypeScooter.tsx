@@ -302,7 +302,7 @@ function SeatedRider({
 /**
  * Stylized-realistic Indian commuter scooter (`Phase 2C`).
  * Local orientation: forward points along -Z, up along +Y, right along +X.
- * Socket groups (`attach_seat_driver`, `attach_seat_pillion`) retain `dispose={null}`.
+ * Named rider sockets retain normal disposal for their owned procedural meshes.
  */
 export function PrototypeScooter({
   variant,
@@ -521,8 +521,8 @@ export function PrototypeScooter({
         </group>
       </group>
 
-      {/* Socket groups preserved for future GLB rig swaps (`dispose={null}`) */}
-      <group name="attach_seat_driver" position={[0, 0.73, 0.13]} dispose={null}>
+      {/* Named sockets preserved for future GLB rig swaps. */}
+      <group name="attach_seat_driver" position={[0, 0.73, 0.13]}>
         {!hideRiders &&
           (isLead ? (
             <SeatedRider
@@ -541,7 +541,7 @@ export function PrototypeScooter({
           ))}
       </group>
 
-      <group name="attach_seat_pillion" position={[0, 0.76, 0.52]} dispose={null}>
+      <group name="attach_seat_pillion" position={[0, 0.76, 0.52]}>
         {!hideRiders &&
           (isLead ? (
             <SeatedRider

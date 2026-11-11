@@ -12,6 +12,7 @@ export interface CheckpointData {
   version: number;
   committedSceneId: SceneId;
   collectedPolaroids: string[];
+  furthestChapterRank?: number;
   stairStepCount?: number;
   baalKuwariStairDirection?: 'ascent' | 'descent';
   mountainRoadSegment?: MountainRoadSegmentId;
@@ -56,6 +57,14 @@ export function validateCheckpointData(raw: unknown): CheckpointData | null {
     return null;
   }
   if (!isStringArray(candidate.collectedPolaroids)) {
+    return null;
+  }
+  if (
+    candidate.furthestChapterRank !== undefined &&
+    (typeof candidate.furthestChapterRank !== 'number' ||
+      !Number.isInteger(candidate.furthestChapterRank) ||
+      candidate.furthestChapterRank < 0 || candidate.furthestChapterRank > 17)
+  ) {
     return null;
   }
   if (
@@ -137,6 +146,7 @@ export function validateCheckpointData(raw: unknown): CheckpointData | null {
     version: CHECKPOINT_VERSION,
     committedSceneId: candidate.committedSceneId,
     collectedPolaroids: [...candidate.collectedPolaroids],
+    furthestChapterRank: candidate.furthestChapterRank,
     stairStepCount: candidate.stairStepCount,
     baalKuwariStairDirection: candidate.baalKuwariStairDirection,
     mountainRoadSegment: normalizedSegment,

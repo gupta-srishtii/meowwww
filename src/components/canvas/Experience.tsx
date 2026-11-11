@@ -35,6 +35,7 @@ import {
   type StoryChapterItem,
 } from '@/lib/chapters';
 import { useCheckpoint } from '@/hooks/useCheckpoint';
+import { useStoryTimers } from '@/hooks/useStoryTimers';
 import { useDrivingInput } from '@/hooks/useDrivingInput';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useWalkInput, type WalkHotspot } from '@/hooks/useWalkController';
@@ -141,6 +142,7 @@ function AdaptiveQualityMonitor() {
 }
 
 export default function Experience() {
+  const { setStoryTimeout, clearStoryTimeout, clearStoryTimers } = useStoryTimers();
   const [canvasElement, setCanvasElement] = useState<HTMLCanvasElement | null>(null);
   const [contextLost, setContextLost] = useState(false);
   const [contextLossCount, setContextLossCount] = useState(0);
@@ -240,6 +242,7 @@ export default function Experience() {
   const qualityProfile = useProgressStore((s) => s.qualityProfile);
   const setQualityProfile = useProgressStore((s) => s.setQualityProfile);
   const committedSceneId = useProgressStore((s) => s.committedSceneId);
+  const sceneMountToken = useProgressStore((s) => s.sceneMountToken);
   const transitionPhase = useProgressStore((s) => s.transitionPhase);
   const userPaused = useProgressStore((s) => s.userPaused);
   const isSimulationPaused = useProgressStore(selectIsSimulationPaused);
@@ -267,10 +270,10 @@ export default function Experience() {
   const showTimedCaption = useCallback(
     (speaker: string, text: string, durationMs = 3200) => {
       if (captionTimerRef.current !== null) {
-        window.clearTimeout(captionTimerRef.current);
+        clearStoryTimeout(captionTimerRef.current);
       }
       setActiveCaption({ speaker, text });
-      captionTimerRef.current = window.setTimeout(() => {
+      captionTimerRef.current = setStoryTimeout(() => {
         captionTimerRef.current = null;
         setActiveCaption(null);
       }, durationMs);
@@ -363,9 +366,9 @@ export default function Experience() {
     const isNew = capturePolaroidAndSave('scene06_dhaba');
     setPolaroidToastVisible(true);
     if (toastTimerRef.current !== null) {
-      window.clearTimeout(toastTimerRef.current);
+      clearStoryTimeout(toastTimerRef.current);
     }
-    toastTimerRef.current = window.setTimeout(() => {
+    toastTimerRef.current = setStoryTimeout(() => {
       toastTimerRef.current = null;
       setPolaroidToastVisible(false);
     }, 4500);
@@ -398,9 +401,9 @@ export default function Experience() {
       if (viewpointPhotoMoment !== 'none') return;
 
       clearInputsRef.current();
-      if (viewpointPoseTimerRef.current !== null) window.clearTimeout(viewpointPoseTimerRef.current);
-      if (viewpointFinishTimerRef.current !== null) window.clearTimeout(viewpointFinishTimerRef.current);
-      if (viewpointToastTimerRef.current !== null) window.clearTimeout(viewpointToastTimerRef.current);
+      if (viewpointPoseTimerRef.current !== null) clearStoryTimeout(viewpointPoseTimerRef.current);
+      if (viewpointFinishTimerRef.current !== null) clearStoryTimeout(viewpointFinishTimerRef.current);
+      if (viewpointToastTimerRef.current !== null) clearStoryTimeout(viewpointToastTimerRef.current);
 
       setViewpointPhotoMoment(kind);
       setViewpointPhotoLabel(
@@ -414,7 +417,7 @@ export default function Experience() {
       const snapDelay = reducedMotion ? 140 : 900;
       const holdDelay = reducedMotion ? 240 : 850;
 
-      viewpointPoseTimerRef.current = window.setTimeout(() => {
+      viewpointPoseTimerRef.current = setStoryTimeout(() => {
         viewpointPoseTimerRef.current = null;
         ambientAudio.playShutterClick();
         capturePolaroidAndSave(
@@ -426,12 +429,12 @@ export default function Experience() {
         );
         setViewpointToastKind(kind);
 
-        viewpointToastTimerRef.current = window.setTimeout(() => {
+        viewpointToastTimerRef.current = setStoryTimeout(() => {
           viewpointToastTimerRef.current = null;
           setViewpointToastKind(null);
         }, 4500);
 
-        viewpointFinishTimerRef.current = window.setTimeout(() => {
+        viewpointFinishTimerRef.current = setStoryTimeout(() => {
           viewpointFinishTimerRef.current = null;
           setViewpointPhotoMoment('none');
           setViewpointPhotoLabel(null);
@@ -466,9 +469,9 @@ export default function Experience() {
     capturePolaroidAndSave('scene03_tea_stop');
     setMorningToastVisible(true);
     if (morningToastTimerRef.current !== null) {
-      window.clearTimeout(morningToastTimerRef.current);
+      clearStoryTimeout(morningToastTimerRef.current);
     }
-    morningToastTimerRef.current = window.setTimeout(() => {
+    morningToastTimerRef.current = setStoryTimeout(() => {
       morningToastTimerRef.current = null;
       setMorningToastVisible(false);
     }, 4500);
@@ -563,9 +566,9 @@ export default function Experience() {
     const isNew = capturePolaroidAndSave('scene07_neelkanth_food');
     setNeelkanthToastVisible(true);
     if (neelkanthToastTimerRef.current !== null) {
-      window.clearTimeout(neelkanthToastTimerRef.current);
+      clearStoryTimeout(neelkanthToastTimerRef.current);
     }
-    neelkanthToastTimerRef.current = window.setTimeout(() => {
+    neelkanthToastTimerRef.current = setStoryTimeout(() => {
       neelkanthToastTimerRef.current = null;
       setNeelkanthToastVisible(false);
     }, 4500);
@@ -616,9 +619,9 @@ export default function Experience() {
       setActiveDarshanPan(true);
       ambientAudio.playHarHarMahadevChant();
       if (neelkanthDarshanTimerRef.current !== null) {
-        window.clearTimeout(neelkanthDarshanTimerRef.current);
+        clearStoryTimeout(neelkanthDarshanTimerRef.current);
       }
-      neelkanthDarshanTimerRef.current = window.setTimeout(
+      neelkanthDarshanTimerRef.current = setStoryTimeout(
         () => {
           neelkanthDarshanTimerRef.current = null;
           setActiveDarshanPan(false);
@@ -672,9 +675,9 @@ export default function Experience() {
       const isNew = capturePolaroidAndSave(key);
       setBaalKuwariToastKind(kind);
       if (baalKuwariToastTimerRef.current !== null) {
-        window.clearTimeout(baalKuwariToastTimerRef.current);
+        clearStoryTimeout(baalKuwariToastTimerRef.current);
       }
-      baalKuwariToastTimerRef.current = window.setTimeout(() => {
+      baalKuwariToastTimerRef.current = setStoryTimeout(() => {
         baalKuwariToastTimerRef.current = null;
         setBaalKuwariToastKind(null);
       }, 4500);
@@ -703,18 +706,18 @@ export default function Experience() {
     if (store.committedSceneId !== 10 || store.activeNarration !== null || bookPhotoActive) return;
 
     clearInputsRef.current();
-    if (bookPhotoPoseTimerRef.current !== null) window.clearTimeout(bookPhotoPoseTimerRef.current);
-    if (bookPhotoFinishTimerRef.current !== null) window.clearTimeout(bookPhotoFinishTimerRef.current);
+    if (bookPhotoPoseTimerRef.current !== null) clearStoryTimeout(bookPhotoPoseTimerRef.current);
+    if (bookPhotoFinishTimerRef.current !== null) clearStoryTimeout(bookPhotoFinishTimerRef.current);
 
     setBookPhotoActive(true);
     const snapDelay = reducedMotion ? 140 : 880;
     const holdDelay = reducedMotion ? 240 : 900;
 
-    bookPhotoPoseTimerRef.current = window.setTimeout(() => {
+    bookPhotoPoseTimerRef.current = setStoryTimeout(() => {
       bookPhotoPoseTimerRef.current = null;
       handleCaptureBaalKuwariPolaroid('book');
 
-      bookPhotoFinishTimerRef.current = window.setTimeout(() => {
+      bookPhotoFinishTimerRef.current = setStoryTimeout(() => {
         bookPhotoFinishTimerRef.current = null;
         setBookPhotoActive(false);
       }, holdDelay);
@@ -849,9 +852,9 @@ export default function Experience() {
         clearInputsRef.current();
         setHotelFarewellDone(true);
         if (hotelSummaryTimerRef.current !== null) {
-          window.clearTimeout(hotelSummaryTimerRef.current);
+          clearStoryTimeout(hotelSummaryTimerRef.current);
         }
-        hotelSummaryTimerRef.current = window.setTimeout(
+        hotelSummaryTimerRef.current = setStoryTimeout(
           () => {
             hotelSummaryTimerRef.current = null;
             setHotelSummaryOpen(true);
@@ -1094,9 +1097,9 @@ export default function Experience() {
       ambientAudio.playShutterClick();
       setBaalKuwariToastKind('stairs');
       if (baalKuwariToastTimerRef.current !== null) {
-        window.clearTimeout(baalKuwariToastTimerRef.current);
+        clearStoryTimeout(baalKuwariToastTimerRef.current);
       }
-      baalKuwariToastTimerRef.current = window.setTimeout(() => {
+      baalKuwariToastTimerRef.current = setStoryTimeout(() => {
         baalKuwariToastTimerRef.current = null;
         setBaalKuwariToastKind(null);
       }, 3400);
@@ -1211,6 +1214,8 @@ export default function Experience() {
               resumeDistance: resumeDist,
               clearInputs: clearAllMovementInputs,
             });
+          } else if (sub === 'viewpoint_walk') {
+            sceneController.requestSceneTransition(5, { clearInputs: clearAllMovementInputs });
           } else {
             setMountainRoadSegment(seg);
             setRoadSubStage(sub);
@@ -1255,6 +1260,8 @@ export default function Experience() {
               resumeDistance: LEAD_START_DISTANCE,
               clearInputs: clearAllMovementInputs,
             });
+          } else if (bkSub === 'maggi_stop') {
+            sceneController.requestSceneTransition(8, { clearInputs: clearAllMovementInputs });
           } else {
             setResetNonce((prev) => prev + 1);
             setArrived(false);
@@ -1336,9 +1343,9 @@ export default function Experience() {
   const handleTrafficBrush = useCallback(() => {
     setTrafficWarningVisible(true);
     if (trafficWarnTimerRef.current !== null) {
-      window.clearTimeout(trafficWarnTimerRef.current);
+      clearStoryTimeout(trafficWarnTimerRef.current);
     }
-    trafficWarnTimerRef.current = window.setTimeout(() => {
+    trafficWarnTimerRef.current = setStoryTimeout(() => {
       trafficWarnTimerRef.current = null;
       setTrafficWarningVisible(false);
     }, 1800);
@@ -1347,39 +1354,39 @@ export default function Experience() {
   useEffect(() => {
     return () => {
       if (trafficWarnTimerRef.current !== null) {
-        window.clearTimeout(trafficWarnTimerRef.current);
+        clearStoryTimeout(trafficWarnTimerRef.current);
       }
-      if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
-      if (viewpointPoseTimerRef.current !== null) window.clearTimeout(viewpointPoseTimerRef.current);
+      if (toastTimerRef.current !== null) clearStoryTimeout(toastTimerRef.current);
+      if (viewpointPoseTimerRef.current !== null) clearStoryTimeout(viewpointPoseTimerRef.current);
       if (viewpointFinishTimerRef.current !== null) {
-        window.clearTimeout(viewpointFinishTimerRef.current);
+        clearStoryTimeout(viewpointFinishTimerRef.current);
       }
       if (viewpointToastTimerRef.current !== null) {
-        window.clearTimeout(viewpointToastTimerRef.current);
+        clearStoryTimeout(viewpointToastTimerRef.current);
       }
       if (neelkanthDarshanTimerRef.current !== null) {
-        window.clearTimeout(neelkanthDarshanTimerRef.current);
+        clearStoryTimeout(neelkanthDarshanTimerRef.current);
       }
       if (morningToastTimerRef.current !== null) {
-        window.clearTimeout(morningToastTimerRef.current);
+        clearStoryTimeout(morningToastTimerRef.current);
       }
       if (neelkanthToastTimerRef.current !== null) {
-        window.clearTimeout(neelkanthToastTimerRef.current);
+        clearStoryTimeout(neelkanthToastTimerRef.current);
       }
       if (baalKuwariToastTimerRef.current !== null) {
-        window.clearTimeout(baalKuwariToastTimerRef.current);
+        clearStoryTimeout(baalKuwariToastTimerRef.current);
       }
       if (bookPhotoPoseTimerRef.current !== null) {
-        window.clearTimeout(bookPhotoPoseTimerRef.current);
+        clearStoryTimeout(bookPhotoPoseTimerRef.current);
       }
       if (bookPhotoFinishTimerRef.current !== null) {
-        window.clearTimeout(bookPhotoFinishTimerRef.current);
+        clearStoryTimeout(bookPhotoFinishTimerRef.current);
       }
       if (hotelSummaryTimerRef.current !== null) {
-        window.clearTimeout(hotelSummaryTimerRef.current);
+        clearStoryTimeout(hotelSummaryTimerRef.current);
       }
       if (captionTimerRef.current !== null) {
-        window.clearTimeout(captionTimerRef.current);
+        clearStoryTimeout(captionTimerRef.current);
       }
     };
   }, []);
@@ -1479,8 +1486,9 @@ export default function Experience() {
     }
   }, [isDevEnvironment]);
 
-  // Clear transient scene/sub-stage banners cleanly on switches.
+  // Cancel outgoing work and reset transient state on switches and explicit restarts.
   useEffect(() => {
+    clearStoryTimers();
     setArrived(false);
     setInViewpointZone(false);
     setViewpointArrived(false);
@@ -1521,14 +1529,14 @@ export default function Experience() {
       ambientAudio.playBhaiDoojChime();
     }
     if (captionTimerRef.current !== null) {
-      window.clearTimeout(captionTimerRef.current);
+      clearStoryTimeout(captionTimerRef.current);
       captionTimerRef.current = null;
     }
     setActiveCaption(null);
     if (committedSceneId === 8 && baalKuwariSubStage === 'maggi_stop') {
       setAteTrailheadMaggi(false);
     }
-  }, [baalKuwariSubStage, committedSceneId, roadSubStage]);
+  }, [baalKuwariSubStage, committedSceneId, roadSubStage, sceneMountToken, clearStoryTimers]);
 
   // Independent pause, audio mute & cutscene skip listeners.
   useEffect(() => {

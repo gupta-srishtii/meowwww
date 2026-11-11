@@ -40,8 +40,9 @@ export function CameraDirector() {
     sceneTimelineRef.current?.kill();
     sceneTimelineRef.current = null;
 
-    if (sceneDef.cameraMode === 'follow') {
-      // Scene 5 scooter follow rig owns per-frame camera transforms in useFrame.
+    if (activeSceneId !== 0) {
+      // All playable scenes own their camera, including cinematic/fixed/orbit modes.
+      // Only the temporary loading/test stage uses the generic director orbit.
       return;
     }
 
