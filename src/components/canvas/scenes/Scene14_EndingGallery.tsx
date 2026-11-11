@@ -7,7 +7,7 @@ import { StylizedPlaceholderCharacter } from '@/components/canvas/characters/Sty
 import { animateCharacterRig } from '@/components/canvas/characters/animateCharacterRig';
 import { PrototypeScooter } from '@/components/canvas/PrototypeScooter';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { POLAROID_MEMORY_SPECS } from '@/lib/privateMemoryLoader';
+import { POLAROID_MEMORY_SPECS, getResolvedPolaroidMemory, usePolaroidMemoryRevision } from '@/lib/privateMemoryLoader';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
 import type { SceneId } from '@/lib/sceneConfig';
 
@@ -16,6 +16,7 @@ export interface Scene14EndingGalleryProps {
   paused: boolean;
   transitionToken: number;
   collectedPolaroids: readonly string[];
+  onInspectMemory: (id: string) => void;
   onSceneReady: (token: number, sceneId: SceneId) => void;
   simulateMountFailure?: boolean;
 }
@@ -61,6 +62,7 @@ export function Scene14_EndingGallery({
   paused,
   transitionToken,
   collectedPolaroids,
+  onInspectMemory,
   onSceneReady,
   simulateMountFailure = false,
 }: Scene14EndingGalleryProps) {
@@ -98,10 +100,42 @@ export function Scene14_EndingGallery({
   const readyTokenRef = useRef(-1);
 
   const galleryItems = useMemo(() => Object.values(POLAROID_MEMORY_SPECS), []);
+  const mediaRevision = usePolaroidMemoryRevision();
   const cardTextures = useMemo(
     () => galleryItems.map((item) => createGalleryCardTexture(item.title, item.locationTag)),
-    [galleryItems]
+    [galleryItems, mediaRevision]
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    const images: HTMLImageElement[] = [];
+    galleryItems.forEach((item, index) => {
+      if (!collectedPolaroids.includes(item.id)) return;
+      const url = getResolvedPolaroidMemory(item.id).resolvedUrl;
+      const texture = cardTextures[index];
+      if (!url || !texture) return;
+      const img = new Image();
+      images.push(img);
+      img.onload = () => {
+        if (cancelled) return;
+        const canvas = texture.image as HTMLCanvasElement;
+        const ctx = canvas.getContext('2d');
+        if (!ctx || img.naturalWidth === 0 || img.naturalHeight === 0) return;
+        const scale = Math.min(224 / img.naturalWidth, 118 / img.naturalHeight);
+        const width = img.naturalWidth * scale;
+        const height = img.naturalHeight * scale;
+        ctx.fillStyle = '#efe7d6';
+        ctx.fillRect(16, 14, 224, 118);
+        ctx.drawImage(img, 16 + (224 - width) / 2, 14 + (118 - height) / 2, width, height);
+        texture.needsUpdate = true;
+      };
+      img.src = url;
+    });
+    return () => {
+      cancelled = true;
+      images.forEach((img) => { img.onload = null; img.removeAttribute('src'); });
+    };
+  }, [galleryItems, cardTextures, collectedPolaroids, mediaRevision]);
 
   useEffect(() => {
     return () => {
@@ -235,7 +269,17 @@ export function Scene14_EndingGallery({
         const pz = -1.1 - Math.cos(angle) * 3.15;
         const collected = collectedPolaroids.includes(item.id);
         return (
-          <group key={item.id} position={[px, 0, pz]} rotation={[0, -angle * 0.72, 0]}>
+          <group
+            key={item.id}
+            name={`memory-pedestal-${item.id}`}
+            position={[px, 0, pz]}
+            rotation={[0, -angle * 0.72, 0]}
+            onClick={(event) => {
+              if (!collected || paused) return;
+              event.stopPropagation();
+              onInspectMemory(item.id);
+            }}
+          >
             <mesh position={[0, 0.55, 0]} castShadow={shadowsEnabled}>
               <cylinderGeometry args={[0.14, 0.2, 1.1, 14]} />
               <meshStandardMaterial color="#334155" roughness={0.72} />

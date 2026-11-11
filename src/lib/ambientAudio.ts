@@ -145,6 +145,8 @@ class AmbientAudioController {
   private customAudioEl: HTMLAudioElement | null = null;
   private customTrackUrl: string | null = null;
   private customTrackFailed = false;
+  private customTrackBlocked = false;
+  private customPlayRequest: { url: string } | null = null;
   private finalePhase: FinaleMusicPhase = 'inactive';
   private customVolumeActual = 0;
   private customVolumeTarget = 0;
@@ -253,6 +255,7 @@ class AmbientAudioController {
     return (
       this.customTrackUrl !== null &&
       !this.customTrackFailed &&
+      this.customAudioEl !== null && !this.customAudioEl.paused &&
       this.state.mode === 'bhai_dooj' &&
       (this.finalePhase === 'applying_tilak' ||
         this.finalePhase === 'sweet_offer' ||
@@ -297,6 +300,9 @@ class AmbientAudioController {
         this.customAudioEl.load();
       }
       this.customVolumeActual = 0;
+      this.customPlayRequest = null;
+      if (this.customRampTimerId !== null) window.clearInterval(this.customRampTimerId);
+      this.customRampTimerId = null;
       return;
     }
 
@@ -306,14 +312,15 @@ class AmbientAudioController {
       audio.preload = 'auto';
       audio.volume = 0;
       audio.addEventListener('error', () => {
-        this.customTrackFailed = true;
-        this.applyLevels();
+        this.failCustomTrack(false);
       });
       this.customAudioEl = audio;
     }
 
     if (this.customAudioEl.src !== this.customTrackUrl) {
       this.customTrackFailed = false;
+      this.customTrackBlocked = false;
+      this.customPlayRequest = null;
       this.customAudioEl.src = this.customTrackUrl;
       this.customAudioEl.currentTime = 0;
       this.customVolumeActual = 0;
@@ -321,9 +328,21 @@ class AmbientAudioController {
     }
 
     if (this.customVolumeTarget > 0.005 && this.userUnlocked && !this.customTrackFailed) {
-      if (this.customAudioEl.paused) {
-        void this.customAudioEl.play().catch(() => {
-          // Browser may wait for next gesture or unsupported codec; procedural fallback takes over cleanly
+      if (this.customAudioEl.paused && !this.customPlayRequest) {
+        const request = { url: this.customTrackUrl };
+        this.customPlayRequest = request;
+        void this.customAudioEl.play().then(() => {
+          if (this.customPlayRequest !== request) return;
+          this.customPlayRequest = null;
+          this.applyLevels();
+        }).catch((error: unknown) => {
+          if (this.customPlayRequest !== request) return;
+          this.customPlayRequest = null;
+          if (this.customTrackUrl !== request.url) return;
+          const name = typeof error === 'object' && error !== null && 'name' in error
+            ? error.name : '';
+          if (name === 'AbortError' && this.getCustomTrackDesiredVolume() === 0) return;
+          this.failCustomTrack(name === 'NotAllowedError');
         });
       }
     }
@@ -360,6 +379,19 @@ class AmbientAudioController {
         }
       }, 45);
     }
+  }
+
+  private failCustomTrack(blocked: boolean): void {
+    this.customTrackFailed = true;
+    this.customTrackBlocked = blocked;
+    this.customPlayRequest = null;
+    this.customVolumeTarget = 0;
+    this.customVolumeActual = 0;
+    if (this.customAudioEl) {
+      this.customAudioEl.volume = 0;
+      this.customAudioEl.pause();
+    }
+    this.applyLevels();
   }
 
   private scheduleNextMotifNote(): void {
@@ -434,6 +466,11 @@ class AmbientAudioController {
 
   unlock(): void {
     this.userUnlocked = true;
+    // A later permitted gesture may recover an autoplay rejection; media errors stay failed.
+    if (this.customTrackBlocked) {
+      this.customTrackBlocked = false;
+      this.customTrackFailed = false;
+    }
     if (!this.ensureContext() || !this.ctx) {
       this.updateCustomTrackElement();
       return;
@@ -456,6 +493,8 @@ class AmbientAudioController {
     if (this.customTrackUrl === url) return;
     this.customTrackUrl = url;
     this.customTrackFailed = false;
+    this.customTrackBlocked = false;
+    this.customPlayRequest = null;
     this.updateCustomTrackElement();
     this.applyLevels();
   }
@@ -537,7 +576,7 @@ class AmbientAudioController {
     this.musicGain.gain.setTargetAtTime(overrideActive ? 0 : musicVol, now, 0.25);
     this.ensureMotifLoop(!overrideActive && musicVol > 0.01);
 
-    const ambientScale = 0.45 + 0.55 * musicVol;
+    const ambientScale = musicVol === 0 ? 0 : 0.45 + 0.55 * musicVol;
 
     if (this.state.mode === 'kitaabi') {
       this.windFilter.frequency.setTargetAtTime(190, now, 0.2);

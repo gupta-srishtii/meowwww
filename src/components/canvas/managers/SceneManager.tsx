@@ -371,6 +371,7 @@ export interface SceneStageProps {
   onBhaiDoojTilakComplete: () => void;
   onBhaiDoojEatingComplete: () => void;
   collectedPolaroids: readonly string[];
+  onInspectMemory: (id: string) => void;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onArrivedChange: (arrived: boolean) => void;
   onInViewpointZoneChange: (inZone: boolean) => void;
@@ -433,6 +434,7 @@ export function SceneStage({
   onBhaiDoojTilakComplete,
   onBhaiDoojEatingComplete,
   collectedPolaroids,
+  onInspectMemory,
   onNearbyHotspotChange,
   onArrivedChange,
   onInViewpointZoneChange,
@@ -721,6 +723,7 @@ export function SceneStage({
               transitionToken={transitionToken}
               simulateMountFailure={simulateMountFailure}
               collectedPolaroids={collectedPolaroids}
+              onInspectMemory={onInspectMemory}
               onSceneReady={controller.onMountedSceneReady}
             />
           ) : (

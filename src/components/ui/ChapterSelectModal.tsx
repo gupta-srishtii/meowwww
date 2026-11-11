@@ -23,6 +23,7 @@ import { useProgressStore } from '@/store/progressStore';
 export interface ChapterSelectModalProps {
   open: boolean;
   initialTab?: 'chapters' | 'memories';
+  initialPolaroidId?: string | null;
   onClose: () => void;
   onSelectChapter: (chapter: StoryChapterItem) => void;
 }
@@ -35,6 +36,7 @@ export interface ChapterSelectModalProps {
 export function ChapterSelectModal({
   open,
   initialTab = 'chapters',
+  initialPolaroidId = null,
   onClose,
   onSelectChapter,
 }: ChapterSelectModalProps) {
@@ -55,8 +57,10 @@ export function ChapterSelectModal({
   useEffect(() => {
     if (open) {
       setActiveTab(initialTab);
+      setPreviewPolaroidId(initialPolaroidId && collectedPolaroids.includes(initialPolaroidId)
+        ? initialPolaroidId : null);
     }
-  }, [initialTab, open]);
+  }, [initialTab, initialPolaroidId, collectedPolaroids, open]);
 
   if (!open) return null;
 

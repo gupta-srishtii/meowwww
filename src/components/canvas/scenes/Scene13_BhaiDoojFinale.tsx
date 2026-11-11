@@ -107,6 +107,15 @@ export function Scene13_BhaiDoojFinale({
       camPos: new THREE.Vector3(),
       lookAt: new THREE.Vector3(),
       smoothLook: new THREE.Vector3(),
+      forehead: new THREE.Vector3(),
+      handTarget: new THREE.Vector3(),
+      direction: new THREE.Vector3(),
+      bend: new THREE.Vector3(),
+      elbow: new THREE.Vector3(),
+      down: new THREE.Vector3(0, -1, 0),
+      armRotation: new THREE.Quaternion(),
+      forearmRotation: new THREE.Quaternion(),
+      inverseArm: new THREE.Quaternion(),
     }),
     []
   );
@@ -116,6 +125,11 @@ export function Scene13_BhaiDoojFinale({
     simRef.current.tilakMarkFired = false;
     simRef.current.tilakDoneSent = false;
     simRef.current.eatingDoneSent = false;
+    // The contact solver owns all three rotation axes; release its twist between phases.
+    if (phase !== 'applying_tilak') {
+      shreeRArmRef.current?.rotation.set(0.45, 0, 0.06);
+      shreeRForearmRef.current?.rotation.set(0.52, 0, 0);
+    }
   }, [phase]);
 
   useEffect(() => {
@@ -155,12 +169,9 @@ export function Scene13_BhaiDoojFinale({
     if (phase === 'applying_tilak') {
       const dur = reducedMotion ? 0.65 : TILAK_DURATION_SEC;
       const u = THREE.MathUtils.clamp(sim.timer / dur, 0, 1);
-      tilakReachWeight = easeBell(u, 0.06, 0.94);
-      if (!sim.tilakMarkFired && u >= 0.48) {
-        sim.tilakMarkFired = true;
-        ambientAudio.playTilakBlessingTone();
-        onTilakApplied();
-      }
+      // Hold real hand contact around the application beat, then withdraw smoothly.
+      tilakReachWeight = THREE.MathUtils.smoothstep(u, 0.06, 0.4) *
+        (1 - THREE.MathUtils.smoothstep(u, 0.62, 0.94));
       if (!sim.tilakDoneSent && u >= 1) {
         sim.tilakDoneSent = true;
         onTilakComplete();
@@ -195,10 +206,10 @@ export function Scene13_BhaiDoojFinale({
         rightArm: ishaanRArmRef.current,
         rightForearm: ishaanRForearmRef.current,
       },
-      posX: 0.56,
+      posX: 0.56 - 0.14 * tilakReachWeight,
       posZ: -0.16,
       groundY: -0.02,
-      facingYaw: phase === 'applying_tilak' ? 1.52 : 1.85,
+      facingYaw: THREE.MathUtils.lerp(1.85, 1.52, tilakReachWeight),
       strideRatio: 0,
       stridePhase: 0,
       torsoBaseY: 0.84,
@@ -223,10 +234,10 @@ export function Scene13_BhaiDoojFinale({
         rightArm: shreeRArmRef.current,
         rightForearm: shreeRForearmRef.current,
       },
-      posX: -0.56,
+      posX: -0.56 + 0.14 * tilakReachWeight,
       posZ: -0.16,
       groundY: -0.02,
-      facingYaw: phase === 'applying_tilak' ? -1.52 : -1.85,
+      facingYaw: THREE.MathUtils.lerp(-1.85, -1.52, tilakReachWeight),
       strideRatio: 0,
       stridePhase: 0,
       torsoBaseY: 0.78,
@@ -238,43 +249,51 @@ export function Scene13_BhaiDoojFinale({
 
     // Subtle bespoke expressive overrides for Tilak application & peaceful sweet sharing
     if (phase === 'applying_tilak') {
+      // Both remain seated; Ishaan bows into reach instead of stretching Shree's arm.
       if (shreeTorsoRef.current) {
-        shreeTorsoRef.current.rotation.x = THREE.MathUtils.damp(
-          shreeTorsoRef.current.rotation.x,
-          -0.24 * tilakReachWeight,
-          8,
-          delta
-        );
+        shreeTorsoRef.current.rotation.x = THREE.MathUtils.lerp(-0.04, -0.2, tilakReachWeight);
       }
-      if (shreeRArmRef.current) {
-        shreeRArmRef.current.rotation.x = THREE.MathUtils.damp(
-          shreeRArmRef.current.rotation.x,
-          0.2 + 1.24 * tilakReachWeight,
-          9,
-          delta
-        );
-        shreeRArmRef.current.rotation.z = THREE.MathUtils.damp(
-          shreeRArmRef.current.rotation.z,
-          -0.1 * tilakReachWeight,
-          9,
-          delta
-        );
-      }
-      if (shreeRForearmRef.current) {
-        shreeRForearmRef.current.rotation.x = THREE.MathUtils.damp(
-          shreeRForearmRef.current.rotation.x,
-          0.25 + 0.28 * tilakReachWeight,
-          9,
-          delta
-        );
+      if (ishaanTorsoRef.current) {
+        ishaanTorsoRef.current.rotation.x = THREE.MathUtils.lerp(-0.04, -0.68, tilakReachWeight);
       }
       if (ishaanHeadRef.current) {
-        ishaanHeadRef.current.rotation.x = THREE.MathUtils.damp(
-          ishaanHeadRef.current.rotation.x,
-          -0.14 * tilakReachWeight,
-          7,
-          delta
-        );
+        ishaanHeadRef.current.rotation.x = -0.14 * tilakReachWeight;
+      }
+      const arm = shreeRArmRef.current;
+      const forearm = shreeRForearmRef.current;
+      const head = ishaanHeadRef.current;
+      if (arm?.parent && forearm && head && tilakReachWeight > 0) {
+        ishaanGroupRef.current?.updateWorldMatrix(true, true);
+        shreeGroupRef.current?.updateWorldMatrix(true, true);
+        head.localToWorld(scratch.forehead.set(0, 0.044, -0.128));
+        arm.parent.worldToLocal(scratch.handTarget.copy(scratch.forehead));
+        scratch.handTarget.sub(arm.position);
+        const upper = forearm.position.length();
+        const lower = 0.178; // Right-hand center in the existing Shree rig.
+        const distance = THREE.MathUtils.clamp(scratch.handTarget.length(), 0.02, upper + lower - 0.001);
+        scratch.direction.copy(scratch.handTarget).normalize();
+        scratch.bend.set(0, 0, -1).addScaledVector(scratch.direction, scratch.direction.z);
+        if (scratch.bend.lengthSq() < 0.001) scratch.bend.set(1, 0, 0);
+        scratch.bend.normalize();
+        const along = (upper * upper - lower * lower + distance * distance) / (2 * distance);
+        scratch.elbow.copy(scratch.direction).multiplyScalar(along)
+          .addScaledVector(scratch.bend, Math.sqrt(Math.max(0, upper * upper - along * along)));
+        scratch.armRotation.setFromUnitVectors(scratch.down, scratch.handTarget.copy(scratch.elbow).normalize());
+        scratch.inverseArm.copy(scratch.armRotation).invert();
+        scratch.handTarget.copy(scratch.direction).multiplyScalar(distance).sub(scratch.elbow)
+          .normalize().applyQuaternion(scratch.inverseArm);
+        scratch.forearmRotation.setFromUnitVectors(scratch.down, scratch.handTarget);
+        arm.quaternion.slerp(scratch.armRotation, tilakReachWeight);
+        forearm.quaternion.slerp(scratch.forearmRotation, tilakReachWeight);
+        forearm.updateWorldMatrix(true, false);
+        forearm.localToWorld(scratch.handTarget.set(0, -lower, 0));
+        const dur = reducedMotion ? 0.65 : TILAK_DURATION_SEC;
+        if (!sim.tilakMarkFired && sim.timer / dur >= 0.48 &&
+          scratch.handTarget.distanceTo(scratch.forehead) < 0.035) {
+          sim.tilakMarkFired = true;
+          ambientAudio.playTilakBlessingTone();
+          onTilakApplied();
+        }
       }
     } else if (phase === 'sweet_offer') {
       if (shreeRArmRef.current) {
@@ -380,6 +399,7 @@ export function Scene13_BhaiDoojFinale({
         rotationY={1.85}
         scale={1.03}
         tilakApplied={tilakApplied}
+        holdingSweet={phase === 'eating_together'}
         castShadow={shadowsEnabled}
       />
 
@@ -400,7 +420,7 @@ export function Scene13_BhaiDoojFinale({
         position={[-0.56, -0.02, -0.16]}
         rotationY={-1.85}
         scale={1.0}
-        holdingSweet={phase === 'sweet_offer'}
+        holdingSweet={phase === 'sweet_offer' || phase === 'eating_together'}
         castShadow={shadowsEnabled}
       />
     </>

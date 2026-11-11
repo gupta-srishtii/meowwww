@@ -316,7 +316,7 @@ export function StylizedPlaceholderCharacter({
                 </group>
               )}
               {holdingSweet && (
-                <group position={[0, -0.185, -0.045]}>
+                <group name="held-mithai" position={[0, -0.185, -0.045]}>
                   <mesh castShadow={castShadow}>
                     <sphereGeometry args={[0.032, 10, 10]} />
                     <meshStandardMaterial color="#f59e0b" roughness={0.65} />
@@ -638,6 +638,18 @@ export function StylizedPlaceholderCharacter({
               <sphereGeometry args={[0.033, 8, 8]} />
               <meshStandardMaterial color={skinColor} roughness={0.76} />
             </mesh>
+            {holdingSweet && (
+              <group name="held-mithai" position={[0, -0.205, -0.045]}>
+                <mesh castShadow={castShadow}>
+                  <sphereGeometry args={[0.032, 10, 10]} />
+                  <meshStandardMaterial color="#f59e0b" roughness={0.65} />
+                </mesh>
+                <mesh position={[0, 0.028, 0]}>
+                  <sphereGeometry args={[0.01, 6, 6]} />
+                  <meshStandardMaterial color="#fef08a" roughness={0.5} />
+                </mesh>
+              </group>
+            )}
             {holdingChaiCup && (
               <mesh position={[0, -0.2, -0.055]} castShadow={castShadow}>
                 <cylinderGeometry args={[0.042, 0.03, 0.085, 10]} />

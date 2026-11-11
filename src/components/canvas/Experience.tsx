@@ -233,6 +233,7 @@ export default function Experience() {
 
   const [chaptersOpen, setChaptersOpen] = useState(false);
   const [chaptersInitialTab, setChaptersInitialTab] = useState<'chapters' | 'memories'>('chapters');
+  const [chaptersInitialPolaroid, setChaptersInitialPolaroid] = useState<string | null>(null);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [scooterReturnOpen, setScooterReturnOpen] = useState(false);
   const isDevEnvironment = process.env.NODE_ENV === 'development';
@@ -1138,6 +1139,7 @@ export default function Experience() {
   }, [clearAllMovementInputs, setMountainRoadSegment, setRoadResumeDistance, setRoadSubStage]);
 
   const handleOpenChapters = useCallback(() => {
+    setChaptersInitialPolaroid(null);
     clearAllMovementInputs();
     setScooterReturnOpen(false);
     setUserPaused(false);
@@ -1146,12 +1148,18 @@ export default function Experience() {
   }, [clearAllMovementInputs, setUserPaused]);
 
   const handleOpenMemoriesTab = useCallback(() => {
+    setChaptersInitialPolaroid(null);
     clearAllMovementInputs();
     setScooterReturnOpen(false);
     setUserPaused(false);
     setChaptersInitialTab('memories');
     setChaptersOpen(true);
   }, [clearAllMovementInputs, setUserPaused]);
+
+  const handleInspectMemory = useCallback((id: string) => {
+    handleOpenMemoriesTab();
+    setChaptersInitialPolaroid(id);
+  }, [handleOpenMemoriesTab]);
 
   const handleProceedToBhaiDooj = useCallback(() => {
     clearInputsRef.current();
@@ -1852,6 +1860,7 @@ export default function Experience() {
           onBhaiDoojTilakComplete={() => setBhaiDoojPhase('sweet_offer')}
           onBhaiDoojEatingComplete={() => setBhaiDoojPhase('creator_letter')}
           collectedPolaroids={collectedPolaroids}
+          onInspectMemory={handleInspectMemory}
           onNearbyHotspotChange={setNearbyHotspot}
           onArrivedChange={setArrived}
           onInViewpointZoneChange={setInViewpointZone}
@@ -2249,6 +2258,7 @@ export default function Experience() {
       <ChapterSelectModal
         open={chaptersOpen}
         initialTab={chaptersInitialTab}
+        initialPolaroidId={chaptersInitialPolaroid}
         onClose={() => setChaptersOpen(false)}
         onSelectChapter={handleSelectChapter}
       />
