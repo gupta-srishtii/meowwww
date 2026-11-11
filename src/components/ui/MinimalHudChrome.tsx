@@ -20,31 +20,17 @@ export interface MinimalTopBarProps {
 }
 
 /**
- * Unified, clutter-free top bar shared across driving and exploration scenes.
- * Keeps recipient screen minimal: Story Stop pill (top-left) + Memories, Sound, Menu (top-right).
+ * Uncluttered top-right action bar (Memories / Mute / Menu) — zero blocking left info card.
  */
 export function MinimalTopBar({
-  title,
-  subtitle,
   polaroidCount,
   audioMuted = false,
   onToggleAudioMute,
   onOpenChapters,
   onPause,
-  children,
 }: MinimalTopBarProps) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-wrap items-start justify-between gap-3 p-3 sm:p-5">
-      {/* Top-left location card & concise progress telemetry */}
-      <div className="pointer-events-auto max-w-sm rounded-2xl border border-slate-700/65 bg-slate-950/72 px-3.5 py-2.5 text-slate-100 shadow-lg backdrop-blur-md">
-        <p className="text-[10px] font-semibold tracking-[0.2em] text-amber-300/90 uppercase">
-          Rishikesh · For Ishaan
-        </p>
-        <p className="mt-0.5 text-xs font-semibold text-white">{title}</p>
-        {subtitle && <p className="mt-0.5 text-[11px] text-slate-300">{subtitle}</p>}
-        {children}
-      </div>
-
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-end p-3 sm:p-5">
       {/* Top-right compact actions: Memories, Mute, Menu */}
       <div className="pointer-events-auto flex items-center gap-2">
         <button
@@ -134,16 +120,30 @@ export function PolaroidToastCard({
             }`}
           >
             {resolvedUrl ? (
-              <img
-                src={resolvedUrl}
-                alt={title}
-                style={{ imageOrientation: 'from-image' }}
-                className="max-h-full max-w-full rounded object-contain transition-transform duration-500 ease-out group-hover:scale-[1.03]"
-              />
+              resolvedMem?.mediaKind === 'video' ? (
+                <video
+                  src={resolvedUrl}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  controls
+                  className="max-h-full max-w-full rounded object-contain"
+                />
+              ) : (
+                <img
+                  src={resolvedUrl}
+                  alt={title}
+                  style={{ imageOrientation: 'from-image' }}
+                  className="max-h-full max-w-full rounded object-contain transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                />
+              )
             ) : (
               <div className="flex flex-col items-center gap-2 px-2 text-center">
                 <span className="rounded-full border border-slate-900/15 bg-white/75 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider text-slate-700 uppercase">
-                  Local Photo Unlinked
+                  {resolvedMem?.mediaKind === 'video'
+                    ? 'Local Video Unlinked'
+                    : 'Local Photo Unlinked'}
                 </span>
                 <p className="line-clamp-2 text-[11px] font-medium leading-snug text-slate-800">
                   {resolvedMem?.matchedFilename
@@ -155,7 +155,7 @@ export function PolaroidToastCard({
                   onClick={handleConnectClick}
                   className="rounded-lg border border-slate-900/20 bg-slate-900 px-3 py-1 text-[11px] font-semibold text-amber-100 shadow transition hover:bg-slate-800"
                 >
-                  Connect Photos
+                  {resolvedMem?.mediaKind === 'video' ? 'Connect Trip Media' : 'Connect Photos'}
                 </button>
               </div>
             )}

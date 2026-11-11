@@ -15,6 +15,7 @@ import {
   BAAL_KUWARI_TEMPLE_OBSTACLES,
   BAAL_KUWARI_TEMPLE_WALK_BOUNDS,
   BaalKuwariTempleEnvironment,
+  sampleBaalKuwariFloorY,
 } from '@/components/canvas/environment/BaalKuwariTempleEnvironment';
 import {
   applyCompanionRigFrame,
@@ -163,10 +164,10 @@ export function Scene10_BaalKuwariTemple({
     companionRigsRef.current = rigs;
   }, []);
 
-  const autoFiredSetRef = useRef(new Set<string>());
+  const autoLastTriggerAtRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
-    autoFiredSetRef.current.clear();
+    autoLastTriggerAtRef.current = {};
     if (transitionToken > 0) {
       onSceneReady(transitionToken, 10);
     }
@@ -223,12 +224,12 @@ export function Scene10_BaalKuwariTemple({
         onArrivalCinematicComplete();
       }
     } else if (bookPhotoActive) {
-      // Ishaan stands behind the backyard tripod camera framing Srishti reading barefoot over the valley
-      sim.posX = THREE.MathUtils.damp(sim.posX, 2.22, 8, delta);
-      sim.posZ = THREE.MathUtils.damp(sim.posZ, 0.42, 8, delta);
+      // Ishaan stands behind the backyard tripod camera down the back steps framing Srishti reading barefoot over the valley
+      sim.posX = THREE.MathUtils.damp(sim.posX, 0.35, 8, delta);
+      sim.posZ = THREE.MathUtils.damp(sim.posZ, -10.05, 8, delta);
       sim.velX = 0;
       sim.velZ = 0;
-      sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, -0.78, 8, delta);
+      sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, -0.31, 8, delta);
       strideRatio = 0;
     } else if (autoPlayMode && onAutoTriggerHotspot) {
       const targetId = !rangBell
@@ -240,18 +241,56 @@ export function Scene10_BaalKuwariTemple({
             : 'descent';
       const targetSpot = BAAL_KUWARI_TEMPLE_HOTSPOTS.find((h) => h.id === targetId);
       if (targetSpot) {
+        let navX = targetSpot.x;
+        let navZ = targetSpot.z;
+        let isIntermediateNav = false;
+        if (targetId === 'book_polaroid') {
+          if (sim.posZ > -10.15) {
+            if (sim.posX < 3.05) {
+              isIntermediateNav = true;
+              navX = 3.4;
+              navZ = sim.posZ > -5.55 ? -2.25 : -5.65;
+            } else {
+              isIntermediateNav = true;
+              navX = 3.4;
+              navZ = -10.35;
+            }
+          } else {
+            navX = 1.15;
+            navZ = -10.35;
+          }
+        } else if (targetId === 'descent' && sim.posZ < -2.4) {
+          isIntermediateNav = true;
+          if (sim.posZ < -9.9 && sim.posX < 3.05) {
+            navX = 3.4;
+            navZ = -10.35;
+          } else {
+            navX = 3.4;
+            navZ = -2.2;
+          }
+        }
         const res = stepAutoWalkTowardTarget(
           sim,
-          targetSpot.x,
-          targetSpot.z,
+          navX,
+          navZ,
           delta,
           BAAL_KUWARI_TEMPLE_WALK_BOUNDS,
-          BAAL_KUWARI_TEMPLE_OBSTACLES
+          BAAL_KUWARI_TEMPLE_OBSTACLES,
+          isIntermediateNav ? 0.18 : 0.35
         );
         strideRatio = res.strideRatio;
         walkSpeed = res.walkSpeed;
-        if (res.arrived && !autoFiredSetRef.current.has(targetId)) {
-          autoFiredSetRef.current.add(targetId);
+        const arrivedAtSpot =
+          Math.hypot(sim.posX - targetSpot.x, sim.posZ - targetSpot.z) <= targetSpot.radius * 0.85;
+        const nowMs = performance.now();
+        const cooldownMs = targetId === 'descent' ? 2000 : 950;
+        if (
+          !arrivalCinematicActive &&
+          !bookPhotoActive &&
+          arrivedAtSpot &&
+          nowMs - (autoLastTriggerAtRef.current[targetId] ?? -Infinity) >= cooldownMs
+        ) {
+          autoLastTriggerAtRef.current[targetId] = nowMs;
           onAutoTriggerHotspot(targetId);
         }
       }
@@ -268,6 +307,7 @@ export function Scene10_BaalKuwariTemple({
       if (strideRatio > 0.03) sim.stridePhase += moveDist * 3.8;
     }
 
+    const playerFloorY = sampleBaalKuwariFloorY(sim.posX, sim.posZ);
     animateIshaanWalkRig({
       refs: {
         group: playerGroupRef.current,
@@ -285,6 +325,7 @@ export function Scene10_BaalKuwariTemple({
       facingYaw: sim.facingYaw,
       strideRatio,
       stridePhase: sim.stridePhase,
+      groundY: playerFloorY,
       elapsed: t,
       delta,
       reducedMotion,
@@ -321,10 +362,10 @@ export function Scene10_BaalKuwariTemple({
     } else {
       const shreeAgent = companionStatesRef.current.find((a) => a.id === 'srishti');
       if (shreeAgent) {
-        shreeAgent.posX = THREE.MathUtils.damp(shreeAgent.posX, 3.92, 7, delta);
-        shreeAgent.posZ = THREE.MathUtils.damp(shreeAgent.posZ, -1.42, 7, delta);
-        // Srishti sits relaxed overlooking the smoky valley ridges reading her open hardcover book
-        shreeAgent.facingYaw = THREE.MathUtils.damp(shreeAgent.facingYaw, -0.35, 7, delta);
+        shreeAgent.posX = THREE.MathUtils.damp(shreeAgent.posX, 1.08, 7, delta);
+        shreeAgent.posZ = THREE.MathUtils.damp(shreeAgent.posZ, -12.35, 7, delta);
+        // Srishti sits barefoot on the grassy pebbly back-stairs ledge facing the distant valley with her book
+        shreeAgent.facingYaw = THREE.MathUtils.damp(shreeAgent.facingYaw, 0.14, 7, delta);
         shreeAgent.velX = 0;
         shreeAgent.velZ = 0;
       }
@@ -336,6 +377,7 @@ export function Scene10_BaalKuwariTemple({
         const rig = rigs[agent.id as FriendCompanionId];
         if (!rig) return;
         const isShreeBookPose = bookPhotoActive && agent.id === 'srishti';
+        const compFloorY = sampleBaalKuwariFloorY(agent.posX, agent.posZ);
         applyCompanionRigFrame({
           agent,
           config: isShreeBookPose
@@ -348,6 +390,9 @@ export function Scene10_BaalKuwariTemple({
           delta,
           reducedMotion,
         });
+        if (rig.group) {
+          rig.group.position.y = isShreeBookPose ? -1.96 : compFloorY;
+        }
         if (isShreeBookPose) {
           if (rig.leftArm) rig.leftArm.rotation.x = THREE.MathUtils.damp(rig.leftArm.rotation.x, 0.58, 8, delta);
           if (rig.rightArm) rig.rightArm.rotation.x = THREE.MathUtils.damp(rig.rightArm.rotation.x, 0.58, 8, delta);
@@ -373,17 +418,17 @@ export function Scene10_BaalKuwariTemple({
         THREE.MathUtils.lerp(-2.5, 0.0, smoothU)
       );
     } else if (bookPhotoActive) {
-      scratch.camPos.set(1.38, 1.54, 1.24);
-      scratch.lookAt.set(3.75, 0.88, -1.55);
+      scratch.camPos.set(-0.78, -0.18, -8.85);
+      scratch.lookAt.set(1.05, -0.85, -12.6);
     } else {
       const hDist = Math.cos(sim.orbitPitch) * CAM_DISTANCE;
-      const vOff = 1.2 + Math.sin(sim.orbitPitch) * CAM_DISTANCE;
+      const vOff = playerFloorY + 1.2 + Math.sin(sim.orbitPitch) * CAM_DISTANCE;
       scratch.camPos.set(
         sim.posX + Math.sin(sim.orbitYaw) * hDist,
         vOff,
         sim.posZ + Math.cos(sim.orbitYaw) * hDist
       );
-      scratch.lookAt.set(sim.posX, 1.18, sim.posZ);
+      scratch.lookAt.set(sim.posX, playerFloorY + 1.18, sim.posZ);
     }
 
     if (!sim.cameraInitialized || reducedMotion) {

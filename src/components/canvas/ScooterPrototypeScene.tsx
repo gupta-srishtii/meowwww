@@ -337,9 +337,9 @@ export function ScooterPrototypeScene({
     })();
     const input: DrivingInputState = autoPlayMode
       ? {
-          throttle: sim.arrived || sim.viewpointArrived ? 0 : 0.94,
+          throttle: sim.arrived || sim.viewpointArrived ? 0 : 0.8,
           brake: 0,
-          steer: THREE.MathUtils.clamp((autoDesiredLat - sim.leadLateral) * 0.9, -0.85, 0.85),
+          steer: THREE.MathUtils.clamp((autoDesiredLat - sim.leadLateral) * 0.85, -0.85, 0.85),
         }
       : rawInput;
 
@@ -505,10 +505,11 @@ export function ScooterPrototypeScene({
         }
       } else {
         // Normal manual cruise driving along mountain highway
-        const segmentMaxSpeed =
+        const baseMaxSpeed =
           roadSegment === 'to_baalkuwari' || roadSegment === 'to_baalkuwari_stairs'
-            ? SCOOTER_MAX_SPEED * 0.88
+            ? SCOOTER_MAX_SPEED * 0.86
             : SCOOTER_MAX_SPEED;
+        const segmentMaxSpeed = autoPlayMode ? Math.min(baseMaxSpeed, 9.6) : baseMaxSpeed;
         if (input.throttle > 0) {
           sim.leadSpeed += SCOOTER_ACCEL * input.throttle * delta;
         }

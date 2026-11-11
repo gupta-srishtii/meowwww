@@ -76,47 +76,17 @@ export function ViewpointHUD({
         onToggleAudioMute={onToggleAudioMute}
         onOpenChapters={onOpenChapters}
         onPause={onPause}
-      >
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-          <span
-            className={`rounded-md px-2 py-0.5 font-medium ${
-              capturedShree ? 'bg-emerald-950/80 text-emerald-300' : 'bg-slate-800/80 text-slate-300'
-            }`}
-          >
-            {capturedShree ? '✓ Shree Solo' : '○ Shree Solo'}
-          </span>
-          <span
-            className={`rounded-md px-2 py-0.5 font-medium ${
-              capturedSolo ? 'bg-emerald-950/80 text-emerald-300' : 'bg-slate-800/80 text-slate-300'
-            }`}
-          >
-            {capturedSolo ? '✓ Shree & Ishaan' : '○ Shree & Ishaan Spot'}
-          </span>
-          <span
-            className={`rounded-md px-2 py-0.5 font-medium ${capturedGroup
-                ? 'bg-emerald-950/80 text-emerald-300'
-                : 'bg-slate-800/80 text-slate-300'
-              }`}
-          >
-            {capturedGroup ? '✓ All Four' : '○ All Four Spot'}
-          </span>
-          {readyToContinue && (
-            <button
-              type="button"
-              onClick={onResumeRiding}
-              className="rounded-md bg-amber-400 px-2.5 py-0.5 font-semibold text-slate-950 transition hover:bg-amber-300"
-            >
-              Continue Journey →
-            </button>
-          )}
-        </div>
-      </MinimalTopBar>
+      />
 
-      {activePhotoLabel && (
-        <div className="pointer-events-none fixed inset-x-0 top-24 z-20 flex justify-center px-4">
-          <div className="rounded-full border border-amber-300/60 bg-slate-950/85 px-4 py-1.5 text-xs font-medium text-amber-100 shadow-lg backdrop-blur-md">
-            📸 {activePhotoLabel}
-          </div>
+      {readyToContinue && !polaroidToastKind && (
+        <div className="pointer-events-none fixed right-4 bottom-4 z-20 sm:right-6 sm:bottom-6">
+          <button
+            type="button"
+            onClick={onResumeRiding}
+            className="pointer-events-auto rounded-full bg-amber-400/95 px-4 py-2 text-xs font-semibold text-slate-950 shadow-lg backdrop-blur-md transition hover:bg-amber-300"
+          >
+            Continue Journey →
+          </button>
         </div>
       )}
 

@@ -330,6 +330,7 @@ export interface SceneStageProps {
   onAdvanceDay1Phase: (next: Day1Phase) => void;
   onDay1CallStateChange: (active: boolean) => void;
   onDay1Complete: () => void;
+  onUnlockDay1StreamVideo?: () => void;
   morningKnockPhase?: boolean;
   onMorningKnockComplete?: () => void;
   morningBreakfastActive: boolean;
@@ -377,6 +378,8 @@ export interface SceneStageProps {
   onBhaiDoojTilakApplied: () => void;
   onBhaiDoojTilakComplete: () => void;
   onBhaiDoojEatingComplete: () => void;
+  onBhaiDoojLaughComplete?: () => void;
+  onBhaiDoojJhulaComplete?: () => void;
   collectedPolaroids: readonly string[];
   onInspectMemory: (id: string) => void;
   onAutoTriggerHotspot?: (hotspotId: string) => void;
@@ -401,6 +404,7 @@ export function SceneStage({
   onAdvanceDay1Phase,
   onDay1CallStateChange,
   onDay1Complete,
+  onUnlockDay1StreamVideo,
   morningKnockPhase = false,
   onMorningKnockComplete,
   morningBreakfastActive,
@@ -448,6 +452,8 @@ export function SceneStage({
   onBhaiDoojTilakApplied,
   onBhaiDoojTilakComplete,
   onBhaiDoojEatingComplete,
+  onBhaiDoojLaughComplete,
+  onBhaiDoojJhulaComplete,
   collectedPolaroids,
   onInspectMemory,
   onAutoTriggerHotspot,
@@ -556,6 +562,7 @@ export function SceneStage({
               onAdvanceDay1Phase={onAdvanceDay1Phase}
               onDay1CallStateChange={onDay1CallStateChange}
               onDay1Complete={onDay1Complete}
+              onUnlockDay1StreamVideo={onUnlockDay1StreamVideo}
               onNearbyHotspotChange={onNearbyHotspotChange}
               onSceneReady={controller.onMountedSceneReady}
               simulateMountFailure={simulateMountFailure}
@@ -755,6 +762,8 @@ export function SceneStage({
               onTilakApplied={onBhaiDoojTilakApplied}
               onTilakComplete={onBhaiDoojTilakComplete}
               onEatingComplete={onBhaiDoojEatingComplete}
+              onLaughComplete={onBhaiDoojLaughComplete}
+              onJhulaComplete={onBhaiDoojJhulaComplete}
               onSceneReady={controller.onMountedSceneReady}
             />
           ) : mountedSceneId === 14 ? (

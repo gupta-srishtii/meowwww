@@ -62,49 +62,15 @@ export function NeelkanthHUD({
     <>
       <MinimalTopBar
         title="Neelkanth Mahadev Temple"
-        subtitle={
-          hadDarshan
-            ? capturedFood
-              ? 'Walk down the market lane to parked scooters toward Baal Kuwari'
-              : 'Walk out through the temple market lane to the Chhole Bhature cafe & scooters'
-            : undefined
-        }
         polaroidCount={polaroidCount}
         audioMuted={audioMuted}
         onToggleAudioMute={onToggleAudioMute}
         onOpenChapters={onOpenChapters}
         onPause={onPause}
-      >
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-          <span
-            className={`rounded-md px-2 py-0.5 font-medium ${
-              rangBell ? 'bg-emerald-950/80 text-emerald-300' : 'bg-slate-800/80 text-slate-300'
-            }`}
-          >
-            {rangBell ? '✓ Bell' : '○ Bell'}
-          </span>
-          <span
-            className={`rounded-md px-2 py-0.5 font-medium ${
-              litDiya ? 'bg-emerald-950/80 text-emerald-300' : 'bg-slate-800/80 text-slate-300'
-            }`}
-          >
-            {litDiya ? '✓ Diya' : '○ Diya'}
-          </span>
-          <span
-            className={`rounded-md px-2 py-0.5 font-medium ${
-              hadDarshan ? 'bg-emerald-950/80 text-emerald-300' : 'bg-slate-800/80 text-slate-300'
-            }`}
-          >
-            {hadDarshan ? '✓ Darshan' : '○ Darshan'}
-          </span>
-          <span
-            className={`rounded-md px-2 py-0.5 font-medium ${
-              capturedFood ? 'bg-emerald-950/80 text-emerald-300' : 'bg-slate-800/80 text-slate-300'
-            }`}
-          >
-            {capturedFood ? '✓ Market Cafe' : '○ Market Cafe'}
-          </span>
+      />
 
+      {!mediaState.templeSongUrl && (
+        <>
           <input
             ref={templeAudioInputRef}
             type="file"
@@ -118,16 +84,12 @@ export function NeelkanthHUD({
           <button
             type="button"
             onClick={() => templeAudioInputRef.current?.click()}
-            className={`rounded-md border px-2 py-0.5 text-[10px] font-medium transition ${
-              mediaState.templeSongUrl
-                ? 'border-amber-400/55 bg-amber-950/60 text-amber-200'
-                : 'border-slate-700 bg-slate-900/80 text-slate-300 hover:border-amber-400/50 hover:text-amber-200'
-            }`}
+            className="pointer-events-auto fixed bottom-4 left-4 z-20 rounded-full border border-slate-700/75 bg-slate-950/75 px-3 py-1.5 text-[11px] font-medium text-amber-200 backdrop-blur-md transition hover:border-amber-300/60"
           >
-            {mediaState.templeSongName ? '♪ Temple Audio On' : '♪ Temple Audio'}
+            ♪ Temple Audio
           </button>
-        </div>
-      </MinimalTopBar>
+        </>
+      )}
 
       {polaroidToastVisible && onDismissPolaroidToast && (
         <PolaroidToastCard

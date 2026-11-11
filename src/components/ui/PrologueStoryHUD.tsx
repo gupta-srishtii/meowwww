@@ -37,6 +37,8 @@ export interface PrologueStoryHUDProps {
   // Scene 2 (Day 1 Evening)
   day1Phase?: Day1StoryPhase;
   day1CallActive?: boolean;
+  day1StreamToastVisible?: boolean;
+  onDismissDay1StreamToast?: () => void;
   onAnswerDay1Call?: () => void;
   onSkipDay1Phase?: () => void;
   // Scene 3
@@ -69,6 +71,8 @@ export function PrologueStoryHUD({
   onAdvanceKitaabi,
   day1Phase = 'stay_meet',
   day1CallActive = false,
+  day1StreamToastVisible = false,
+  onDismissDay1StreamToast,
   onAnswerDay1Call,
   onSkipDay1Phase,
   morningKnockPhase = false,
@@ -215,6 +219,16 @@ export function PrologueStoryHUD({
             onOpenChapters={onOpenChapters}
             onPause={onPause}
           />
+          {day1StreamToastVisible && onDismissDay1StreamToast && (
+            <PolaroidToastCard
+              polaroidId="scene02_day1_stream_video"
+              title="Day 1 Creek & Water Flow"
+              caption="Spontaneous roadside stop · cool clear trickle over stream boulders"
+              gradientClass="from-emerald-100 via-teal-100 to-sky-100"
+              stackedCount={polaroidCount}
+              onDismiss={onDismissDay1StreamToast}
+            />
+          )}
           {onTriggerHotspot && (
             <ContextualActionPill
               nearbyHotspot={nearbyHotspot}
@@ -296,21 +310,20 @@ export function PrologueStoryHUD({
             onPause={onPause}
           />
           {day1CallActive && (
-            <div className="pointer-events-none fixed inset-0 z-20 flex items-center justify-center px-4">
-              <div className="pointer-events-auto w-full max-w-xs rounded-2xl border border-emerald-400/55 bg-slate-950/92 p-4 text-center text-slate-100 shadow-2xl backdrop-blur-md">
-                <p className="text-[10px] font-semibold tracking-[0.2em] text-emerald-300 uppercase">
-                  ~9:00 PM · Incoming Call
-                </p>
-                <p className="mt-1 text-base font-semibold text-white">Ishaan</p>
-                <p className="mt-1.5 text-xs text-amber-100">
+            <div className="pointer-events-none fixed inset-x-0 bottom-6 z-20 flex justify-center px-4">
+              <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-3 rounded-full border border-emerald-400/55 bg-slate-950/92 px-4 py-2 text-xs text-slate-100 shadow-2xl backdrop-blur-md">
+                <span className="text-[10px] font-semibold tracking-wider text-emerald-300 uppercase">
+                  ~9:00 PM · Ishaan
+                </span>
+                <span className="text-amber-100">
                   &ldquo;Dinner ke liye dhaba chalte hain?&rdquo;
-                </p>
+                </span>
                 <button
                   type="button"
                   onClick={onAnswerDay1Call}
-                  className="mt-4 w-full rounded-xl bg-emerald-400 px-4 py-2 text-xs font-semibold text-slate-950 transition hover:bg-emerald-300"
+                  className="rounded-full bg-emerald-400 px-3 py-1 text-[11px] font-semibold text-slate-950 transition hover:bg-emerald-300"
                 >
-                  Head Out Through 9 PM Market →
+                  Ride Through 9 PM Market →
                 </button>
               </div>
             </div>
@@ -341,14 +354,14 @@ export function PrologueStoryHUD({
           )}
           <div className="pointer-events-none fixed inset-x-0 bottom-4 z-20 flex justify-center px-4">
             <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-amber-300/50 bg-slate-950/90 px-4 py-2 text-xs text-amber-100 shadow-xl">
-              <span>Walking through narrow lit Rishikesh market lanes...</span>
+              <span>~9:00 PM scooter ride through illuminated Rishikesh bazaar...</span>
               {onSkipDay1Phase && (
                 <button
                   type="button"
                   onClick={onSkipDay1Phase}
                   className="rounded-full bg-amber-400 px-3 py-1 text-[11px] font-semibold text-slate-950 hover:bg-amber-300"
                 >
-                  Join Boys at Dhaba →
+                  Join Dinner at Dhaba →
                 </button>
               )}
             </div>
@@ -448,37 +461,14 @@ export function PrologueStoryHUD({
           title={
             morningKnockPhase
               ? 'Day 2 Morning · Ground-Floor Room'
-              : 'Day 2 Morning · Main Road'
-          }
-          subtitle={
-            morningKnockPhase
-              ? 'Srishti is knocking at Ishaan’s ground-floor door to wake him up'
-              : morningBreakfastDone
-                ? 'Back at stay (~5 min stop) — head to scooters for Neelkanth'
-                : 'Walk out of the lane onto the morning road to share bun maska & chai'
+              : 'Day 2 Morning · Scooter Ride'
           }
           polaroidCount={polaroidCount}
           audioMuted={audioMuted}
           onToggleAudioMute={onToggleAudioMute}
           onOpenChapters={onOpenChapters}
           onPause={onPause}
-        >
-          <div className="mt-1.5 flex items-center gap-1.5 text-[11px]">
-            <span
-              className={`rounded-md px-2 py-0.5 font-medium ${
-                morningBreakfastDone
-                  ? 'bg-emerald-950/80 text-emerald-300'
-                  : 'bg-slate-800/80 text-slate-300'
-              }`}
-            >
-              {morningKnockPhase
-                ? '○ Wake Ishaan (Ground Floor)'
-                : morningBreakfastDone
-                  ? '✓ Bun Maska & Chai · 5-Min Stay Stop'
-                  : '○ Bun Maska & Chai'}
-            </span>
-          </div>
-        </MinimalTopBar>
+        />
 
         {morningKnockPhase && onKnockWakeIshaan && (
           <div className="pointer-events-none fixed inset-x-0 bottom-6 z-20 flex justify-center px-4">

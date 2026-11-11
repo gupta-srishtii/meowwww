@@ -126,31 +126,24 @@ export function BaalKuwariHUD({
         onToggleAudioMute={onToggleAudioMute}
         onOpenChapters={onOpenChapters}
         onPause={onPause}
-      >
-        {mode === 'maggi_stop' && (
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-            <span
-              className={`rounded-md px-2 py-0.5 font-medium ${
-                ateMaggi ? 'bg-emerald-950/80 text-emerald-300' : 'bg-slate-800/80 text-slate-300'
-              }`}
-            >
-              {ateMaggi ? '✓ Pre-Climb Maggi' : eatingActive ? 'Eating Maggi...' : '○ Clearing Maggi'}
-            </span>
-            {ateMaggi && onBeginClimbFromMaggi && (
-              <button
-                type="button"
-                onClick={onBeginClimbFromMaggi}
-                className="rounded-md bg-amber-400 px-2.5 py-0.5 font-semibold text-slate-950 transition hover:bg-amber-300"
-              >
-                Ride Scooters to Stairs →
-              </button>
-            )}
-          </div>
-        )}
+      />
 
-        {isStairCinematic && (
-          <div className="mt-2 space-y-1">
-            <div className="flex items-center justify-between gap-4 text-[11px]">
+      {mode === 'maggi_stop' && ateMaggi && onBeginClimbFromMaggi && (
+        <div className="pointer-events-none fixed right-4 bottom-4 z-20 sm:right-6 sm:bottom-6">
+          <button
+            type="button"
+            onClick={onBeginClimbFromMaggi}
+            className="pointer-events-auto rounded-full bg-amber-400/95 px-4 py-2 text-xs font-semibold text-slate-950 shadow-lg backdrop-blur-md transition hover:bg-amber-300"
+          >
+            Ride Scooters to Stairs →
+          </button>
+        </div>
+      )}
+
+      {isStairCinematic && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-6 z-20 flex justify-center px-4">
+          <div className="pointer-events-auto flex w-full max-w-md flex-col gap-2 rounded-2xl border border-amber-300/40 bg-slate-950/85 px-4 py-2.5 text-center shadow-2xl backdrop-blur-md">
+            <div className="flex items-center justify-between gap-2 text-[11px]">
               <span
                 ref={stairTelemetryRefs?.stepCountEl}
                 className="font-semibold text-amber-200 tabular-nums"
@@ -171,56 +164,25 @@ export function BaalKuwariHUD({
                 style={{ width: '0%' }}
               />
             </div>
-          </div>
-        )}
-
-        {mode === 'temple' && (
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-            <span
-              className={`rounded-md px-2 py-0.5 font-medium ${
-                rangBell ? 'bg-emerald-950/80 text-emerald-300' : 'bg-slate-800/80 text-slate-300'
-              }`}
-            >
-              {rangBell ? '✓ Summit Bell' : '○ Bell'}
-            </span>
-            <span
-              className={`rounded-md px-2 py-0.5 font-medium ${
-                capturedPolaroid ? 'bg-sky-950/80 text-sky-300' : 'bg-slate-800/80 text-slate-300'
-              }`}
-            >
-              {capturedPolaroid ? '✓ Polaroid' : '○ Summit Photo'}
-            </span>
-            <span
-              className={`rounded-md px-2 py-0.5 font-medium ${
-                capturedBookPolaroid ? 'bg-amber-950/80 text-amber-300' : 'bg-slate-800/80 text-slate-300'
-              }`}
-            >
-              {capturedBookPolaroid ? '✓ Book Photo' : '○ Book Overlook'}
-            </span>
-          </div>
-        )}
-      </MinimalTopBar>
-
-      {isStairCinematic && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-6 z-20 flex justify-center px-4">
-          <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-amber-300/40 bg-slate-950/85 px-5 py-2.5 text-center shadow-2xl backdrop-blur-md">
-            <p
-              ref={stairTelemetryRefs?.phaseLabelEl}
-              className="text-xs font-medium text-amber-100"
-            >
-              {mode === 'stairs'
-                ? 'Climbing the ~400 winding Baal Kuwari stone steps together...'
-                : 'Heading down fast and laughing all the way down...'}
-            </p>
-            {onSkipStairCinematic && (
-              <button
-                type="button"
-                onClick={onSkipStairCinematic}
-                className="rounded-lg border border-slate-600 bg-slate-800/90 px-2.5 py-1 text-[11px] font-semibold text-slate-200 transition hover:bg-slate-700 hover:text-white"
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+              <p
+                ref={stairTelemetryRefs?.phaseLabelEl}
+                className="text-xs font-medium text-amber-100"
               >
-                Skip (Space)
-              </button>
-            )}
+                {mode === 'stairs'
+                  ? 'Climbing the ~400 winding Baal Kuwari stone steps together...'
+                  : 'Heading down fast and laughing all the way down...'}
+              </p>
+              {onSkipStairCinematic && (
+                <button
+                  type="button"
+                  onClick={onSkipStairCinematic}
+                  className="rounded-lg border border-slate-600 bg-slate-800/90 px-2.5 py-1 text-[11px] font-semibold text-slate-200 transition hover:bg-slate-700 hover:text-white"
+                >
+                  Skip (Space)
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

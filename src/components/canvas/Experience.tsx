@@ -167,6 +167,8 @@ export default function Experience() {
   const [day1TerraceNonce, setDay1TerraceNonce] = useState(0);
   const [day1WaterfallSitNonce, setDay1WaterfallSitNonce] = useState(0);
   const [day1CallActive, setDay1CallActive] = useState(false);
+  const [day1StreamToastVisible, setDay1StreamToastVisible] = useState(false);
+  const day1StreamTimerRef = useRef<number | null>(null);
   const [morningKnockPhase, setMorningKnockPhase] = useState(true);
   const [morningBreakfastActive, setMorningBreakfastActive] = useState(false);
   const [morningBreakfastDone, setMorningBreakfastDone] = useState(false);
@@ -232,7 +234,7 @@ export default function Experience() {
   const hotelSummaryTimerRef = useRef<number | null>(null);
 
   // Scene 13 (Virtual Bhai Dooj Finale) state
-  const [bhaiDoojPhase, setBhaiDoojPhase] = useState<BhaiDoojPhase>('kitaabi_callback');
+  const [bhaiDoojPhase, setBhaiDoojPhase] = useState<BhaiDoojPhase>('arrival');
   const [bhaiDoojTilakApplied, setBhaiDoojTilakApplied] = useState(false);
 
   const [chaptersOpen, setChaptersOpen] = useState(false);
@@ -491,6 +493,18 @@ export default function Experience() {
     setMorningBreakfastDone(false);
     sceneController.requestSceneTransition(3, { clearInputs: clearInputsRef.current });
   }, [sceneController]);
+
+  const handleUnlockDay1StreamVideo = useCallback(() => {
+    capturePolaroidAndSave('scene02_day1_stream_video');
+    setDay1StreamToastVisible(true);
+    if (day1StreamTimerRef.current !== null) {
+      clearStoryTimeout(day1StreamTimerRef.current);
+    }
+    day1StreamTimerRef.current = setStoryTimeout(() => {
+      day1StreamTimerRef.current = null;
+      setDay1StreamToastVisible(false);
+    }, 5200);
+  }, [capturePolaroidAndSave, clearStoryTimeout, setStoryTimeout]);
 
   const handleKnockWakeIshaan = useCallback(() => {
     setMorningKnockPhase(false);
@@ -1192,7 +1206,7 @@ export default function Experience() {
   const handleProceedToBhaiDooj = useCallback(() => {
     clearInputsRef.current();
     setHotelSummaryOpen(false);
-    setBhaiDoojPhase('kitaabi_callback');
+    setBhaiDoojPhase('arrival');
     setBhaiDoojTilakApplied(false);
     sceneController.requestSceneTransition(13, { clearInputs: clearInputsRef.current });
   }, [sceneController]);
@@ -1209,7 +1223,7 @@ export default function Experience() {
     setMorningKnockPhase(true);
     setMorningBreakfastActive(false);
     setMorningBreakfastDone(false);
-    setBhaiDoojPhase('kitaabi_callback');
+    setBhaiDoojPhase('arrival');
     setBhaiDoojTilakApplied(false);
     sceneController.requestSceneTransition(1, { clearInputs: clearInputsRef.current });
   }, [sceneController]);
@@ -1220,16 +1234,8 @@ export default function Experience() {
       setPlayMode(mode, true);
       if (mode === 'watch') {
         dismissPendingResume();
-        setControlsOpen(false);
-      } else {
-        try {
-          if (window.localStorage.getItem('road_made_us_family_controls_seen') !== '1') {
-            setControlsOpen(true);
-          }
-        } catch {
-          // Ignore storage errors cleanly
-        }
       }
+      setControlsOpen(false);
     },
     [dismissPendingResume, setPlayMode]
   );
@@ -1412,6 +1418,9 @@ export default function Experience() {
       if (morningToastTimerRef.current !== null) {
         clearStoryTimeout(morningToastTimerRef.current);
       }
+      if (day1StreamTimerRef.current !== null) {
+        clearStoryTimeout(day1StreamTimerRef.current);
+      }
       if (neelkanthToastTimerRef.current !== null) {
         clearStoryTimeout(neelkanthToastTimerRef.current);
       }
@@ -1583,7 +1592,7 @@ export default function Experience() {
       setMorningBreakfastActive(false);
       setMorningBreakfastDone(false);
     } else if (committedSceneId === 13) {
-      setBhaiDoojPhase('kitaabi_callback');
+      setBhaiDoojPhase('arrival');
       setBhaiDoojTilakApplied(false);
       ambientAudio.playBhaiDoojChime();
     } else if (committedSceneId === 14) {
@@ -1627,7 +1636,7 @@ export default function Experience() {
 
     if (committedSceneId === 5 && roadSubStage === 'driving') {
       if (viewpointArrived && mountainRoadSegment === 'to_dhaba') {
-        const id = setStoryTimeout(() => handleEnterViewpoint(), reducedMotion ? 450 : 950);
+        const id = setStoryTimeout(() => handleEnterViewpoint(), reducedMotion ? 550 : 1850);
         return () => clearStoryTimeout(id);
       }
       if (arrived) {
@@ -1639,7 +1648,7 @@ export default function Experience() {
               handleContinueToDhaba();
             }
           },
-          reducedMotion ? 500 : 1100
+          reducedMotion ? 550 : 1850
         );
         return () => clearStoryTimeout(id);
       }
@@ -1648,7 +1657,7 @@ export default function Experience() {
     if (committedSceneId === 8 && arrived) {
       const id = setStoryTimeout(
         () => handleEnterStaircaseFromFootpath(),
-        reducedMotion ? 500 : 1100
+        reducedMotion ? 550 : 1850
       );
       return () => clearStoryTimeout(id);
     }
@@ -1656,7 +1665,7 @@ export default function Experience() {
     if (committedSceneId === 11 && arrived) {
       const id = setStoryTimeout(
         () => handleEnterHotelCourtyard(),
-        reducedMotion ? 500 : 1100
+        reducedMotion ? 550 : 1850
       );
       return () => clearStoryTimeout(id);
     }
@@ -1670,13 +1679,6 @@ export default function Experience() {
     }
 
     if (isBhaiDoojSceneActive) {
-      if (bhaiDoojPhase === 'kitaabi_callback') {
-        const id = setStoryTimeout(
-          () => setBhaiDoojPhase('arrival'),
-          reducedMotion ? 800 : 3400
-        );
-        return () => clearStoryTimeout(id);
-      }
       if (bhaiDoojPhase === 'arrival') {
         const id = setStoryTimeout(
           () => setBhaiDoojPhase('applying_tilak'),
@@ -1688,13 +1690,6 @@ export default function Experience() {
         const id = setStoryTimeout(
           () => setBhaiDoojPhase('eating_together'),
           reducedMotion ? 700 : 2000
-        );
-        return () => clearStoryTimeout(id);
-      }
-      if (bhaiDoojPhase === 'creator_letter') {
-        const id = setStoryTimeout(
-          () => handleFinishBhaiDooj(),
-          reducedMotion ? 1100 : 5200
         );
         return () => clearStoryTimeout(id);
       }
@@ -1782,7 +1777,7 @@ export default function Experience() {
       ) {
         event.preventDefault();
         if (isBhaiDoojSceneActive && bhaiDoojPhase === 'eating_together') {
-          setBhaiDoojPhase('creator_letter');
+          setBhaiDoojPhase('playful_laugh');
         } else if (isDepartureSceneActive) {
           handleScooterDepartureComplete();
         } else if (isDay2MorningActive && morningKnockPhase) {
@@ -2014,6 +2009,7 @@ export default function Experience() {
           onAdvanceDay1Phase={setDay1Phase}
           onDay1CallStateChange={setDay1CallActive}
           onDay1Complete={handleDay1Complete}
+          onUnlockDay1StreamVideo={handleUnlockDay1StreamVideo}
           morningKnockPhase={morningKnockPhase}
           onMorningKnockComplete={handleKnockWakeIshaan}
           morningBreakfastActive={morningBreakfastActive}
@@ -2060,7 +2056,9 @@ export default function Experience() {
           bhaiDoojTilakApplied={bhaiDoojTilakApplied}
           onBhaiDoojTilakApplied={() => setBhaiDoojTilakApplied(true)}
           onBhaiDoojTilakComplete={() => setBhaiDoojPhase('sweet_offer')}
-          onBhaiDoojEatingComplete={() => setBhaiDoojPhase('creator_letter')}
+          onBhaiDoojEatingComplete={() => setBhaiDoojPhase('playful_laugh')}
+          onBhaiDoojLaughComplete={() => setBhaiDoojPhase('jhula_swing')}
+          onBhaiDoojJhulaComplete={() => setBhaiDoojPhase('complete')}
           collectedPolaroids={collectedPolaroids}
           onInspectMemory={handleInspectMemory}
           onAutoTriggerHotspot={handleAutoTriggerHotspot}
@@ -2099,6 +2097,8 @@ export default function Experience() {
             onAdvanceKitaabi={handleAdvanceKitaabi}
             day1Phase={day1Phase}
             day1CallActive={day1CallActive}
+            day1StreamToastVisible={day1StreamToastVisible}
+            onDismissDay1StreamToast={() => setDay1StreamToastVisible(false)}
             onAnswerDay1Call={handleAnswerDay1Call}
             onSkipDay1Phase={handleSkipDay1Phase}
             morningKnockPhase={morningKnockPhase}
@@ -2403,10 +2403,11 @@ export default function Experience() {
           onOpenChapters={handleOpenChapters}
           onPause={handleOpenPause}
           polaroidCount={validPolaroidCount}
-          onStartCelebration={() => setBhaiDoojPhase('arrival')}
           onTriggerTilak={() => setBhaiDoojPhase('applying_tilak')}
           onAcceptSweets={() => setBhaiDoojPhase('eating_together')}
-          onSkipEating={() => setBhaiDoojPhase('creator_letter')}
+          onSkipEating={() => setBhaiDoojPhase('playful_laugh')}
+          onViewMemories={handleOpenMemoriesTab}
+          onReplayJourney={handleReplayJourney}
           onFinishFinale={handleFinishBhaiDooj}
         />
       ) : isEndingGalleryActive ? (

@@ -307,9 +307,37 @@ test('final story accuracy: removed disliked title, silent stairs, Srishti/Kanis
 
   const hotelEnv = read('src/components/canvas/environment/HotelReturnEnvironment.tsx');
   assert.equal(hotelEnv.includes('Kanishka'), true);
-  assert.equal(hotelEnv.includes('15.6'), true);
+  assert.equal(hotelEnv.includes('33.6'), true);
 
   const prologueHud = read('src/components/ui/PrologueStoryHUD.tsx');
   assert.equal(prologueHud.includes("'evening_maggi_stop'"), true);
   assert.equal(prologueHud.includes("'return_and_kanishka'"), true);
+});
+
+test('final gameplay & media repair: Day 1 video spec, decluttered HUDs, Baal Kuwari back stairs, Bhai Dooj jhula', () => {
+  const read = (rel) => fs.readFileSync(path.resolve(__dirname, '..', rel), 'utf8');
+
+  const loaderSrc = read('src/lib/privateMemoryLoader.ts');
+  assert.equal(loaderSrc.includes("matchedFilename: 'DAY 1 1.mp4'"), true);
+  assert.equal(loaderSrc.includes("mediaKind: 'video'"), true);
+
+  const hudChrome = read('src/components/ui/MinimalHudChrome.tsx');
+  assert.equal(hudChrome.includes('Rishikesh · For Ishaan'), false);
+
+  const endingHud = read('src/components/ui/EndingScreenHUD.tsx');
+  assert.equal(endingHud.includes('Every Road Led Here'), false);
+  assert.equal(endingHud.includes('Memories'), true);
+  assert.equal(endingHud.includes('Experience Again'), true);
+
+  const bhaiHud = read('src/components/ui/BhaiDoojHUD.tsx');
+  assert.equal(bhaiHud.includes('CREATOR_BHAI_DOOJ_LETTER'), false);
+  assert.equal(bhaiHud.includes('creatorDraftNotice'), false);
+  assert.equal(bhaiHud.includes('HAPPY BHAI DOOJ'), true);
+
+  const bhaiScene = read('src/components/canvas/scenes/Scene13_BhaiDoojFinale.tsx');
+  assert.equal(bhaiScene.includes("'playful_laugh'"), true);
+  assert.equal(bhaiScene.includes("'jhula_swing'"), true);
+
+  const bkEnv = read('src/components/canvas/environment/BaalKuwariTempleEnvironment.tsx');
+  assert.equal(bkEnv.includes('sampleBaalKuwariFloorY'), true);
 });

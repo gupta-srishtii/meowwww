@@ -75,33 +75,19 @@ export function WalkHUD({
         onToggleAudioMute={onToggleAudioMute}
         onOpenChapters={onOpenChapters}
         onPause={onPause}
-      >
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-          <span
-            className={`rounded-md px-2 py-0.5 font-medium ${
-              ateMaggi ? 'bg-emerald-950/80 text-emerald-300' : 'bg-slate-800/80 text-slate-300'
-            }`}
+      />
+
+      {readyToContinue && (
+        <div className="pointer-events-none fixed right-4 bottom-4 z-20 sm:right-6 sm:bottom-6">
+          <button
+            type="button"
+            onClick={onContinueRiding}
+            className="pointer-events-auto rounded-full bg-amber-400/95 px-4 py-2 text-xs font-semibold text-slate-950 shadow-lg backdrop-blur-md transition hover:bg-amber-300"
           >
-            {ateMaggi ? '✓ Maggi' : '○ Maggi'}
-          </span>
-          <span
-            className={`rounded-md px-2 py-0.5 font-medium ${
-              sippedChai ? 'bg-emerald-950/80 text-emerald-300' : 'bg-slate-800/80 text-slate-300'
-            }`}
-          >
-            {sippedChai ? '✓ Chai' : '○ Chai'}
-          </span>
-          {readyToContinue && (
-            <button
-              type="button"
-              onClick={onContinueRiding}
-              className="rounded-md bg-amber-400 px-2.5 py-0.5 font-semibold text-slate-950 transition hover:bg-amber-300"
-            >
-              Continue Journey →
-            </button>
-          )}
+            Continue Journey →
+          </button>
         </div>
-      </MinimalTopBar>
+      )}
 
       {polaroidToastVisible && (
         <PolaroidToastCard

@@ -88,16 +88,16 @@ export function createMountainRoadCurve(
       : segment === 'to_neelkanth'
         ? [
             new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(-10, 1.5, -42),
-            new THREE.Vector3(-30, 3.6, -86),
-            new THREE.Vector3(-18, 5.8, -134),
-            new THREE.Vector3(14, 8.0, -182),
-            new THREE.Vector3(34, 10.2, -230),
-            new THREE.Vector3(22, 12.2, -278),
-            new THREE.Vector3(-4, 13.8, -328), // Neelkanth Mahadev gateway plaza ~324m
-            new THREE.Vector3(-34, 15.2, -374), // road curves past temple toward future Baal Kuwari forest route
-            new THREE.Vector3(-72, 16.4, -416),
-            new THREE.Vector3(-112, 17.6, -448),
+            new THREE.Vector3(-14, 1.8, -44),
+            new THREE.Vector3(-36, 4.2, -90),
+            new THREE.Vector3(-14, 6.6, -138),
+            new THREE.Vector3(22, 9.0, -186),
+            new THREE.Vector3(42, 11.4, -234),
+            new THREE.Vector3(24, 13.4, -280),
+            new THREE.Vector3(-6, 15.0, -330), // Neelkanth Mahadev gateway plaza ~324m
+            new THREE.Vector3(-38, 16.4, -376), // road curves past temple toward future Baal Kuwari forest route
+            new THREE.Vector3(-76, 17.6, -418),
+            new THREE.Vector3(-116, 18.8, -450),
           ]
         : segment === 'to_baalkuwari'
           ? [
@@ -132,12 +132,12 @@ export function createMountainRoadCurve(
               ]
             : [
                 // Evening Safe Return Descent toward Rishikesh Accommodation Lane (~266m stop bay)
-                new THREE.Vector3(0, 15.6, 0),
-                new THREE.Vector3(-10, 13.8, -42),
-                new THREE.Vector3(-26, 11.4, -86),
-                new THREE.Vector3(-14, 9.0, -132),
-                new THREE.Vector3(14, 6.4, -178),
-                new THREE.Vector3(24, 3.8, -224),
+                new THREE.Vector3(0, 16.4, 0),
+                new THREE.Vector3(-14, 14.4, -42),
+                new THREE.Vector3(-32, 11.8, -88),
+                new THREE.Vector3(-12, 9.2, -134),
+                new THREE.Vector3(20, 6.4, -180),
+                new THREE.Vector3(28, 3.8, -226),
                 new THREE.Vector3(8, 1.4, -268),
                 new THREE.Vector3(-16, 0.4, -314),
                 new THREE.Vector3(-48, 0.0, -356),

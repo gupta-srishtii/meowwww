@@ -63,17 +63,20 @@ export interface Scene02RishikeshDay1Props {
   onAdvanceDay1Phase: (next: Day1Phase) => void;
   onDay1CallStateChange: (active: boolean) => void;
   onDay1Complete: () => void;
+  onUnlockDay1StreamVideo?: () => void;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onSceneReady: (token: number, sceneId: SceneId) => void;
   simulateMountFailure?: boolean;
 }
 
-const WATERFALL_RIDE_DURATION_SEC = 3.2;
-const WATERFALL_TOTAL_DURATION_SEC = 7.6;
-const EVENING_MAGGI_DURATION_SEC = 5.4;
-const RETURN_ROLLOUT_DURATION_SEC = 2.6;
+const STAY_HOLD_BEFORE_WALK_SEC = 2.2;
+const WATERFALL_RIDE_DURATION_SEC = 4.6;
+const WATERFALL_WALK_IN_DURATION_SEC = 3.0;
+const WATERFALL_TOTAL_DURATION_SEC = 13.0;
+const EVENING_MAGGI_DURATION_SEC = 5.8;
+const RETURN_ROLLOUT_DURATION_SEC = 2.8;
 const NIGHT_DHABA_DURATION_SEC = 6.2;
-const NIGHT_RETURN_DURATION_SEC = 4.0;
+const NIGHT_RETURN_DURATION_SEC = 4.6;
 
 function useRigRefs(): HumanRigRefs & {
   groupRef: RefObject<THREE.Group | null>;
@@ -165,6 +168,7 @@ export function Scene02_RishikeshDay1({
   onAdvanceDay1Phase,
   onDay1CallStateChange,
   onDay1Complete,
+  onUnlockDay1StreamVideo,
   onNearbyHotspotChange,
   onSceneReady,
   simulateMountFailure = false,
@@ -190,12 +194,14 @@ export function Scene02_RishikeshDay1({
   const compScooterRef = useRef<THREE.Group>(null);
   const returnScooter1Ref = useRef<THREE.Group>(null);
   const returnScooter2Ref = useRef<THREE.Group>(null);
+  const marketScooterRef = useRef<THREE.Group>(null);
 
   const readyTokenRef = useRef(-1);
   const phaseTimerRef = useRef(0);
   const completedRef = useRef(false);
   const phaseAdvancedRef = useRef(false);
   const callTriggeredRef = useRef(false);
+  const streamVideoUnlockedRef = useRef(false);
   const prevHotspotIdRef = useRef<string | null>(null);
   const onTerraceRef = useRef(false);
   const waterfallSeatedRef = useRef(false);
@@ -226,6 +232,7 @@ export function Scene02_RishikeshDay1({
     phaseTimerRef.current = 0;
     phaseAdvancedRef.current = false;
     callTriggeredRef.current = false;
+    streamVideoUnlockedRef.current = false;
     prevHotspotIdRef.current = null;
     onNearbyHotspotChange(null);
     if (day1Phase !== 'waterfall_ride_stop') {
@@ -248,17 +255,17 @@ export function Scene02_RishikeshDay1({
       onTerraceRef.current = false;
       setOnTerraceState(false);
     } else if (day1Phase === 'waterfall_ride_stop') {
-      simRef.current.posX = -1.65;
-      simRef.current.posZ = -1.25;
+      simRef.current.posX = -2.15;
+      simRef.current.posZ = -1.35;
       simRef.current.velX = 0;
       simRef.current.velZ = 0;
       simRef.current.facingYaw = -Math.PI * 0.48;
       simRef.current.orbitYaw = -Math.PI * 0.45;
       simRef.current.orbitPitch = 0.22;
-      waterfallSeatedRef.current = autoPlayMode;
-      setWaterfallSeated(autoPlayMode);
+      waterfallSeatedRef.current = false;
+      setWaterfallSeated(false);
     } else if (day1Phase === 'market_street_walk') {
-      simRef.current.posX = 0.15;
+      simRef.current.posX = 0.0;
       simRef.current.posZ = 10.2;
       simRef.current.velX = 0;
       simRef.current.velZ = 0;
@@ -301,12 +308,15 @@ export function Scene02_RishikeshDay1({
       setWaterfallSeated(next);
       simRef.current.velX = 0;
       simRef.current.velZ = 0;
-      if (!next) {
+      if (next && !streamVideoUnlockedRef.current) {
+        streamVideoUnlockedRef.current = true;
+        onUnlockDay1StreamVideo?.();
+      } else if (!next) {
         simRef.current.posX = -0.35;
         simRef.current.posZ = -1.25;
       }
     }
-  }, [waterfallSitNonce, day1Phase]);
+  }, [waterfallSitNonce, day1Phase, onUnlockDay1StreamVideo]);
 
   useFrame((_, rawDelta) => {
     const delta = Math.min(rawDelta, 0.05);
@@ -345,7 +355,14 @@ export function Scene02_RishikeshDay1({
         scratch.currentLookAt.lerp(scratch.desiredLookAt, 1 - Math.exp(-delta * 5.2));
         camera.lookAt(scratch.currentLookAt);
       } else {
-        const sitT = Math.min(1, (t - WATERFALL_RIDE_DURATION_SEC) / 5.4);
+        const walkElapsed = t - WATERFALL_RIDE_DURATION_SEC;
+        const autoShouldSit = walkElapsed >= WATERFALL_WALK_IN_DURATION_SEC;
+        if (autoPlayMode && autoShouldSit !== waterfallSeatedRef.current) {
+          waterfallSeatedRef.current = autoShouldSit;
+          setWaterfallSeated(autoShouldSit);
+        }
+
+        const sitT = Math.max(0, Math.min(1, (walkElapsed - WATERFALL_WALK_IN_DURATION_SEC) / 5.4));
         const rockSeatIshaan = DAY1_WATERFALL_ROCK_SEATS.ishaan;
         const rockSeatShree = DAY1_WATERFALL_ROCK_SEATS.srishti;
         const rockSeatManish = DAY1_WATERFALL_ROCK_SEATS.friend_black_tee;
@@ -379,7 +396,53 @@ export function Scene02_RishikeshDay1({
           reducedMotion,
         });
 
-        if (autoPlayMode || waterfallSeatedRef.current) {
+        if (autoPlayMode && !autoShouldSit) {
+          // Walk in visibly together along the stony slope toward the stream boulders before sitting
+          const wAlpha = Math.min(1, walkElapsed / WATERFALL_WALK_IN_DURATION_SEC);
+          const wEase = wAlpha * wAlpha * (3 - 2 * wAlpha);
+          const curIx = THREE.MathUtils.lerp(-2.15, rockSeatIshaan.x - 0.55, wEase);
+          const curIz = THREE.MathUtils.lerp(-1.35, rockSeatIshaan.z - 0.1, wEase);
+          const curSx = THREE.MathUtils.lerp(-1.95, rockSeatShree.x - 0.55, wEase);
+          const curSz = THREE.MathUtils.lerp(-2.0, rockSeatShree.z + 0.05, wEase);
+          const walkYaw = -Math.PI * 0.46;
+
+          animateIshaanWalkRig({
+            refs: ishaanRig,
+            posX: curIx,
+            posZ: curIz,
+            facingYaw: walkYaw,
+            strideRatio: 0.72,
+            stridePhase: walkElapsed * 5.8,
+            elapsed: sim.elapsed,
+            delta,
+            groundY: 0.02,
+            reducedMotion,
+          });
+          animateCharacterRig({
+            refs: shreeRig,
+            posX: curSx,
+            posZ: curSz,
+            facingYaw: walkYaw,
+            strideRatio: 0.72,
+            stridePhase: walkElapsed * 5.8 + 0.4,
+            elapsed: sim.elapsed,
+            delta,
+            groundY: 0.02,
+            idlePose: 'chat_nod',
+            reducedMotion,
+          });
+
+          scratch.desiredCamPos.set(curIx - 2.35, 1.92, curIz + 2.55);
+          scratch.desiredLookAt.set(curIx + 1.8, 1.05, -1.65);
+          camera.position.lerp(scratch.desiredCamPos, 1 - Math.exp(-delta * 5));
+          scratch.currentLookAt.lerp(scratch.desiredLookAt, 1 - Math.exp(-delta * 6));
+          camera.lookAt(scratch.currentLookAt);
+        } else if (waterfallSeatedRef.current) {
+          if (walkElapsed >= WATERFALL_WALK_IN_DURATION_SEC + 0.9 && !streamVideoUnlockedRef.current) {
+            streamVideoUnlockedRef.current = true;
+            onUnlockDay1StreamVideo?.();
+          }
+
           animateCharacterRig({
             refs: ishaanRig,
             posX: rockSeatIshaan.x,
@@ -611,16 +674,16 @@ export function Scene02_RishikeshDay1({
         returnScooter2Ref.current.rotation.set(0, -Math.PI * 0.72, 0);
       }
 
-      if (t >= RETURN_ROLLOUT_DURATION_SEC * 0.85 && !duskNight) {
+      if (t >= RETURN_ROLLOUT_DURATION_SEC && !duskNight) {
         setDuskNight(true);
       }
 
-      if (t >= RETURN_ROLLOUT_DURATION_SEC && !callTriggeredRef.current) {
+      if (t >= RETURN_ROLLOUT_DURATION_SEC + 1.8 && !callTriggeredRef.current) {
         callTriggeredRef.current = true;
         onDay1CallStateChange(true);
       }
 
-      if (autoPlayMode && t >= RETURN_ROLLOUT_DURATION_SEC + 3.0 && !phaseAdvancedRef.current) {
+      if (autoPlayMode && t >= RETURN_ROLLOUT_DURATION_SEC + 4.6 && !phaseAdvancedRef.current) {
         phaseAdvancedRef.current = true;
         onDay1CallStateChange(false);
         onAdvanceDay1Phase('market_street_walk');
@@ -635,86 +698,61 @@ export function Scene02_RishikeshDay1({
     }
 
     // ---------------------------------------------------------
-    // PHASE 3B: SRISHTI WALKING THROUGH NIGHT RISHIKESH MARKET STREETS
+    // PHASE 3B: ~9:00 PM SCOOTER RIDE THROUGH ILLUMINATED RISHIKESH MARKET
     // ---------------------------------------------------------
     if (day1Phase === 'market_street_walk') {
+      phaseTimerRef.current += delta;
       const input = walkInputRef.current;
+      let leanAngle = 0;
+
       if (autoPlayMode) {
         const target = DAY1_MARKET_HOTSPOTS[0];
-        const dx = target.x - sim.posX;
-        const dz = target.z - sim.posZ;
-        const dist = Math.hypot(dx, dz);
-        if (dist > 0.75) {
-          const step = Math.min(dist, WALK_SPEED_MPS * 1.18 * delta);
-          sim.posX += (dx / dist) * step;
-          sim.posZ += (dz / dist) * step;
-          sim.facingYaw = Math.atan2(-dx, -dz);
-          sim.stridePhase += delta * 7.2;
-          sim.strideRatio = 0.9;
+        const targetZ = target.z + 0.6;
+        const targetX = Math.sin((10.2 - sim.posZ) * 0.14) * 0.22;
+        const dz = targetZ - sim.posZ;
+        if (Math.abs(dz) > 0.35) {
+          const speed = Math.abs(dz) < 2.8 ? 1.8 : 3.0;
+          const stepZ = Math.min(Math.abs(dz), speed * delta);
+          sim.posZ -= stepZ;
+          sim.posX = THREE.MathUtils.damp(sim.posX, targetX, 5, delta);
+          sim.facingYaw = Math.atan2(-(targetX - sim.posX), 2.5) * 0.45;
+          leanAngle = -sim.facingYaw * 0.45;
         } else {
-          sim.strideRatio = 0;
-          if (!phaseAdvancedRef.current) {
+          sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, 0, 6, delta);
+          if (!phaseAdvancedRef.current && phaseTimerRef.current >= 6.8) {
             phaseAdvancedRef.current = true;
             onAdvanceDay1Phase('night_dhaba_dinner');
           }
         }
       } else if (input) {
-        const moveDist = stepWalkSimulation(
-          sim,
-          input,
-          delta,
-          DAY1_MARKET_WALK_BOUNDS,
-          []
-        );
-        const speed = Math.hypot(sim.velX, sim.velZ);
-        sim.strideRatio = THREE.MathUtils.clamp(speed / WALK_SPEED_MPS, 0, 1);
-        if (sim.strideRatio > 0.03) {
-          sim.stridePhase += moveDist * 3.8;
-        }
+        const throttle = THREE.MathUtils.clamp(input.moveZ, -1, 1);
+        const steer = THREE.MathUtils.clamp(input.moveX, -1, 1);
+        const driveSpeed = throttle !== 0 ? throttle * 5.6 : 0;
+        sim.posZ = THREE.MathUtils.clamp(sim.posZ - driveSpeed * delta, -9.2, 10.6);
+        sim.posX = THREE.MathUtils.clamp(sim.posX + steer * 2.2 * delta, -1.45, 1.45);
+        leanAngle = -steer * 0.09;
+        sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, -steer * 0.22, 8, delta);
       }
 
       const streetY = sampleMarketStreetY(sim.posZ);
-      animateIshaanWalkRig({
-        refs: ishaanRig,
-        posX: sim.posX - 0.32,
-        posZ: sim.posZ + 0.12,
-        facingYaw: sim.facingYaw,
-        strideRatio: sim.strideRatio,
-        stridePhase: sim.stridePhase + 0.35,
-        elapsed: sim.elapsed,
-        delta,
-        groundY: streetY,
-        reducedMotion,
-      });
-      animateCharacterRig({
-        refs: shreeRig,
-        posX: sim.posX + 0.32,
-        posZ: sim.posZ,
-        facingYaw: sim.facingYaw,
-        strideRatio: sim.strideRatio,
-        stridePhase: sim.stridePhase,
-        elapsed: sim.elapsed,
-        delta,
-        groundY: streetY,
-        idlePose: 'chat_nod',
-        reducedMotion,
-      });
+      if (marketScooterRef.current) {
+        marketScooterRef.current.position.set(sim.posX, streetY + 0.02, sim.posZ);
+        marketScooterRef.current.rotation.set(-0.04, sim.facingYaw, leanAngle);
+      }
 
-      const camSin = Math.sin(sim.orbitYaw);
-      const camCos = Math.cos(sim.orbitYaw);
       const isNarrow = size.width < 768;
       scratch.desiredCamPos.set(
-        sim.posX + camSin * (isNarrow ? 3.55 : 2.95),
-        streetY + 1.82,
-        sim.posZ + camCos * (isNarrow ? 3.55 : 2.95)
+        sim.posX * 0.65 + (isNarrow ? 0.45 : 0.35),
+        streetY + 2.05,
+        sim.posZ + (isNarrow ? 4.4 : 3.7)
       );
       scratch.desiredLookAt.set(
-        sim.posX - camSin * 1.65,
-        streetY + 1.14,
-        sim.posZ - camCos * 1.65
+        sim.posX * 0.5,
+        streetY + 1.18,
+        sim.posZ - 4.2
       );
-      camera.position.lerp(scratch.desiredCamPos, 1 - Math.exp(-delta * 8));
-      scratch.currentLookAt.lerp(scratch.desiredLookAt, 1 - Math.exp(-delta * 10));
+      camera.position.lerp(scratch.desiredCamPos, 1 - Math.exp(-delta * 6.5));
+      scratch.currentLookAt.lerp(scratch.desiredLookAt, 1 - Math.exp(-delta * 8));
       camera.lookAt(scratch.currentLookAt);
 
       const mktHotspot = findNearestWalkHotspot(sim.posX, sim.posZ, DAY1_MARKET_HOTSPOTS);
@@ -867,23 +905,28 @@ export function Scene02_RishikeshDay1({
     const activeHotspots = currentTerrace ? TERRACE_HOTSPOTS : DAY1_HOTSPOTS;
 
     if (autoPlayMode && !currentTerrace) {
-      // Smooth directed autopilot walking from interior stay straight out to the evening waterfall ride hotspot
-      const targetSpot = DAY1_HOTSPOTS[1];
-      const dx = targetSpot.x - sim.posX;
-      const dz = targetSpot.z - sim.posZ;
-      const dist = Math.hypot(dx, dz);
-      if (dist > 0.65) {
-        const moveStep = Math.min(dist, WALK_SPEED_MPS * 0.88 * delta);
-        sim.posX += (dx / dist) * moveStep;
-        sim.posZ += (dz / dist) * moveStep;
-        sim.facingYaw = Math.atan2(-dx, -dz);
-        sim.stridePhase += delta * 6.8;
-        sim.strideRatio = 0.85;
-      } else {
+      phaseTimerRef.current += delta;
+      // Hold warm post-rafting greeting visibly for ~2.2s before strolling out to the scooters
+      if (phaseTimerRef.current < STAY_HOLD_BEFORE_WALK_SEC) {
         sim.strideRatio = 0;
-        if (!phaseAdvancedRef.current) {
-          phaseAdvancedRef.current = true;
-          onAdvanceDay1Phase('waterfall_ride_stop');
+      } else {
+        const targetSpot = DAY1_HOTSPOTS[1];
+        const dx = targetSpot.x - sim.posX;
+        const dz = targetSpot.z - sim.posZ;
+        const dist = Math.hypot(dx, dz);
+        if (dist > 0.65) {
+          const moveStep = Math.min(dist, WALK_SPEED_MPS * 0.85 * delta);
+          sim.posX += (dx / dist) * moveStep;
+          sim.posZ += (dz / dist) * moveStep;
+          sim.facingYaw = Math.atan2(-dx, -dz);
+          sim.stridePhase += delta * 6.8;
+          sim.strideRatio = 0.82;
+        } else {
+          sim.strideRatio = 0;
+          if (!phaseAdvancedRef.current) {
+            phaseAdvancedRef.current = true;
+            onAdvanceDay1Phase('waterfall_ride_stop');
+          }
         }
       }
     } else {
@@ -979,7 +1022,7 @@ export function Scene02_RishikeshDay1({
           qualityProfile={qualityProfile}
           paused={paused}
           scootersParked={waterfallParked}
-          sittingOnBoulders={autoPlayMode || waterfallSeated}
+          sittingOnBoulders={waterfallSeated}
         />
 
         {!waterfallParked ? (
@@ -1007,16 +1050,16 @@ export function Scene02_RishikeshDay1({
               rightArmRef={ishaanRig.rightArmRef}
               rightForearmRef={ishaanRig.rightForearmRef}
               position={
-                autoPlayMode || waterfallSeated
+                waterfallSeated
                   ? [
                       DAY1_WATERFALL_ROCK_SEATS.ishaan.x,
                       DAY1_WATERFALL_ROCK_SEATS.ishaan.rockTopY - 0.44,
                       DAY1_WATERFALL_ROCK_SEATS.ishaan.z,
                     ]
-                  : [-1.65, 0.02, -1.25]
+                  : [-2.15, 0.02, -1.35]
               }
               rotationY={
-                autoPlayMode || waterfallSeated ? DAY1_WATERFALL_ROCK_SEATS.ishaan.yaw : -Math.PI * 0.48
+                waterfallSeated ? DAY1_WATERFALL_ROCK_SEATS.ishaan.yaw : -Math.PI * 0.48
               }
               castShadow={shadowsEnabled}
             />
@@ -1034,15 +1077,15 @@ export function Scene02_RishikeshDay1({
               rightArmRef={shreeRig.rightArmRef}
               rightForearmRef={shreeRig.rightForearmRef}
               position={
-                autoPlayMode || waterfallSeated
+                waterfallSeated
                   ? [
                       DAY1_WATERFALL_ROCK_SEATS.srishti.x,
                       DAY1_WATERFALL_ROCK_SEATS.srishti.rockTopY - 0.44,
                       DAY1_WATERFALL_ROCK_SEATS.srishti.z,
                     ]
-                  : [1.15, 0, -1.75]
+                  : [1.15, 0.02, -1.75]
               }
-              rotationY={autoPlayMode || waterfallSeated ? DAY1_WATERFALL_ROCK_SEATS.srishti.yaw : -1.2}
+              rotationY={waterfallSeated ? DAY1_WATERFALL_ROCK_SEATS.srishti.yaw : -1.2}
               castShadow={shadowsEnabled}
             />
             <StylizedPlaceholderCharacter
@@ -1184,40 +1227,13 @@ export function Scene02_RishikeshDay1({
     return (
       <>
         <Day1MarketWalkEnvironment qualityProfile={qualityProfile} paused={paused} />
-        <StylizedPlaceholderCharacter
-          characterVariant="ishaan"
-          outfitMode="day1"
-          groupRef={ishaanRig.groupRef}
-          torsoRef={ishaanRig.torsoRef}
-          headRef={ishaanRig.headRef}
-          leftLegRef={ishaanRig.leftLegRef}
-          leftKneeRef={ishaanRig.leftKneeRef}
-          rightLegRef={ishaanRig.rightLegRef}
-          rightKneeRef={ishaanRig.rightKneeRef}
-          leftArmRef={ishaanRig.leftArmRef}
-          rightArmRef={ishaanRig.rightArmRef}
-          rightForearmRef={ishaanRig.rightForearmRef}
-          position={[-0.17, sampleMarketStreetY(10.32), 10.32]}
-          rotationY={0}
-          castShadow={shadowsEnabled}
-        />
-        <StylizedPlaceholderCharacter
-          characterVariant="srishti"
-          outfitMode="day1"
-          groupRef={shreeRig.groupRef}
-          torsoRef={shreeRig.torsoRef}
-          headRef={shreeRig.headRef}
-          leftLegRef={shreeRig.leftLegRef}
-          leftKneeRef={shreeRig.leftKneeRef}
-          rightLegRef={shreeRig.rightLegRef}
-          rightKneeRef={shreeRig.rightKneeRef}
-          leftArmRef={shreeRig.leftArmRef}
-          rightArmRef={shreeRig.rightArmRef}
-          rightForearmRef={shreeRig.rightForearmRef}
-          position={[0.47, sampleMarketStreetY(10.2), 10.2]}
-          rotationY={0}
-          castShadow={shadowsEnabled}
-        />
+        <group
+          ref={marketScooterRef}
+          position={[0.0, sampleMarketStreetY(10.2) + 0.02, 10.2]}
+          rotation={[-0.04, 0, 0]}
+        >
+          <PrototypeScooter variant="lead" castShadow={shadowsEnabled} outfitMode="day1" />
+        </group>
       </>
     );
   }
