@@ -99,6 +99,54 @@ export function getSrishtiFloralPeplumTexture(): THREE.CanvasTexture | null {
 }
 
 /**
+ * Sunny mustard-yellow cotton short kurti print with subtle ivory/coral floral block motifs
+ * matching Shree's Day 1 evening waterfall & scooter look.
+ */
+export function getSrishtiDay1KurtiTexture(): THREE.CanvasTexture | null {
+  return createCachedCanvasTexture(
+    'srishti_day1_yellow_kurti',
+    256,
+    (ctx, s) => {
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(0, 0, s, s);
+
+      // Subtle cotton slub weave
+      ctx.strokeStyle = 'rgba(202, 138, 4, 0.18)';
+      ctx.lineWidth = 1;
+      for (let y = 0; y < s; y += 8) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(s, y);
+        ctx.stroke();
+      }
+
+      // Delicate ivory & coral Indian block-print floral sprigs
+      const flowerColors = ['#fef9c3', '#fffbeb', '#fb7185', '#ea580c'];
+      for (let i = 0; i < 48; i++) {
+        const px = ((i * 59) % s) + ((i % 3) * 6 - 6);
+        const py = ((i * 41) % s) + ((i % 4) * 5 - 8);
+        const color = flowerColors[i % flowerColors.length];
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.fillStyle = color;
+        for (let p = 0; p < 5; p++) {
+          const ang = (p / 5) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.arc(Math.cos(ang) * 4.5, Math.sin(ang) * 4.5, 2.3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = '#92400e';
+        ctx.beginPath();
+        ctx.arc(0, 0, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    },
+    { repeatX: 2, repeatY: 2 }
+  );
+}
+
+/**
  * Brown, charcoal & cream checked flannel overshirt texture from the group overlook reference.
  */
 export function getPlaidShirtTexture(): THREE.CanvasTexture | null {

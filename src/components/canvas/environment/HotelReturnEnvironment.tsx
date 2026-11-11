@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
+import { Html } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
@@ -93,7 +94,7 @@ function smooth01(t: number): number {
 
 function sampleTownBasinY(wx: number, wz: number): number {
   // Keep Rishikesh street, interior lane, and neighboring house blocks flat around y = -0.04
-  const edgeX = Math.max(0, Math.abs(wx) - 18.0);
+  const edgeX = Math.max(0, Math.abs(wx) - 24.0);
   const edgeNorth = Math.max(0, -14.0 - wz);
   const rise = Math.max(edgeX * 0.65, edgeNorth * 0.78);
   const hillMask = smooth01(rise / 10.0);
@@ -129,9 +130,9 @@ export const ORIGIN_FRIEND_SLOTS = [
 ] as const;
 
 export const DAY1_WALK_BOUNDS: WalkBounds = {
-  minX: -5.1,
-  maxX: 5.1,
-  minZ: -4.2,
+  minX: -4.8,
+  maxX: 4.8,
+  minZ: -1.95,
   maxZ: 7.45,
 };
 
@@ -155,6 +156,14 @@ export const DAY1_OBSTACLES: readonly WalkObstacle[] = [
 
 export const DAY1_HOTSPOTS: readonly WalkHotspot[] = [
   {
+    id: 'greet_kanishka',
+    label: 'Meet Kanishka & Your Group',
+    x: 0.72,
+    z: 2.95,
+    radius: 1.55,
+    actionType: 'interact',
+  },
+  {
     id: 'go_to_terrace',
     label: 'See the Terrace View',
     x: 3.32,
@@ -164,9 +173,9 @@ export const DAY1_HOTSPOTS: readonly WalkHotspot[] = [
   },
   {
     id: 'day1_scooter_maggi',
-    label: 'Go for Evening Scooter Ride & Maggi',
+    label: 'Go for Evening Waterfall Ride',
     x: -2.95,
-    z: 2.7,
+    z: 2.75,
     radius: 1.85,
     actionType: 'interact',
   },
@@ -174,27 +183,30 @@ export const DAY1_HOTSPOTS: readonly WalkHotspot[] = [
 
 export const DAY2_MORNING_WALK_BOUNDS: WalkBounds = {
   minX: -5.1,
-  maxX: 5.1,
+  maxX: 18.2,
   minZ: -0.25,
-  maxZ: 8.65,
+  maxZ: 12.6,
 };
 
 export const DAY2_MORNING_OBSTACLES: readonly WalkObstacle[] = [
   { kind: 'box', minX: -4.75, maxX: -2.25, minZ: 1.55, maxZ: 2.85 },
   { kind: 'box', minX: -5.4, maxX: -2.55, minZ: 3.85, maxZ: 7.6 },
   { kind: 'box', minX: 2.55, maxX: 5.4, minZ: 3.85, maxZ: 7.6 },
+  { kind: 'box', minX: 4.1, maxX: 8.7, minZ: 3.9, maxZ: 7.6 },
+  { kind: 'box', minX: 9.6, maxX: 13.4, minZ: 3.9, maxZ: 7.6 },
   { kind: 'box', minX: 2.45, maxX: 4.55, minZ: -0.35, maxZ: 0.72 },
-  // Morning road bun-maska & chai stall counter on left sidewalk corner
-  { kind: 'box', minX: -2.55, maxX: -0.65, minZ: 7.05, maxZ: 8.35 },
+  // Distant town-road bun-maska & chai stall counter + bench well away from hotel
+  { kind: 'box', minX: 14.3, maxX: 16.4, minZ: 7.05, maxZ: 8.35 },
+  { kind: 'box', minX: 13.4, maxX: 14.3, minZ: 7.05, maxZ: 7.82 },
 ];
 
 export const DAY2_MORNING_HOTSPOTS: readonly WalkHotspot[] = [
   {
     id: 'bun_maska_chai',
     label: 'Have Bun Maska & Chai Together',
-    x: -0.25,
-    z: 7.25,
-    radius: 1.85,
+    x: 15.6,
+    z: 9.15,
+    radius: 2.0,
     actionType: 'interact',
   },
   {
@@ -207,6 +219,12 @@ export const DAY2_MORNING_HOTSPOTS: readonly WalkHotspot[] = [
   },
 ];
 
+export const TERRACE_GROUP_SLOTS = [
+  { x: -1.15, z: -4.45, rotY: -0.22, shirt: '#db2777', trousers: '#1e293b', hair: '#1c1917', isKanishka: true },
+  { x: -2.05, z: -4.65, rotY: 0.18, shirt: '#2563eb', trousers: '#334155', hair: '#292524', isKanishka: false },
+  { x: -2.65, z: -3.95, rotY: -0.34, shirt: '#ea580c', trousers: '#1e293b', hair: '#18181b', isKanishka: false },
+] as const;
+
 export interface HotelReturnEnvironmentProps {
   qualityProfile: QualityProfile;
   paused: boolean;
@@ -217,6 +235,7 @@ export interface HotelReturnEnvironmentProps {
   morningBreakfastActive?: boolean;
   day1Done?: boolean;
   morningBreakfastDone?: boolean;
+  nightReturn?: boolean;
 }
 
 /**
@@ -232,23 +251,40 @@ export function HotelReturnEnvironment({
   hideOriginFriends = false,
   day1Done = false,
   morningBreakfastDone = false,
+  nightReturn = false,
 }: HotelReturnEnvironmentProps) {
   const { scene } = useThree();
   const isDay1 = variant === 'day1_stay';
   const isMorning = variant === 'day2_morning';
-  const skyHex = isMorning ? '#cbe6f7' : isDay1 ? '#c5dff3' : '#dc9e74';
-  const fogHex = isMorning ? '#d9ecfa' : isDay1 ? '#cfe3f3' : '#d8a17d';
+  const skyHex = nightReturn
+    ? '#0a1224'
+    : isMorning
+      ? '#cbe6f7'
+      : isDay1
+        ? '#c5dff3'
+        : '#dc9e74';
+  const fogHex = nightReturn
+    ? '#0d162c'
+    : isMorning
+      ? '#d9ecfa'
+      : isDay1
+        ? '#cfe3f3'
+        : '#d8a17d';
 
   useEffect(() => {
     const prevBg = scene.background;
     const prevFog = scene.fog;
     scene.background = new THREE.Color(skyHex);
-    scene.fog = new THREE.Fog(fogHex, isMorning || isDay1 ? 52 : 42, isMorning || isDay1 ? 210 : 185);
+    scene.fog = new THREE.Fog(
+      fogHex,
+      nightReturn ? 28 : isMorning || isDay1 ? 52 : 42,
+      nightReturn ? 120 : isMorning || isDay1 ? 210 : 185
+    );
     return () => {
       scene.background = prevBg;
       scene.fog = prevFog;
     };
-  }, [scene, skyHex, fogHex, isMorning, isDay1]);
+  }, [scene, skyHex, fogHex, isMorning, isDay1, nightReturn]);
   const shadowsEnabled = QUALITY_PRESETS[qualityProfile].shadows;
   const reducedMotion = useReducedMotion();
   const courtyardTex = useMemo(() => getStoneCourtyardTexture(), []);
@@ -302,7 +338,7 @@ export function HotelReturnEnvironment({
           : -28 + ((i * 5.8) % 44);
       const scale = 0.88 + ((i * 5) % 6) * 0.09;
       const groundY = terrainSampler.trySampleY(x, z) ?? sampleTownBasinY(x, z);
-      items.push([x, groundY - 0.12 * scale, z, scale]);
+      items.push([x, groundY - 0.25 * scale, z, scale]);
     }
     return items;
   }, [terrainSampler]);
@@ -332,12 +368,16 @@ export function HotelReturnEnvironment({
     const delta = Math.min(rawDelta, 0.05);
     phaseRef.current += delta;
 
-    // Natural staggered conversation idle on Srishti's Rishikesh friends (no synchronized robotics)
+    // Natural staggered conversation idle on Srishti's Rishikesh friends (Kanishka + group)
     friendGroupRefs.current.forEach((grp, idx) => {
       if (!grp) return;
+      const baseRot = onTerrace
+        ? (TERRACE_GROUP_SLOTS[idx]?.rotY ?? 0)
+        : (ORIGIN_FRIEND_SLOTS[idx]?.rotY ?? 0);
+      const baseY = onTerrace ? TERRACE_Y : 0;
       const sway = Math.sin(phaseRef.current * 1.15 + idx * 1.7);
-      grp.rotation.y = ORIGIN_FRIEND_SLOTS[idx].rotY + sway * 0.07;
-      grp.position.y = Math.abs(Math.sin(phaseRef.current * 1.9 + idx * 1.3)) * 0.015;
+      grp.rotation.y = baseRot + sway * 0.07;
+      grp.position.y = baseY + Math.abs(Math.sin(phaseRef.current * 1.9 + idx * 1.3)) * 0.015;
     });
 
     lanternLightsRef.current.forEach((bulb, idx) => {
@@ -349,21 +389,24 @@ export function HotelReturnEnvironment({
 
   return (
     <>
-      {/* Horizon backdrop (fresh morning/daytime or warm dusk return) */}
+      {/* Horizon backdrop (fresh morning/daytime, warm dusk return, or quiet starry night) */}
       <color attach="background" args={[skyHex]} />
-      <fog attach="fog" args={[fogHex, isMorning || isDay1 ? 52 : 42, isMorning || isDay1 ? 210 : 185]} />
+      <fog
+        attach="fog"
+        args={[fogHex, nightReturn ? 28 : isMorning || isDay1 ? 52 : 42, nightReturn ? 120 : isMorning || isDay1 ? 210 : 185]}
+      />
 
       <hemisphereLight
         args={[
-          isMorning ? '#e0f2fe' : isDay1 ? '#e2f0fc' : '#ffd7b0',
-          isMorning || isDay1 ? '#4d6048' : '#48545c',
-          isMorning ? 1.02 : 0.94,
+          nightReturn ? '#3b537a' : isMorning ? '#e0f2fe' : isDay1 ? '#e2f0fc' : '#ffd7b0',
+          nightReturn ? '#1e202b' : isMorning || isDay1 ? '#4d6048' : '#48545c',
+          nightReturn ? 0.56 : isMorning ? 1.02 : 0.94,
         ]}
       />
       <directionalLight
         position={isMorning ? [28, 36, 18] : isDay1 ? [20, 32, -24] : [-34, 24, -46]}
-        intensity={isMorning ? 1.7 : 1.55}
-        color={isMorning ? '#fff6de' : isDay1 ? '#fff1d6' : '#ffbe7e'}
+        intensity={nightReturn ? 0.52 : isMorning ? 1.7 : 1.55}
+        color={nightReturn ? '#93c5fd' : isMorning ? '#fff6de' : isDay1 ? '#fff1d6' : '#ffbe7e'}
         castShadow={shadowsEnabled}
         shadow-mapSize-width={qualityProfile === 'high' ? 1024 : 512}
         shadow-mapSize-height={qualityProfile === 'high' ? 1024 : 512}
@@ -453,6 +496,42 @@ export function HotelReturnEnvironment({
           <meshStandardMaterial color="#475569" roughness={0.82} />
         </mesh>
       </group>
+      {/* Town bakery/provision block down the main road well before the morning bun-maska chai tapri */}
+      <group position={[11.4, 0, 5.75]}>
+        <mesh position={[0, 1.9, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+          <boxGeometry args={[3.6, 3.8, 3.4]} />
+          <meshStandardMaterial color="#e5dac8" roughness={0.88} />
+        </mesh>
+        <mesh position={[0, 1.25, 1.72]}>
+          <boxGeometry args={[2.4, 2.1, 0.08]} />
+          <meshStandardMaterial color="#b45309" roughness={0.68} />
+        </mesh>
+        <mesh position={[0, 2.48, 2.1]} rotation={[0.25, 0, 0]}>
+          <boxGeometry args={[2.9, 0.08, 0.92]} />
+          <meshStandardMaterial color="#047857" roughness={0.82} />
+        </mesh>
+      </group>
+      {/* Extended Rishikesh main-road neighbor buildings continuing smoothly down both sides */}
+      <group position={[-11.8, 0, 5.8]}>
+        <mesh position={[0, 2.35, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+          <boxGeometry args={[5.8, 4.7, 3.9]} />
+          <meshStandardMaterial color="#ded2c0" roughness={0.88} />
+        </mesh>
+        <mesh position={[0, 1.35, 1.98]}>
+          <boxGeometry args={[3.4, 2.1, 0.08]} />
+          <meshStandardMaterial color="#334155" roughness={0.7} />
+        </mesh>
+      </group>
+      <group position={[12.2, 0, 5.85]}>
+        <mesh position={[0, 2.25, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+          <boxGeometry args={[6.0, 4.5, 3.9]} />
+          <meshStandardMaterial color="#dce1e6" roughness={0.88} />
+        </mesh>
+        <mesh position={[0, 1.35, 1.98]}>
+          <boxGeometry args={[3.5, 2.1, 0.08]} />
+          <meshStandardMaterial color="#b45309" roughness={0.72} />
+        </mesh>
+      </group>
       {/* Street utility pole beside main road */}
       <group position={[-3.35, 0, 7.25]}>
         <mesh position={[0, 2.8, 0]} castShadow={shadowsEnabled}>
@@ -465,7 +544,11 @@ export function HotelReturnEnvironment({
         </mesh>
       </group>
 
-      {/* 2. NARROW RESIDENTIAL INTERIOR LANE (`x = -2.4..2.4, z = 2.6..7.5`) + YARD (`z = -0.5..3.9`) */}
+      {/* 2. NARROW RESIDENTIAL INTERIOR LANE (`x = -2.4..2.4, z = 2.6..7.5`) + BEVELED ROAD APRON + YARD */}
+      <mesh position={[0, -0.015, 7.58]} rotation={[0.08, 0, 0]} receiveShadow={shadowsEnabled}>
+        <boxGeometry args={[5.1, 0.06, 0.72]} />
+        <meshStandardMaterial color="#7d8490" map={courtyardTex ?? undefined} roughness={0.94} />
+      </mesh>
       <mesh position={[0, -0.01, 5.3]} receiveShadow={shadowsEnabled}>
         <boxGeometry args={[4.85, 0.06, 4.8]} />
         <meshStandardMaterial color="#878d96" map={courtyardTex ?? undefined} roughness={0.94} />
@@ -792,15 +875,15 @@ export function HotelReturnEnvironment({
         </group>
       ))}
 
-      {/* Parked Hero Scooters Beside House Entry Yard */}
-      <group position={[-4.05, 0, 2.2]} rotation={[0, 0.38, 0]}>
+      {/* Parked Hero Scooters Beside House Entry Yard (cleanly spaced off walls) */}
+      <group position={[-3.82, 0, 2.28]} rotation={[0, 0.34, 0]}>
         <PrototypeScooter
           variant="lead"
           castShadow={shadowsEnabled}
           hideRiders
         />
       </group>
-      <group position={[-2.92, 0, 2.35]} rotation={[0, 0.28, 0]}>
+      <group position={[-2.74, 0, 2.4]} rotation={[0, 0.24, 0]}>
         <PrototypeScooter
           variant="companion"
           castShadow={shadowsEnabled}
@@ -808,9 +891,9 @@ export function HotelReturnEnvironment({
         />
       </group>
 
-      {/* Lively Morning Road Bun-Maska & Kulhad Chai Stall Outside Interior Lane (Day 2 Morning only) */}
+      {/* Lively Morning Road Bun-Maska & Kulhad Chai Stall Down the Town Road Away from Hotel (Day 2 Morning) */}
       {isMorning && (
-        <group position={[-1.55, 0, 7.68]}>
+        <group position={[15.4, 0, 7.68]}>
           {/* Framed timber posts + colorful striped roadside tea tapri awning */}
           {[
             [-0.86, -0.46],
@@ -841,8 +924,8 @@ export function HotelReturnEnvironment({
             <boxGeometry args={[1.82, 0.08, 1.05]} />
             <meshStandardMaterial color="#9a6b44" roughness={0.82} />
           </mesh>
-          {/* Crafted 4-legged sidewalk wooden bench beside tea stall */}
-          <group position={[1.18, 0, -0.32]}>
+          {/* Crafted 4-legged sidewalk wooden bench clear of walk path */}
+          <group position={[-1.44, 0, -0.24]}>
             <mesh position={[0, 0.44, 0]} castShadow={shadowsEnabled}>
               <boxGeometry args={[0.96, 0.07, 0.44]} />
               <meshStandardMaterial color="#7c4a26" roughness={0.86} />
@@ -889,15 +972,15 @@ export function HotelReturnEnvironment({
         </group>
       )}
 
-      {/* Srishti's Original Rishikesh Friends in a Natural Circle (kept clearly separate!) */}
+      {/* Srishti's Original Rishikesh Friends (including Kanishka) in Lane OR Together on Rooftop Terrace */}
       {!hideOriginFriends &&
-        ORIGIN_FRIEND_SLOTS.map((f, idx) => (
+        (onTerrace ? TERRACE_GROUP_SLOTS : ORIGIN_FRIEND_SLOTS).map((f, idx) => (
           <group
-            key={`orig-friend-${idx}`}
+            key={`orig-friend-${onTerrace ? 'terrace' : 'lane'}-${idx}`}
             ref={(el) => {
               friendGroupRefs.current[idx] = el;
             }}
-            position={[f.x, 0, f.z]}
+            position={[f.x, onTerrace ? TERRACE_Y : 0, f.z]}
             rotation={[0, f.rotY, 0]}
           >
             <mesh position={[-0.08, 0.4, 0]} castShadow={shadowsEnabled}>
@@ -912,6 +995,29 @@ export function HotelReturnEnvironment({
               <cylinderGeometry args={[0.17, 0.145, 0.54, 10]} />
               <meshStandardMaterial color={f.shirt} roughness={0.82} />
             </mesh>
+            {/* Kanishka warm cream shawl/dupatta accent across torso + compact badge */}
+            {idx === 0 && (
+              <>
+                <mesh position={[0, 1.08, 0.04]} rotation={[0.1, 0, -0.35]}>
+                  <boxGeometry args={[0.38, 0.14, 0.24]} />
+                  <meshStandardMaterial color="#fef3c7" roughness={0.85} />
+                </mesh>
+                <Html
+                  center
+                  position={[0, 1.84, 0]}
+                  zIndexRange={[10, 0]}
+                  style={{ pointerEvents: 'none', userSelect: 'none' }}
+                >
+                  <div className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-pink-300/75 bg-slate-950/88 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-pink-100 shadow-lg backdrop-blur-sm">
+                    <span
+                      className="h-1.5 w-1.5 rounded-full"
+                      style={{ backgroundColor: '#f472b6' }}
+                    />
+                    Kanishka
+                  </div>
+                </Html>
+              </>
+            )}
             <mesh position={[0, 1.44, 0]} castShadow={shadowsEnabled}>
               <sphereGeometry args={[0.12, 12, 10]} />
               <meshStandardMaterial color="#d29c76" roughness={0.76} />
@@ -942,16 +1048,22 @@ export function HotelReturnEnvironment({
           )}
         </>
       )}
-      {variant === 'day1_stay' && !onTerrace && (
+      {variant === 'day1_stay' && !onTerrace && !nightReturn && (
         <>
           <HotspotBeaconSparkle
             position={[DAY1_HOTSPOTS[0].x, 0.04, DAY1_HOTSPOTS[0].z]}
-            color="#38bdf8"
+            color="#f472b6"
             paused={paused}
             reducedMotion={reducedMotion}
           />
           <HotspotBeaconSparkle
             position={[DAY1_HOTSPOTS[1].x, 0.04, DAY1_HOTSPOTS[1].z]}
+            color="#38bdf8"
+            paused={paused}
+            reducedMotion={reducedMotion}
+          />
+          <HotspotBeaconSparkle
+            position={[DAY1_HOTSPOTS[2].x, 0.04, DAY1_HOTSPOTS[2].z]}
             color={day1Done ? '#34d399' : '#fbbf24'}
             paused={paused}
             reducedMotion={reducedMotion}

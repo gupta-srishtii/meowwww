@@ -262,61 +262,6 @@ export function NeelkanthMarketAndCrowd({
           <meshStandardMaterial color="#d97706" metalness={0.75} roughness={0.28} />
         </mesh>
 
-        {/* Outer Steel Thali Meal Corner (chhole bhature & hot plate matching real Neelkanth meal photo) */}
-        <group position={[-1.08, 0, 1.0]}>
-          {/* Table top & warm red runner cloth */}
-          <mesh position={[0, 0.7, 0]} castShadow={castShadow} receiveShadow={castShadow}>
-            <boxGeometry args={[0.56, 0.05, 0.74]} />
-            <meshStandardMaterial color="#6d4c3d" roughness={0.88} />
-          </mesh>
-          <mesh position={[0, 0.728, 0]}>
-            <boxGeometry args={[0.42, 0.012, 0.62]} />
-            <meshStandardMaterial color="#b91c1c" roughness={0.9} />
-          </mesh>
-          {[
-            [-0.22, -0.3],
-            [0.22, -0.3],
-            [-0.22, 0.3],
-            [0.22, 0.3],
-          ].map(([lx, lz], lIdx) => (
-            <mesh key={`thali-leg-${lIdx}`} position={[lx, 0.34, lz]} castShadow={castShadow}>
-              <boxGeometry args={[0.05, 0.68, 0.05]} />
-              <meshStandardMaterial color="#4e3222" roughness={0.9} />
-            </mesh>
-          ))}
-          {/* Shining steel thali plate */}
-          <mesh position={[0, 0.745, 0]} castShadow={castShadow}>
-            <cylinderGeometry args={[0.21, 0.19, 0.025, 16]} />
-            <meshStandardMaterial color="#e2e8f0" metalness={0.82} roughness={0.2} />
-          </mesh>
-          {/* Steel katori bowls (chhole curry & chutney) */}
-          <mesh position={[-0.07, 0.778, -0.06]}>
-            <cylinderGeometry args={[0.055, 0.042, 0.04, 12]} />
-            <meshStandardMaterial color="#cbd5e1" metalness={0.78} roughness={0.24} />
-          </mesh>
-          <mesh position={[-0.07, 0.793, -0.06]}>
-            <cylinderGeometry args={[0.046, 0.046, 0.015, 12]} />
-            <meshStandardMaterial color="#9a3412" roughness={0.75} />
-          </mesh>
-          <mesh position={[0.06, 0.775, -0.08]}>
-            <cylinderGeometry args={[0.042, 0.032, 0.032, 10]} />
-            <meshStandardMaterial color="#cbd5e1" metalness={0.78} roughness={0.24} />
-          </mesh>
-          <mesh position={[0.06, 0.787, -0.08]}>
-            <cylinderGeometry args={[0.034, 0.034, 0.012, 10]} />
-            <meshStandardMaterial color="#15803d" roughness={0.8} />
-          </mesh>
-          {/* Golden fluffy puffed bhature */}
-          <mesh position={[0.03, 0.782, 0.06]} scale={[1.25, 0.45, 0.95]} castShadow={castShadow}>
-            <sphereGeometry args={[0.078, 12, 10]} />
-            <meshStandardMaterial color="#f59e0b" roughness={0.68} />
-          </mesh>
-          <mesh position={[-0.06, 0.772, 0.08]} scale={[1.1, 0.4, 0.9]}>
-            <sphereGeometry args={[0.066, 10, 8]} />
-            <meshStandardMaterial color="#d97706" roughness={0.72} />
-          </mesh>
-        </group>
-
         {/* Prasad Stall Vendor behind counter */}
         <DevoteeNpc
           position={[0.32, 0, 0]}
@@ -443,23 +388,259 @@ export function NeelkanthMarketAndCrowd({
         />
       </group>
 
-      {/* 6. SMALL VISITOR CHAT PAIR NEAR MARKET STEP EDGE (`x = +3.3, z = 10.6`) */}
-      <group position={[3.35, 0, 10.6]}>
+      {/* 6. CONNECTED TEMPLE EXIT MARKET LANE: CONTINUOUS SHOPS ON BOTH SIDES + PILGRIMS + CHHOLE BHATURE CAFE */}
+      {/* Right side: Brass Bells, Rudraksha & Damru Stall closing the upper gap (`z = 11.8`) */}
+      <group position={[5.15, 0, 11.8]}>
+        <mesh position={[0.45, 1.45, 0]} castShadow={castShadow} receiveShadow={castShadow}>
+          <boxGeometry args={[1.9, 2.9, 4.2]} />
+          <meshStandardMaterial color="#e6dac4" roughness={0.88} />
+        </mesh>
+        <mesh position={[-0.75, 0.44, 0]} castShadow={castShadow}>
+          <boxGeometry args={[0.72, 0.88, 3.6]} />
+          <meshStandardMaterial color="#78513c" roughness={0.86} />
+        </mesh>
+        {[-1.2, -0.4, 0.4, 1.2].map((bz, bIdx) => (
+          <mesh key={`bell-${bIdx}`} position={[-0.95, 1.85, bz]}>
+            <cylinderGeometry args={[0.04, 0.085, 0.16, 10]} />
+            <meshStandardMaterial color="#eab308" metalness={0.75} roughness={0.28} />
+          </mesh>
+        ))}
+        <mesh position={[-1.05, 2.35, 0]} rotation={[0, 0, 0.16]} castShadow={castShadow}>
+          <boxGeometry args={[1.65, 0.08, 4.4]} />
+          <meshStandardMaterial color="#b91c1c" roughness={0.8} />
+        </mesh>
         <DevoteeNpc
-          position={[0, 0, -0.35]}
-          rotationY={Math.PI * 0.88}
-          shirtColor="#fbbf24"
+          position={[-0.18, 0, 0.35]}
+          rotationY={Math.PI / 2}
+          shirtColor="#fb923c"
           pantsColor="#334155"
           castShadow={castShadow}
         />
+      </group>
+
+      {/* Left side continuous woollens, wooden crafts & prasad bazaar shops (`z = 13.6..24.4`) */}
+      {[
+        { z: 13.8, len: 3.8, wall: '#e4d8c3', awning: '#b45309', sh1: '#be123c', sh2: '#ca8a04' },
+        { z: 18.0, len: 4.4, wall: '#dfd4c0', awning: '#0f766e', sh1: '#0284c7', sh2: '#d97706' },
+        { z: 22.6, len: 4.4, wall: '#dadce2', awning: '#7c2d12', sh1: '#15803d', sh2: '#ea580c' },
+      ].map((shop, sIdx) => (
+        <group key={`left-mkt-shop-${sIdx}`} position={[-5.4, 0, shop.z]}>
+          <mesh position={[0, 1.55, 0]} castShadow={castShadow} receiveShadow={castShadow}>
+            <boxGeometry args={[2.3, 3.1, shop.len]} />
+            <meshStandardMaterial color={shop.wall} roughness={0.88} />
+          </mesh>
+          <mesh position={[1.18, 1.15, -shop.len * 0.22]}>
+            <boxGeometry args={[0.08, 1.9, shop.len * 0.36]} />
+            <meshStandardMaterial color={shop.sh1} roughness={0.7} />
+          </mesh>
+          <mesh position={[1.18, 1.15, shop.len * 0.22]}>
+            <boxGeometry args={[0.08, 1.9, shop.len * 0.36]} />
+            <meshStandardMaterial color={shop.sh2} roughness={0.72} />
+          </mesh>
+          <mesh position={[1.45, 2.35, 0]} rotation={[0, 0, -0.18]} castShadow={castShadow}>
+            <boxGeometry args={[1.12, 0.08, shop.len + 0.2]} />
+            <meshStandardMaterial color={shop.awning} roughness={0.82} />
+          </mesh>
+          {/* Open front shop counter & spice/prasad jars */}
+          <mesh position={[1.42, 0.42, 0]} castShadow={castShadow}>
+            <boxGeometry args={[0.62, 0.84, shop.len * 0.82]} />
+            <meshStandardMaterial color="#78513c" roughness={0.88} />
+          </mesh>
+          <DevoteeNpc
+            position={[0.88, 0, 0]}
+            rotationY={-Math.PI / 2}
+            shirtColor={sIdx % 2 === 0 ? '#fde68a' : '#bae6fd'}
+            pantsColor="#1e293b"
+            castShadow={castShadow}
+          />
+        </group>
+      ))}
+
+      {/* Right side sweets & rudraksha counter right before Cafe (`z = 16.0`) */}
+      <group position={[5.4, 0, 16.0]}>
+        <mesh position={[0.3, 1.5, 0]} castShadow={castShadow}>
+          <boxGeometry args={[2.0, 3.0, 4.0]} />
+          <meshStandardMaterial color="#e0d6c2" roughness={0.88} />
+        </mesh>
+        <mesh position={[-0.85, 2.32, 0]} rotation={[0, 0, 0.16]}>
+          <boxGeometry args={[1.35, 0.08, 4.1]} />
+          <meshStandardMaterial color="#0f766e" roughness={0.82} />
+        </mesh>
+        <mesh position={[-0.85, 0.44, 0]}>
+          <boxGeometry args={[0.7, 0.88, 3.2]} />
+          <meshStandardMaterial color="#78513c" roughness={0.86} />
+        </mesh>
+      </group>
+
+      {/* Festive Overhead Saffron & Crimson Temple Market Flags / Bulbs Above Cobblestone Street */}
+      {[7.5, 11.5, 15.5, 19.5, 23.5].map((fz, fIdx) => (
+        <group key={`nk-flags-${fIdx}`} position={[0, 2.95, fz]}>
+          <mesh>
+            <boxGeometry args={[8.4, 0.025, 0.025]} />
+            <meshStandardMaterial color="#334155" roughness={0.8} />
+          </mesh>
+          {[-2.8, -1.6, -0.5, 0.5, 1.6, 2.8].map((bx, bIdx) => (
+            <mesh key={`nk-fl-${bIdx}`} position={[bx, -0.14, 0]}>
+              <coneGeometry args={[0.14, 0.24, 3]} />
+              <meshStandardMaterial
+                color={bIdx % 3 === 0 ? '#f97316' : bIdx % 3 === 1 ? '#dc2626' : '#facc15'}
+                roughness={0.7}
+              />
+            </mesh>
+          ))}
+        </group>
+      ))}
+
+      {/* Extra Browsing Pilgrims Along Bazaar Stalls */}
+      {[
+        { x: -2.4, z: 14.5, yaw: 1.4, shirt: '#fef08a', pants: '#334155' },
+        { x: 2.3, z: 12.6, yaw: -1.5, shirt: '#38bdf8', pants: '#1e293b' },
+        { x: -2.2, z: 22.8, yaw: 1.2, shirt: '#f472b6', pants: '#1e293b' },
+      ].map((p, idx) => (
         <DevoteeNpc
-          position={[0.48, 0, 0.3]}
-          rotationY={-0.38}
-          shirtColor="#e2e8f0"
-          pantsColor="#1f2937"
+          key={`mkt-browser-${idx}`}
+          position={[p.x, 0, p.z]}
+          rotationY={p.yaw}
+          shirtColor={p.shirt}
+          pantsColor={p.pants}
+          castShadow={castShadow}
+        />
+      ))}
+
+      {/* Dhaba-Style Open-Front Market Cafe Kitchen & Dining Deck (`x = 5.45 / 2.85, z = 20.6`) */}
+      <group position={[5.45, 0, 20.6]}>
+        {/* Back kitchen wall & counter */}
+        <mesh position={[0.45, 1.55, 0]} castShadow={castShadow} receiveShadow={castShadow}>
+          <boxGeometry args={[1.9, 3.1, 4.2]} />
+          <meshStandardMaterial color="#e7d9c3" roughness={0.88} />
+        </mesh>
+        <mesh position={[-1.4, 2.65, 0]} rotation={[0, 0, 0.14]} castShadow={castShadow}>
+          <boxGeometry args={[2.55, 0.1, 4.45]} />
+          <meshStandardMaterial color="#9a3412" roughness={0.82} />
+        </mesh>
+        <mesh position={[-1.4, 1.32, -1.95]}>
+          <cylinderGeometry args={[0.055, 0.065, 2.6, 8]} />
+          <meshStandardMaterial color="#5c3d2e" roughness={0.9} />
+        </mesh>
+        <mesh position={[-1.4, 1.32, 1.95]}>
+          <cylinderGeometry args={[0.055, 0.065, 2.6, 8]} />
+          <meshStandardMaterial color="#5c3d2e" roughness={0.9} />
+        </mesh>
+        {/* Serving counter + kadhai for piping-hot bhature */}
+        <mesh position={[-0.75, 0.48, 0]} castShadow={castShadow}>
+          <boxGeometry args={[0.78, 0.96, 3.2]} />
+          <meshStandardMaterial color="#78513c" roughness={0.86} />
+        </mesh>
+        <mesh position={[-0.72, 1.02, -0.55]}>
+          <cylinderGeometry args={[0.26, 0.16, 0.14, 12]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.75} roughness={0.28} />
+        </mesh>
+        <mesh position={[-0.72, 1.04, 0.55]}>
+          <cylinderGeometry args={[0.2, 0.18, 0.24, 12]} />
+          <meshStandardMaterial color="#b45309" roughness={0.65} />
+        </mesh>
+        <pointLight position={[-1.55, 2.35, 0]} intensity={1.8} color="#fbbf24" distance={7} />
+        <DevoteeNpc
+          position={[0.0, 0, -0.1]}
+          rotationY={Math.PI / 2}
+          shirtColor="#fef08a"
+          pantsColor="#334155"
           castShadow={castShadow}
         />
       </group>
+
+      {/* Right Exit Sweets & Chai Shop past Cafe (`x = 5.45, z = 24.4`) */}
+      <group position={[5.45, 0, 24.4]}>
+        <mesh position={[0.3, 1.48, 0]} castShadow={castShadow}>
+          <boxGeometry args={[1.95, 2.95, 3.2]} />
+          <meshStandardMaterial color="#e5dac8" roughness={0.88} />
+        </mesh>
+        <mesh position={[-0.85, 2.28, 0]} rotation={[0, 0, 0.16]}>
+          <boxGeometry args={[1.25, 0.08, 3.3]} />
+          <meshStandardMaterial color="#b45309" roughness={0.8} />
+        </mesh>
+      </group>
+
+      {/* Cafe Outdoor Dining Table (`x = 2.85, z = 20.6`, top y = 0.76m) & 4 Grounded Chairs + Chole Bhature Thalis */}
+      <group position={[2.85, 0, 20.6]}>
+        <mesh position={[0, 0.73, 0]} castShadow={castShadow} receiveShadow={castShadow}>
+          <boxGeometry args={[1.18, 0.06, 0.98]} />
+          <meshStandardMaterial color="#7c4a26" roughness={0.84} />
+        </mesh>
+        <mesh position={[0, 0.764, 0]}>
+          <boxGeometry args={[0.96, 0.012, 0.8]} />
+          <meshStandardMaterial color="#b91c1c" roughness={0.88} />
+        </mesh>
+        {[
+          [-0.48, -0.38],
+          [0.48, -0.38],
+          [-0.48, 0.38],
+          [0.48, 0.38],
+        ].map(([lx, lz], idx) => (
+          <mesh key={`cafe-tbl-leg-${idx}`} position={[lx, 0.36, lz]} castShadow={castShadow}>
+            <boxGeometry args={[0.065, 0.72, 0.065]} />
+            <meshStandardMaterial color="#4e301d" roughness={0.9} />
+          </mesh>
+        ))}
+
+        {/* 4 Shining Steel Chole Bhature Thalis */}
+        {[
+          [0, 0.28],
+          [0, -0.28],
+          [-0.35, 0],
+          [0.35, 0],
+        ].map(([px, pz], idx) => (
+          <group key={`cafe-thali-${idx}`} position={[px, 0.77, pz]}>
+            <mesh castShadow={castShadow}>
+              <cylinderGeometry args={[0.155, 0.14, 0.022, 14]} />
+              <meshStandardMaterial color="#e2e8f0" metalness={0.82} roughness={0.22} />
+            </mesh>
+            <mesh position={[-0.045, 0.03, -0.04]}>
+              <cylinderGeometry args={[0.045, 0.036, 0.034, 10]} />
+              <meshStandardMaterial color="#9a3412" roughness={0.74} />
+            </mesh>
+            <mesh position={[0.04, 0.028, -0.05]}>
+              <cylinderGeometry args={[0.036, 0.03, 0.028, 10]} />
+              <meshStandardMaterial color="#15803d" roughness={0.78} />
+            </mesh>
+            <mesh position={[0.02, 0.034, 0.045]} scale={[1.22, 0.45, 0.92]}>
+              <sphereGeometry args={[0.06, 10, 8]} />
+              <meshStandardMaterial color="#f59e0b" roughness={0.68} />
+            </mesh>
+          </group>
+        ))}
+      </group>
+
+      {/* 4 Grounded Wooden Chairs/Stools Around Cafe Table (`seatTopY = 0.43m`) */}
+      {[
+        { x: 2.85, z: 21.42, rotY: 0 },
+        { x: 2.85, z: 19.78, rotY: Math.PI },
+        { x: 1.88, z: 20.6, rotY: Math.PI / 2 },
+        { x: 3.82, z: 20.6, rotY: -Math.PI / 2 },
+      ].map((chair, idx) => (
+        <group key={`cafe-chair-${idx}`} position={[chair.x, 0, chair.z]} rotation={[0, chair.rotY, 0]}>
+          <mesh position={[0, 0.4, 0]} castShadow={castShadow} receiveShadow={castShadow}>
+            <boxGeometry args={[0.42, 0.06, 0.42]} />
+            <meshStandardMaterial color="#784a2a" roughness={0.86} />
+          </mesh>
+          {/* Low backrest safely outward from table */}
+          <mesh position={[0, 0.65, 0.18]} castShadow={castShadow}>
+            <boxGeometry args={[0.4, 0.44, 0.05]} />
+            <meshStandardMaterial color="#6d4327" roughness={0.88} />
+          </mesh>
+          {[
+            [-0.16, -0.16],
+            [0.16, -0.16],
+            [-0.16, 0.16],
+            [0.16, 0.16],
+          ].map(([lx, lz], lIdx) => (
+            <mesh key={`ch-leg-${lIdx}`} position={[lx, 0.2, lz]} castShadow={castShadow}>
+              <boxGeometry args={[0.05, 0.4, 0.05]} />
+              <meshStandardMaterial color="#4e2e19" roughness={0.9} />
+            </mesh>
+          ))}
+        </group>
+      ))}
     </group>
   );
 }

@@ -6,6 +6,7 @@ import { SlingBagAccessory } from '@/components/canvas/characters/SlingBagAccess
 import {
   getDenimTexture,
   getPlaidShirtTexture,
+  getSrishtiDay1KurtiTexture,
   getSrishtiFloralPeplumTexture,
 } from '@/lib/proceduralTextures';
 
@@ -20,6 +21,8 @@ export interface PrototypeScooterProps {
   rearWheelRef?: RefObject<THREE.Group | null>;
   castShadow?: boolean;
   hideRiders?: boolean;
+  driverOnly?: boolean;
+  outfitMode?: 'default' | 'day1';
 }
 
 interface RiderBlockProps {
@@ -28,6 +31,7 @@ interface RiderBlockProps {
   hasBackpack?: boolean;
   isFrontPose?: boolean;
   castShadow?: boolean;
+  outfitMode?: 'default' | 'day1';
 }
 
 /**
@@ -40,20 +44,28 @@ function SeatedRider({
   hasBackpack = false,
   isFrontPose = false,
   castShadow = false,
+  outfitMode = 'default',
 }: RiderBlockProps) {
   const floralPeplumTex = useMemo(() => getSrishtiFloralPeplumTexture(), []);
+  const day1KurtiTex = useMemo(() => getSrishtiDay1KurtiTexture(), []);
   const denimTex = useMemo(() => getDenimTexture(), []);
   const plaidTex = useMemo(() => getPlaidShirtTexture(), []);
 
+  const isDay1 = outfitMode === 'day1';
   const isSrishti = riderVariant === 'srishti';
   const isIshaan = riderVariant === 'ishaan';
   const isBlackTee = riderVariant === 'friend_black_tee';
   const isPlaid = riderVariant === 'friend_plaid';
 
+  const srishtiTex = isDay1 ? day1KurtiTex : floralPeplumTex;
   const topColor = isSrishti
-    ? '#ebe6da'
+    ? isDay1
+      ? '#fef08a'
+      : '#ebe6da'
     : isIshaan
-      ? '#f1f5f9'
+      ? isDay1
+        ? '#166534'
+        : '#f1f5f9'
       : isBlackTee
         ? '#18181b'
         : '#c7b8a8';
@@ -169,33 +181,37 @@ function SeatedRider({
       {/* Torso silhouette */}
       {isSrishti ? (
         <group position={[0, 0.29, -0.02]} rotation={[-0.08, 0, 0]}>
-          {/* Fitted smocked waist-to-ribcage bodice */}
+          {/* Fitted waist-to-ribcage bodice */}
           <mesh position={[0, 0.06, 0]} scale={[1.05, 1, 0.78]} castShadow={castShadow}>
             <cylinderGeometry args={[0.115, 0.088, 0.26, 14]} />
             <meshStandardMaterial
               color={topColor}
-              map={floralPeplumTex ?? undefined}
+              map={srishtiTex ?? undefined}
               roughness={0.8}
             />
           </mesh>
-          {/* Peplum ruffled flare */}
+          {/* Short kurti / peplum flare */}
           <mesh position={[0, -0.11, 0.01]} scale={[1.08, 1, 0.88]} castShadow={castShadow}>
             <cylinderGeometry args={[0.092, 0.18, 0.2, 16]} />
             <meshStandardMaterial
-              color="#e6dfd2"
-              map={floralPeplumTex ?? undefined}
+              color={isDay1 ? '#fde047' : '#e6dfd2'}
+              map={srishtiTex ?? undefined}
               roughness={0.82}
             />
           </mesh>
-          {/* Square open upper back & tie ribbon (`ishaan and srishti.jpg`) */}
-          <mesh position={[0, 0.145, 0.084]}>
-            <boxGeometry args={[0.11, 0.064, 0.016]} />
-            <meshStandardMaterial color={skinTone} roughness={0.76} />
-          </mesh>
-          <mesh position={[0, 0.168, 0.094]}>
-            <boxGeometry args={[0.1, 0.012, 0.01]} />
-            <meshStandardMaterial color="#d4ccc0" roughness={0.82} />
-          </mesh>
+          {!isDay1 && (
+            <>
+              {/* Square open upper back & tie ribbon (`ishaan and srishti.jpg`) */}
+              <mesh position={[0, 0.145, 0.084]}>
+                <boxGeometry args={[0.11, 0.064, 0.016]} />
+                <meshStandardMaterial color={skinTone} roughness={0.76} />
+              </mesh>
+              <mesh position={[0, 0.168, 0.094]}>
+                <boxGeometry args={[0.1, 0.012, 0.01]} />
+                <meshStandardMaterial color="#d4ccc0" roughness={0.82} />
+              </mesh>
+            </>
+          )}
           {/* Contoured crossbody olive-grey sling bag sitting clearly outside left hip */}
           <group position={[0, -0.16, 0]}>
             <SlingBagAccessory variant="seated" castShadow={castShadow} />
@@ -232,7 +248,7 @@ function SeatedRider({
               />
               <meshStandardMaterial
                 color={topColor}
-                map={isSrishti ? floralPeplumTex ?? undefined : isPlaid ? plaidTex ?? undefined : undefined}
+                map={isSrishti ? srishtiTex ?? undefined : isPlaid ? plaidTex ?? undefined : undefined}
                 roughness={0.78}
               />
             </mesh>
@@ -312,6 +328,8 @@ export function PrototypeScooter({
   rearWheelRef,
   castShadow = false,
   hideRiders = false,
+  driverOnly = false,
+  outfitMode = 'default',
 }: PrototypeScooterProps) {
   const isLead = variant === 'lead';
   const bodyColor = isLead ? '#cc5433' : '#1b7a72';
@@ -530,6 +548,7 @@ export function PrototypeScooter({
               helmetColor="#334155"
               isFrontPose
               castShadow={castShadow}
+              outfitMode={outfitMode}
             />
           ) : (
             <SeatedRider
@@ -537,17 +556,20 @@ export function PrototypeScooter({
               helmetColor="#1e293b"
               isFrontPose
               castShadow={castShadow}
+              outfitMode={outfitMode}
             />
           ))}
       </group>
 
       <group name="attach_seat_pillion" position={[0, 0.76, 0.52]}>
         {!hideRiders &&
+          !driverOnly &&
           (isLead ? (
             <SeatedRider
               riderVariant="srishti"
               helmetColor="#f1f5f9"
               castShadow={castShadow}
+              outfitMode={outfitMode}
             />
           ) : (
             <SeatedRider
@@ -555,6 +577,7 @@ export function PrototypeScooter({
               helmetColor="#e2e8f0"
               hasBackpack
               castShadow={castShadow}
+              outfitMode={outfitMode}
             />
           ))}
       </group>

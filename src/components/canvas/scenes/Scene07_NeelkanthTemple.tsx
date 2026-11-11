@@ -14,6 +14,8 @@ import {
   type CharacterIdlePose,
 } from '@/components/canvas/characters/animateCharacterRig';
 import {
+  NEELKANTH_CAFE_SEATS,
+  NEELKANTH_CAFE_TABLE_CENTER,
   NEELKANTH_HOTSPOTS,
   NEELKANTH_OBSTACLES,
   NEELKANTH_WALK_BOUNDS,
@@ -36,6 +38,7 @@ import {
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
 import type { SceneId } from '@/lib/sceneConfig';
+import { useProgressStore } from '@/store/progressStore';
 
 export interface Scene07NeelkanthTempleProps {
   walkInputRef: RefObject<WalkInputState>;
@@ -48,7 +51,10 @@ export interface Scene07NeelkanthTempleProps {
   litDiya: boolean;
   hadDarshan: boolean;
   capturedFood?: boolean;
+  eatingCafeActive?: boolean;
   activeDarshanPan: boolean;
+  autoPlayMode?: boolean;
+  onAutoTriggerHotspot?: (hotspotId: string) => void;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onSceneReady: (token: number, sceneId: SceneId) => void;
 }
@@ -94,26 +100,32 @@ const NEELKANTH_COMPANION_CONFIGS: readonly CompanionAgentConfig[] = [
 
 const PRAYER_TARGETS: Record<FriendCompanionId, CompanionTargetSlot> = {
   srishti: {
-    x: 1.28,
-    z: -2.95,
-    facingYaw: yawTowardTarget(1.28, -2.95, 0, -6.2),
+    x: 0.44,
+    z: -2.68,
+    facingYaw: yawTowardTarget(0.44, -2.68, 0, -6.2),
   },
   friend_black_tee: {
-    x: -1.35,
-    z: -2.85,
-    facingYaw: yawTowardTarget(-1.35, -2.85, 0, -6.2),
+    x: -1.16,
+    z: -2.42,
+    facingYaw: yawTowardTarget(-1.16, -2.42, 0, -6.2),
   },
   friend_plaid: {
-    x: 1.95,
-    z: -2.3,
-    facingYaw: yawTowardTarget(1.95, -2.3, 0, -6.2),
+    x: 1.18,
+    z: -2.42,
+    facingYaw: yawTowardTarget(1.18, -2.42, 0, -6.2),
   },
 };
 
+const CAFE_COMPANION_TARGETS: Record<FriendCompanionId, CompanionTargetSlot> = {
+  srishti: NEELKANTH_CAFE_SEATS.srishti,
+  friend_black_tee: NEELKANTH_CAFE_SEATS.friend_black_tee,
+  friend_plaid: NEELKANTH_CAFE_SEATS.friend_plaid,
+};
+
 const SCOOTER_RETURN_TARGETS: Record<FriendCompanionId, CompanionTargetSlot> = {
-  srishti: { x: 1.45, z: 12.85, facingYaw: Math.PI },
-  friend_black_tee: { x: -0.95, z: 12.85, facingYaw: Math.PI },
-  friend_plaid: { x: -1.85, z: 12.95, facingYaw: Math.PI },
+  srishti: { x: 1.45, z: 25.1, facingYaw: Math.PI },
+  friend_black_tee: { x: -0.95, z: 25.1, facingYaw: Math.PI },
+  friend_plaid: { x: -1.85, z: 25.25, facingYaw: Math.PI },
 };
 
 /**
@@ -132,7 +144,10 @@ export function Scene07_NeelkanthTemple({
   litDiya,
   hadDarshan,
   capturedFood = false,
+  eatingCafeActive = false,
   activeDarshanPan,
+  autoPlayMode = false,
+  onAutoTriggerHotspot,
   onNearbyHotspotChange,
   onSceneReady,
 }: Scene07NeelkanthTempleProps) {
@@ -213,6 +228,30 @@ export function Scene07_NeelkanthTemple({
     }
   }, [camera, size.width, size.height]);
 
+  const darshanElapsedRef = useRef(0);
+  const cafeElapsedRef = useRef(0);
+  const autoFiredSetRef = useRef(new Set<string>());
+
+  useEffect(() => {
+    useProgressStore.getState().setNeelkanthDarshanActive(activeDarshanPan);
+    if (!activeDarshanPan) {
+      darshanElapsedRef.current = 0;
+    }
+    return () => {
+      useProgressStore.getState().setNeelkanthDarshanActive(false);
+    };
+  }, [activeDarshanPan]);
+
+  useEffect(() => {
+    if (!eatingCafeActive) {
+      cafeElapsedRef.current = 0;
+    }
+  }, [eatingCafeActive]);
+
+  useEffect(() => {
+    autoFiredSetRef.current.clear();
+  }, [transitionToken]);
+
   useEffect(() => {
     return () => {
       onNearbyHotspotChange(null);
@@ -231,13 +270,57 @@ export function Scene07_NeelkanthTemple({
     let idlePose: CharacterIdlePose = 'default';
 
     if (activeDarshanPan) {
-      // Align Srishti peacefully in front of Nandi facing the sanctum Shivalinga (`-Z`)
-      sim.posX = THREE.MathUtils.damp(sim.posX, 0.0, 8, delta);
-      sim.posZ = THREE.MathUtils.damp(sim.posZ, -2.95, 8, delta);
+      darshanElapsedRef.current += delta;
+      // Align Ishaan cleanly in left-center of devotional lower-third arc facing Garbhagriha (-Z)
+      sim.posX = THREE.MathUtils.damp(sim.posX, -0.38, 8, delta);
+      sim.posZ = THREE.MathUtils.damp(sim.posZ, -2.65, 8, delta);
       sim.velX = 0;
       sim.velZ = 0;
-      sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, 0, 8, delta);
+      sim.facingYaw = THREE.MathUtils.damp(
+        sim.facingYaw,
+        yawTowardTarget(-0.38, -2.65, 0, -6.2),
+        8,
+        delta
+      );
       idlePose = 'pray_bow';
+    } else if (eatingCafeActive) {
+      cafeElapsedRef.current += delta;
+      sim.posX = NEELKANTH_CAFE_SEATS.ishaan.x;
+      sim.posZ = NEELKANTH_CAFE_SEATS.ishaan.z;
+      sim.velX = 0;
+      sim.velZ = 0;
+      sim.facingYaw = NEELKANTH_CAFE_SEATS.ishaan.facingYaw;
+      idlePose = 'sit_eat';
+    } else if (autoPlayMode && onAutoTriggerHotspot) {
+      const targetId = !rangBell
+        ? 'bell'
+        : !litDiya
+          ? 'diya'
+          : !hadDarshan
+            ? 'darshan'
+            : !capturedFood
+              ? 'neelkanth_food'
+              : 'scooters';
+      const targetSpot = NEELKANTH_HOTSPOTS.find((h) => h.id === targetId);
+      if (targetSpot) {
+        const dx = targetSpot.x - sim.posX;
+        const dz = targetSpot.z - sim.posZ;
+        const dist = Math.hypot(dx, dz);
+        if (dist > 0.72) {
+          const step = Math.min(dist, WALK_SPEED_MPS * 0.92 * delta);
+          sim.velX = (dx / dist) * WALK_SPEED_MPS * 0.92;
+          sim.velZ = (dz / dist) * WALK_SPEED_MPS * 0.92;
+          sim.posX += (dx / dist) * step;
+          sim.posZ += (dz / dist) * step;
+          sim.facingYaw = Math.atan2(-dx, -dz);
+          walkSpeed = WALK_SPEED_MPS * 0.92;
+          strideRatio = 0.88;
+          sim.stridePhase += step * 3.8;
+        } else if (!autoFiredSetRef.current.has(targetId)) {
+          autoFiredSetRef.current.add(targetId);
+          onAutoTriggerHotspot(targetId);
+        }
+      }
     } else {
       const moveDist = stepWalkSimulation(
         sim,
@@ -253,7 +336,7 @@ export function Scene07_NeelkanthTemple({
       }
     }
 
-    // 1. Ishaan walk + genuine forward bow & folded-hands Namaste
+    // 1. Ishaan walk + genuine forward bow / café dining pose
     animateIshaanWalkRig({
       refs: {
         group: playerGroupRef.current,
@@ -277,12 +360,14 @@ export function Scene07_NeelkanthTemple({
       reducedMotion,
     });
 
-    // 2. Friends follow Srishti through market & temple courtyard, pray together, or walk back to scooters
+    // 2. Friends follow through temple, pray together, sit together at Market Café, or walk to scooters
     const companionMode = activeDarshanPan
       ? 'prayer'
-      : sim.posZ > 11.45
-        ? 'scooter_return'
-        : 'follow';
+      : eatingCafeActive
+        ? 'sit_dine'
+        : sim.posZ > 19.2
+          ? 'scooter_return'
+          : 'follow';
 
     stepGroupCompanions({
       agents: companionStatesRef.current,
@@ -298,9 +383,11 @@ export function Scene07_NeelkanthTemple({
       explicitTargets:
         companionMode === 'prayer'
           ? PRAYER_TARGETS
-          : companionMode === 'scooter_return'
-            ? SCOOTER_RETURN_TARGETS
-            : undefined,
+          : eatingCafeActive
+            ? CAFE_COMPANION_TARGETS
+            : companionMode === 'scooter_return'
+              ? SCOOTER_RETURN_TARGETS
+              : undefined,
     });
 
     const rigs = companionRigsRef.current;
@@ -316,20 +403,50 @@ export function Scene07_NeelkanthTemple({
           agent,
           config: cfg,
           refs: rig,
-          lookTargetX: i % 2 === 0 ? sim.posX : lookPeer.posX,
-          lookTargetZ: i % 2 === 0 ? sim.posZ : lookPeer.posZ,
+          lookTargetX: eatingCafeActive
+            ? NEELKANTH_CAFE_TABLE_CENTER.x
+            : i % 2 === 0
+              ? sim.posX
+              : lookPeer.posX,
+          lookTargetZ: eatingCafeActive
+            ? NEELKANTH_CAFE_TABLE_CENTER.z
+            : i % 2 === 0
+              ? sim.posZ
+              : lookPeer.posZ,
           elapsed: t,
           delta,
           forcePrayBow: activeDarshanPan,
+          idlePoseOverride: eatingCafeActive
+            ? i === 0
+              ? 'sit_laugh'
+              : 'sit_eat'
+            : undefined,
           reducedMotion,
         });
       }
     }
 
-    // 3. Peaceful devotional camera framing during Mahadev prayer OR smooth third-person orbit
+    // 3. Clear wide-angle darshan camera (unobstructed behind all 4 friends facing Shivalinga) or café orbit
     if (activeDarshanPan) {
-      scratch.desiredCamPos.set(1.75, 1.98, -0.35);
-      scratch.desiredLookAt.set(0.05, 1.48, -4.95);
+      const dPan = Math.min(1, darshanElapsedRef.current / 4.0);
+      scratch.desiredCamPos.set(
+        Math.sin(dPan * Math.PI) * 0.34,
+        1.82 - dPan * 0.06,
+        0.35 - dPan * 0.65
+      );
+      scratch.desiredLookAt.set(0, 1.32, -5.95);
+    } else if (eatingCafeActive) {
+      const cPan = Math.min(1, cafeElapsedRef.current / 4.2);
+      scratch.desiredCamPos.set(
+        0.55 + cPan * 0.65,
+        1.92,
+        18.65 - cPan * 0.55
+      );
+      scratch.desiredLookAt.set(
+        NEELKANTH_CAFE_TABLE_CENTER.x,
+        0.95,
+        NEELKANTH_CAFE_TABLE_CENTER.z
+      );
     } else {
       const horizDist = Math.cos(sim.orbitPitch) * CAM_DISTANCE;
       const vertOffset = 1.2 + Math.sin(sim.orbitPitch) * CAM_DISTANCE;
@@ -408,6 +525,7 @@ export function Scene07_NeelkanthTemple({
         litDiya={litDiya}
         hadDarshan={hadDarshan}
         capturedFood={capturedFood}
+        activeDarshanPan={activeDarshanPan}
       />
 
       {/* Playable Ishaan avatar entering vibrant market passage toward colorful temple gate */}
@@ -422,12 +540,17 @@ export function Scene07_NeelkanthTemple({
         rightKneeRef={rightKneeRef}
         leftArmRef={leftArmRef}
         rightArmRef={rightArmRef}
+        holdingFork={eatingCafeActive}
         position={[0.15, 0, 10.65]}
         castShadow={shadowsEnabled}
       />
 
-      {/* Friends walking alongside Srishti, joining prayer, or walking back to parked scooters */}
-      <CompanionGroup initialPositions={NEELKANTH_COMPANION_INIT} onRigsReady={handleRigsReady} />
+      {/* Friends walking alongside Ishaan, joining prayer, sitting at Market Cafe, or walking to scooters */}
+      <CompanionGroup
+        initialPositions={NEELKANTH_COMPANION_INIT}
+        holdingFork={eatingCafeActive}
+        onRigsReady={handleRigsReady}
+      />
     </>
   );
 }

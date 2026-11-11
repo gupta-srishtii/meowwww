@@ -16,9 +16,10 @@ export interface DistantHimalayanRidgesProps {
   baseY?: number;
 }
 
-const _foothillGreen = new THREE.Color('#2f4f38');
-const _midSlopeSage = new THREE.Color('#446652');
-const _ridgeSlateBlue = new THREE.Color('#63839e');
+const _foothillGreen = new THREE.Color('#274330');
+const _warmSlopeMoss = new THREE.Color('#4a5f42');
+const _rockySlateFace = new THREE.Color('#616c78');
+const _ridgeSlateBlue = new THREE.Color('#66839b');
 const _highMistBlue = new THREE.Color('#9db7cc');
 
 function ridgedNoise(x: number, z: number): number {
@@ -97,15 +98,22 @@ function buildContinuousMountainRangeGeometry(
 
     pos.setXYZ(i, wx, h, wz);
 
-    // Distance & elevation-based hazy Shivalik aerial perspective
+    // Distance & elevation-based hazy Shivalik aerial perspective with rock-band ridges
     const heightNorm = THREE.MathUtils.clamp((h + 18) / 102, 0, 1);
-    const valleyDepthShade = Math.sin(wx * 0.03 + wz * 0.025) * 0.04;
+    const strataBand = Math.sin(wx * 0.045 - wz * 0.035 + h * 0.14) * 0.5 + 0.5;
+    const valleyDepthShade = Math.sin(wx * 0.03 + wz * 0.025) * 0.038;
     if (heightNorm < 0.34) {
-      tmpColor.copy(_foothillGreen).lerp(_midSlopeSage, heightNorm / 0.34);
-    } else if (heightNorm < 0.7) {
-      tmpColor.copy(_midSlopeSage).lerp(_ridgeSlateBlue, (heightNorm - 0.34) / 0.36);
+      tmpColor.copy(_foothillGreen).lerp(_warmSlopeMoss, heightNorm / 0.34);
+      if (strataBand > 0.62) {
+        tmpColor.lerp(_rockySlateFace, (strataBand - 0.62) * 1.15);
+      }
+    } else if (heightNorm < 0.72) {
+      tmpColor
+        .copy(_warmSlopeMoss)
+        .lerp(_rockySlateFace, strataBand * 0.58)
+        .lerp(_ridgeSlateBlue, (heightNorm - 0.34) / 0.38);
     } else {
-      tmpColor.copy(_ridgeSlateBlue).lerp(_highMistBlue, (heightNorm - 0.7) / 0.3);
+      tmpColor.copy(_ridgeSlateBlue).lerp(_highMistBlue, (heightNorm - 0.72) / 0.28);
     }
     tmpColor.offsetHSL(0, 0, valleyDepthShade);
     colors[i * 3] = tmpColor.r;

@@ -147,3 +147,169 @@ test('custom track pauses at silence and resumes without failing', async () => {
   assert.equal(h.audio.customAudioEl.paused, false);
   assert.equal(h.audio.customTrackFailed, false);
 });
+
+test('local temple audio gates on Shivling darshan trigger, waits for unlock, and falls back on error', async () => {
+  const h = audioHarness();
+  h.state({ mode: 'neelkanth', templeDarshanTriggered: false });
+  h.audio.setTempleTrackUrl('blob:temple-track');
+  assert.equal(h.calls(), 0);
+  // Entering temple courtyard without reaching Shivling darshan keeps track silent
+  assert.equal(h.audio.templeVolumeTarget, 0);
+  assert.equal(h.audio.isTempleTrackOverriding(), false);
+
+  h.setPlay(() => Promise.reject({ name: 'NotSupportedError' }));
+  h.state({ mode: 'neelkanth', templeDarshanTriggered: true });
+  h.audio.unlock();
+  await settle();
+  assert.equal(h.audio.templeTrackFailed, true);
+  assert.equal(h.audio.musicGain.gain.value, 0.7);
+  assert.equal(h.audio.isTempleTrackOverriding(), false);
+  h.state({ mode: 'neelkanth', musicVolume: 0, templeDarshanTriggered: true });
+  assert.equal(h.audio.musicGain.gain.value, 0);
+  assert.equal(h.audio.templeVolumeTarget, 0);
+});
+
+test('to_baalkuwari executes two sharp right-hand turns on smooth road before offroad dirt bumps start', () => {
+  const {
+    createMountainRoadCurve,
+    BAAL_KUWARI_OFFROAD_START_DIST,
+    BAAL_KUWARI_STOP_DISTANCE,
+    sampleRoadFrame,
+    sampleOffroadTrackBump,
+  } = loadSource('src/lib/mountainSpline.ts');
+  const THREE = require('three');
+  const curve = createMountainRoadCurve('to_baalkuwari');
+  const totalLen = curve.getLength();
+
+  const pt = new THREE.Vector3();
+  const tan = new THREE.Vector3();
+  const right = new THREE.Vector3();
+  const up = new THREE.Vector3();
+
+  // Sample heading change across [0..BAAL_KUWARI_OFFROAD_START_DIST]
+  const headings = [];
+  for (let d = 2; d <= BAAL_KUWARI_OFFROAD_START_DIST; d += 8) {
+    sampleRoadFrame(curve, d, totalLen, pt, tan, right, up);
+    headings.push(tan.x);
+  }
+  const hasRightShift1 = headings.slice(0, 5).some((x) => x > 0.35);
+  const hasDipThenRightShift2 = headings.slice(4, 9).some((x) => x < 0.25) && headings.slice(8).some((x) => x > 0.45);
+  assert.equal(hasRightShift1, true);
+  assert.equal(hasDipThenRightShift2, true);
+
+  // Opening smooth paved bends must produce zero off-road suspension heave
+  const smoothStart = sampleOffroadTrackBump(40, 0, BAAL_KUWARI_STOP_DISTANCE);
+  assert.equal(smoothStart.heaveY, 0);
+
+  // Off-road bumps engage only beyond BAAL_KUWARI_OFFROAD_START_DIST
+  const rockyClimb = sampleOffroadTrackBump(
+    BAAL_KUWARI_OFFROAD_START_DIST + 25,
+    0,
+    BAAL_KUWARI_STOP_DISTANCE
+  );
+  assert.notEqual(rockyClimb.heaveY, 0);
+});
+
+test('POLAROID_MEMORY_SPECS resolves trailing-space BUN MASKA TEA and food in neelkanth photos', () => {
+  const filename = path.resolve(__dirname, '..', 'src/lib/privateMemoryLoader.ts');
+  const code = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+  }).outputText;
+  const ctx = {
+    exports: {},
+    URL: { createObjectURL: (f) => `blob:${f.name}`, revokeObjectURL() {} },
+    require: (name) =>
+      name === 'react'
+        ? { useState: (init) => [typeof init === 'function' ? init() : init, () => {}], useEffect: () => {} }
+        : require(name),
+  };
+  vm.runInNewContext(code, ctx, { filename });
+  const loader = ctx.exports;
+  assert.equal(loader.POLAROID_MEMORY_SPECS.scene03_tea_stop.matchedFilename, 'BUN MASKA TEA .jpg');
+  assert.equal(loader.POLAROID_MEMORY_SPECS.scene07_neelkanth_food.matchedFilename, 'food in neelkanth.jpg');
+  loader.registerLocalPhotoFolder([
+    { name: 'BUN MASKA TEA .jpg' },
+    { name: 'food in neelkanth.jpg' },
+  ]);
+  assert.equal(
+    loader.getResolvedPolaroidMemory('scene03_tea_stop').resolvedUrl,
+    'blob:BUN MASKA TEA .jpg'
+  );
+  assert.equal(
+    loader.getResolvedPolaroidMemory('scene07_neelkanth_food').resolvedUrl,
+    'blob:food in neelkanth.jpg'
+  );
+});
+
+test('Watch Our Story mode never mutates saved localStorage checkpoints', () => {
+  const storageMap = new Map();
+  let setCount = 0;
+  const mockStorage = {
+    getItem: (k) => (storageMap.has(k) ? storageMap.get(k) : null),
+    setItem: (k, v) => {
+      setCount += 1;
+      storageMap.set(k, String(v));
+    },
+    removeItem: (k) => storageMap.delete(k),
+  };
+  const { useProgressStore } = loadSource('src/store/progressStore.ts', {
+    navigator: { maxTouchPoints: 0 },
+    window: {
+      localStorage: mockStorage,
+      matchMedia: () => ({ matches: false }),
+      innerWidth: 1280,
+      devicePixelRatio: 1,
+    },
+  });
+  const store = useProgressStore.getState();
+  store.setPlayMode('play', true);
+  store.beginFadeOut(3, 1, true);
+  store.enterLoadingPhase(3, 1);
+  store.enterMountingPhase(1);
+  assert.equal(store.commitSceneReady(1, 3), true);
+  const writesBeforeWatch = setCount;
+  const savedBeforeWatch = storageMap.get('road_made_us_family_checkpoint');
+  assert.ok(writesBeforeWatch >= 1);
+  assert.ok(savedBeforeWatch && savedBeforeWatch.includes('"committedSceneId":3'));
+
+  store.setPlayMode('watch', true);
+  store.beginFadeOut(7, 2, true);
+  store.enterLoadingPhase(7, 2);
+  store.enterMountingPhase(2);
+  assert.equal(store.commitSceneReady(2, 7), true);
+  store.capturePolaroidAndSave('scene07_neelkanth_food');
+  useProgressStore.getState().saveCheckpoint();
+  assert.equal(setCount, writesBeforeWatch);
+  assert.equal(storageMap.get('road_made_us_family_checkpoint'), savedBeforeWatch);
+  assert.equal(useProgressStore.getState().lastCheckpoint.committedSceneId, 3);
+});
+
+test('final story accuracy: removed disliked title, silent stairs, Srishti/Kanishka badges, and Day 1 5PM Maggi phase', () => {
+  const read = (rel) => fs.readFileSync(path.resolve(__dirname, '..', rel), 'utf8');
+  for (const rel of [
+    'src/app/layout.tsx',
+    'src/components/ui/LoadingScreen.tsx',
+    'src/components/ui/MinimalHudChrome.tsx',
+    'src/components/ui/EndingScreenHUD.tsx',
+    'src/components/ui/FallbackStorybookView.tsx',
+    'src/lib/sceneConfig.ts',
+  ]) {
+    assert.equal(read(rel).includes('The Road That Made Us Family'), false, rel);
+  }
+
+  const headOverlay = read('src/components/canvas/characters/CharacterHeadOverlay.tsx');
+  assert.equal(headOverlay.includes("name: 'Srishti'"), true);
+  assert.equal(headOverlay.includes('distanceFactor='), false);
+  assert.equal(headOverlay.includes('haath do!'), false);
+
+  const stairsSrc = read('src/components/canvas/scenes/Scene09_BaalKuwariStairs.tsx');
+  assert.equal(stairsSrc.includes("'Gotcha.'"), false);
+
+  const hotelEnv = read('src/components/canvas/environment/HotelReturnEnvironment.tsx');
+  assert.equal(hotelEnv.includes('Kanishka'), true);
+  assert.equal(hotelEnv.includes('15.6'), true);
+
+  const prologueHud = read('src/components/ui/PrologueStoryHUD.tsx');
+  assert.equal(prologueHud.includes("'evening_maggi_stop'"), true);
+  assert.equal(prologueHud.includes("'return_and_kanishka'"), true);
+});

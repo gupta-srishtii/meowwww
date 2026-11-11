@@ -25,6 +25,7 @@ import {
 import {
   WALK_SPEED_MPS,
   findNearestWalkHotspot,
+  stepAutoWalkTowardTarget,
   stepWalkSimulation,
   type WalkHotspot,
   type WalkInputState,
@@ -46,6 +47,8 @@ export interface Scene10BaalKuwariTempleProps {
   capturedPolaroid: boolean;
   capturedBookPolaroid?: boolean;
   bookPhotoActive?: boolean;
+  autoPlayMode?: boolean;
+  onAutoTriggerHotspot?: (hotspotId: string) => void;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
   onSceneReady: (token: number, sceneId: SceneId) => void;
 }
@@ -99,6 +102,8 @@ export function Scene10_BaalKuwariTemple({
   capturedPolaroid,
   capturedBookPolaroid = false,
   bookPhotoActive = false,
+  autoPlayMode = false,
+  onAutoTriggerHotspot,
   onNearbyHotspotChange,
   onSceneReady,
 }: Scene10BaalKuwariTempleProps) {
@@ -158,7 +163,10 @@ export function Scene10_BaalKuwariTemple({
     companionRigsRef.current = rigs;
   }, []);
 
+  const autoFiredSetRef = useRef(new Set<string>());
+
   useEffect(() => {
+    autoFiredSetRef.current.clear();
     if (transitionToken > 0) {
       onSceneReady(transitionToken, 10);
     }
@@ -215,12 +223,38 @@ export function Scene10_BaalKuwariTemple({
         onArrivalCinematicComplete();
       }
     } else if (bookPhotoActive) {
-      sim.posX = THREE.MathUtils.damp(sim.posX, 2.45, 8, delta);
-      sim.posZ = THREE.MathUtils.damp(sim.posZ, 0.35, 8, delta);
+      // Ishaan stands behind the backyard tripod camera framing Srishti reading barefoot over the valley
+      sim.posX = THREE.MathUtils.damp(sim.posX, 2.22, 8, delta);
+      sim.posZ = THREE.MathUtils.damp(sim.posZ, 0.42, 8, delta);
       sim.velX = 0;
       sim.velZ = 0;
       sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, -0.78, 8, delta);
       strideRatio = 0;
+    } else if (autoPlayMode && onAutoTriggerHotspot) {
+      const targetId = !rangBell
+        ? 'summit_bell'
+        : !capturedPolaroid
+          ? 'summit_polaroid'
+          : !capturedBookPolaroid
+            ? 'book_polaroid'
+            : 'descent';
+      const targetSpot = BAAL_KUWARI_TEMPLE_HOTSPOTS.find((h) => h.id === targetId);
+      if (targetSpot) {
+        const res = stepAutoWalkTowardTarget(
+          sim,
+          targetSpot.x,
+          targetSpot.z,
+          delta,
+          BAAL_KUWARI_TEMPLE_WALK_BOUNDS,
+          BAAL_KUWARI_TEMPLE_OBSTACLES
+        );
+        strideRatio = res.strideRatio;
+        walkSpeed = res.walkSpeed;
+        if (res.arrived && !autoFiredSetRef.current.has(targetId)) {
+          autoFiredSetRef.current.add(targetId);
+          onAutoTriggerHotspot(targetId);
+        }
+      }
     } else {
       const moveDist = stepWalkSimulation(
         sim,
@@ -287,9 +321,10 @@ export function Scene10_BaalKuwariTemple({
     } else {
       const shreeAgent = companionStatesRef.current.find((a) => a.id === 'srishti');
       if (shreeAgent) {
-        shreeAgent.posX = THREE.MathUtils.damp(shreeAgent.posX, 3.95, 7, delta);
-        shreeAgent.posZ = THREE.MathUtils.damp(shreeAgent.posZ, -1.35, 7, delta);
-        shreeAgent.facingYaw = THREE.MathUtils.damp(shreeAgent.facingYaw, -0.45, 7, delta);
+        shreeAgent.posX = THREE.MathUtils.damp(shreeAgent.posX, 3.92, 7, delta);
+        shreeAgent.posZ = THREE.MathUtils.damp(shreeAgent.posZ, -1.42, 7, delta);
+        // Srishti sits relaxed overlooking the smoky valley ridges reading her open hardcover book
+        shreeAgent.facingYaw = THREE.MathUtils.damp(shreeAgent.facingYaw, -0.35, 7, delta);
         shreeAgent.velX = 0;
         shreeAgent.velZ = 0;
       }
@@ -338,8 +373,8 @@ export function Scene10_BaalKuwariTemple({
         THREE.MathUtils.lerp(-2.5, 0.0, smoothU)
       );
     } else if (bookPhotoActive) {
-      scratch.camPos.set(1.22, 1.58, 1.15);
-      scratch.lookAt.set(3.55, 0.92, -1.25);
+      scratch.camPos.set(1.38, 1.54, 1.24);
+      scratch.lookAt.set(3.75, 0.88, -1.55);
     } else {
       const hDist = Math.cos(sim.orbitPitch) * CAM_DISTANCE;
       const vOff = 1.2 + Math.sin(sim.orbitPitch) * CAM_DISTANCE;

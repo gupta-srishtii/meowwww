@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
+  BAAL_KUWARI_OFFROAD_START_DIST,
   COMPANION_PARK_LATERAL,
   DHABA_TURNOUT_END,
   DHABA_TURNOUT_START,
@@ -289,11 +290,12 @@ function sampleWorldMountainElevation(
   const hillShoulder = -(ROAD_HALF_WIDTH + 1.3);
   const { centerX: riverX, waterY: riverY } = getRiverChannelCenter(wz, curveBoundsMaxX);
 
-  const shoulderDirt = new THREE.Color('#7a6c59');
-  const rockScree = new THREE.Color('#656b62');
-  const graniteFace = new THREE.Color('#5a6066');
-  const midTurf = new THREE.Color('#4c6b3a');
-  const pineForest = new THREE.Color('#37552f');
+  const shoulderDirt = new THREE.Color('#7d6d58');
+  const rockScree = new THREE.Color('#666a64');
+  const graniteFace = new THREE.Color('#5a5f66');
+  const ochreScrub = new THREE.Color('#6b7549');
+  const midTurf = new THREE.Color('#476438');
+  const pineForest = new THREE.Color('#2d4929');
   const sandyShingle = new THREE.Color('#978c78');
   const color = new THREE.Color();
 
@@ -303,7 +305,7 @@ function sampleWorldMountainElevation(
     return { y: nearest.projY - 0.24, color, isValleyRiverBank: false };
   }
 
-  // Hillside (+uphill mountain massif on -right side)
+  // Hillside (+uphill mountain massif on -right side) with stratified Garhwal shale & pine patches
   if (nearest.signedLateral < hillShoulder) {
     const distOut = -(nearest.signedLateral - hillShoulder);
     const surfaceRelY = sampleHillsideHeightOffset(
@@ -316,17 +318,25 @@ function sampleWorldMountainElevation(
     // Tuck smoothly beneath narrow spline batter for outer 0..3.8m so zero Z-fighting
     const tuckBlend = smoothStep01((distOut - 2.4) / 2.2);
     const y = nearest.projY + THREE.MathUtils.lerp(-0.26, surfaceRelY, tuckBlend);
+    const strataWave = Math.sin(wx * 0.08 + wz * 0.065 + surfaceRelY * 0.22) * 0.5 + 0.5;
+    const dryGrassMix = Math.cos(wx * 0.045 - wz * 0.055) * 0.5 + 0.5;
 
-    if (distOut < 4.5) {
-      color.copy(shoulderDirt).lerp(rockScree, distOut / 4.5);
-    } else if (distOut < 13.5) {
-      const rockMix = 0.35 + Math.max(0, Math.sin(wx * 0.08 + wz * 0.06)) * 0.45;
-      color.copy(rockScree).lerp(graniteFace, rockMix * 0.5).lerp(midTurf, (distOut - 4.5) / 9.0);
+    if (distOut < 4.8) {
+      color.copy(shoulderDirt).lerp(rockScree, distOut / 4.8);
+    } else if (distOut < 15.0) {
+      const bandT = (distOut - 4.8) / 10.2;
+      color
+        .copy(rockScree)
+        .lerp(graniteFace, strataWave * 0.65)
+        .lerp(dryGrassMix > 0.52 ? ochreScrub : midTurf, bandT * (0.55 + (1 - strataWave) * 0.35));
     } else {
-      const highFrac = Math.min(1, (distOut - 13.5) / 28.0);
-      color.copy(midTurf).lerp(pineForest, highFrac);
+      const highFrac = Math.min(1, (distOut - 15.0) / 28.0);
+      color
+        .copy(dryGrassMix > 0.55 ? ochreScrub : midTurf)
+        .lerp(pineForest, highFrac * 0.85)
+        .lerp(graniteFace, Math.max(0, strataWave - 0.62) * 0.9);
     }
-    const shade = (Math.sin(wx * 0.11 + wz * 0.09) * 0.025 + Math.cos(wx * 0.04 - wz * 0.05) * 0.02);
+    const shade = Math.sin(wx * 0.11 + wz * 0.09) * 0.03 + Math.cos(wx * 0.04 - wz * 0.05) * 0.025;
     color.offsetHSL(0, 0, shade);
     return { y, color, isValleyRiverBank: false };
   }
@@ -733,6 +743,13 @@ export function MountainRoadEnvironment({
 
   const isOffroad =
     roadSegment === 'to_baalkuwari' || roadSegment === 'to_baalkuwari_stairs';
+  const isSplitBaalKuwari = roadSegment === 'to_baalkuwari';
+  const isPureOffroad = roadSegment === 'to_baalkuwari_stairs';
+  const pavedEndDist = isPureOffroad
+    ? 0
+    : isSplitBaalKuwari
+      ? Math.min(totalLength, BAAL_KUWARI_OFFROAD_START_DIST)
+      : totalLength;
   const asphaltTex = useMemo(() => getAsphaltRoadTexture(), []);
   const offroadDirtTex = useMemo(() => getOffroadDirtTrackTexture(), []);
   const gopuramTex = useMemo(() => getGopuramDetailTexture(), []);
@@ -825,14 +842,39 @@ export function MountainRoadEnvironment({
   }, [curve, totalLength, roadSegment, turnoutA, turnoutB, stopDist]);
 
   const geometries = useMemo(() => {
-    const surfaceHalfWidth = isOffroad ? 2.55 : ROAD_HALF_WIDTH;
-    const asphalt = buildSplineRibbonGeometry(curve, totalLength, ROAD_SEGMENTS, {
-      leftOffset: -surfaceHalfWidth,
-      leftY: 0.01,
-      rightOffset: surfaceHalfWidth,
-      rightY: 0.01,
-    });
+    const pavedSpanEnd = Math.max(2, pavedEndDist);
+    const asphalt = buildSplineRibbonGeometry(
+      curve,
+      totalLength,
+      isPureOffroad ? 2 : isSplitBaalKuwari ? 70 : ROAD_SEGMENTS,
+      {
+        leftOffset: -ROAD_HALF_WIDTH,
+        leftY: 0.01,
+        rightOffset: ROAD_HALF_WIDTH,
+        rightY: 0.01,
+      },
+      0,
+      pavedSpanEnd
+    );
 
+    const dirtStart = isPureOffroad ? 0 : pavedEndDist;
+    const dirtTrack = isOffroad
+      ? buildSplineRibbonGeometry(
+          curve,
+          totalLength,
+          isPureOffroad ? ROAD_SEGMENTS : 190,
+          {
+            leftOffset: -2.55,
+            leftY: 0.012,
+            rightOffset: 2.55,
+            rightY: 0.012,
+          },
+          dirtStart,
+          totalLength
+        )
+      : null;
+
+    const surfaceHalfWidth = isOffroad ? 2.55 : ROAD_HALF_WIDTH;
     const leftShoulder = buildSplineRibbonGeometry(curve, totalLength, ROAD_SEGMENTS, {
       leftOffset: -(ROAD_HALF_WIDTH + 1.35),
       leftY: -0.04,
@@ -847,19 +889,33 @@ export function MountainRoadEnvironment({
       rightY: -0.04,
     });
 
-    const leftEdgeStripe = buildSplineRibbonGeometry(curve, totalLength, 160, {
-      leftOffset: -(ROAD_HALF_WIDTH - 0.35),
-      leftY: 0.02,
-      rightOffset: -(ROAD_HALF_WIDTH - 0.2),
-      rightY: 0.02,
-    });
+    const leftEdgeStripe = buildSplineRibbonGeometry(
+      curve,
+      totalLength,
+      isSplitBaalKuwari ? 48 : 160,
+      {
+        leftOffset: -(ROAD_HALF_WIDTH - 0.35),
+        leftY: 0.02,
+        rightOffset: -(ROAD_HALF_WIDTH - 0.2),
+        rightY: 0.02,
+      },
+      0,
+      pavedSpanEnd
+    );
 
-    const rightEdgeStripe = buildSplineRibbonGeometry(curve, totalLength, 160, {
-      leftOffset: ROAD_HALF_WIDTH - 0.35,
-      leftY: 0.02,
-      rightOffset: ROAD_HALF_WIDTH - 0.2,
-      rightY: 0.02,
-    });
+    const rightEdgeStripe = buildSplineRibbonGeometry(
+      curve,
+      totalLength,
+      isSplitBaalKuwari ? 48 : 160,
+      {
+        leftOffset: ROAD_HALF_WIDTH - 0.35,
+        leftY: 0.02,
+        rightOffset: ROAD_HALF_WIDTH - 0.2,
+        rightY: 0.02,
+      },
+      0,
+      pavedSpanEnd
+    );
 
     const hillsideSlope = buildContouredRoadSideGeometry(
       curve,
@@ -888,7 +944,7 @@ export function MountainRoadEnvironment({
     const { geometry: worldTerrain, riverGeometry: valleyRiver } =
       buildWorldMountainTerrainGeometry(roadStations, roadSegment);
 
-    // Guardrail spans split around Turnout A & Turnout B so riders pull smoothly onto shoulders
+    // Guardrail spans split around Turnout A & Turnout B (or end cleanly at offroad dirt turnoff in to_baalkuwari)
     const guardrail1 = buildSplineRibbonGeometry(
       curve,
       totalLength,
@@ -900,7 +956,7 @@ export function MountainRoadEnvironment({
         rightY: 0.76,
       },
       0,
-      turnoutA.start - 2
+      isSplitBaalKuwari ? pavedEndDist - 2 : turnoutA.start - 2
     );
 
     const guardrail2 = buildSplineRibbonGeometry(
@@ -991,6 +1047,7 @@ export function MountainRoadEnvironment({
 
     return {
       asphalt,
+      dirtTrack,
       leftShoulder,
       rightShoulder,
       leftEdgeStripe,
@@ -1007,15 +1064,35 @@ export function MountainRoadEnvironment({
       mainTurnoutApron,
       mainTurnoutRetainingSkirt,
     };
-  }, [curve, totalLength, roadSegment, stopDist, turnoutA, turnoutB, roadStations, isOffroad]);
+  }, [
+    curve,
+    totalLength,
+    roadSegment,
+    stopDist,
+    turnoutA,
+    turnoutB,
+    roadStations,
+    isOffroad,
+    isSplitBaalKuwari,
+    isPureOffroad,
+    pavedEndDist,
+  ]);
 
   useEffect(() => {
     return () => {
-      Object.values(geometries).forEach((geometry) => geometry.dispose());
+      Object.values(geometries).forEach((geometry) => geometry?.dispose());
     };
   }, [geometries]);
 
-  const dashCount = useMemo(() => Math.floor((totalLength - 12) / 6.2), [totalLength]);
+  const dashCount = useMemo(
+    () =>
+      isPureOffroad
+        ? 0
+        : isSplitBaalKuwari
+          ? Math.max(0, Math.floor((pavedEndDist - 8) / 6.2))
+          : Math.floor((totalLength - 12) / 6.2),
+    [totalLength, isPureOffroad, isSplitBaalKuwari, pavedEndDist]
+  );
   const postPositions = useMemo(() => {
     const result: number[] = [];
     for (let d = 2; d < totalLength - 4; d += 4.6) {
@@ -1050,6 +1127,7 @@ export function MountainRoadEnvironment({
     const negTangent = new THREE.Vector3();
 
     if (dashMeshRef.current) {
+      dashMeshRef.current.count = dashCount;
       for (let i = 0; i < dashCount; i += 1) {
         const d = 4 + i * 6.2;
         sampleRoadFrame(curve, d, totalLength, point, tangent, right, up);
@@ -1188,8 +1266,8 @@ export function MountainRoadEnvironment({
       if (!footprint) continue;
 
       const yaw = rand() * Math.PI * 2;
-      // Anchor trunk relative to minimum perimeter ground height so uphill/downhill trunk bases bury naturally
-      const rootY = footprint.minY - 0.14 * scale;
+      // Anchor trunk deeply below minimum perimeter ground height so steep hillside edges never gap
+      const rootY = footprint.minY - 0.25 * scale;
 
       dummy.position.set(wx, rootY + 0.85 * scale, wz);
       dummy.rotation.set(0, yaw, 0);
@@ -1238,9 +1316,8 @@ export function MountainRoadEnvironment({
       const footprint = sampleTerrainFootprint(terrainMeshSampler, wx, wz, 0.58 * scale);
       if (!footprint) continue;
 
-      // Dodecahedron radius 0.65 * 0.85 = 0.55 * scale; placing center at minY + 0.14 * scale
-      // guarantees 0.41 * scale embeds below the LOWEST edge of the slope footprint.
-      dummy.position.set(wx, footprint.minY + 0.14 * scale, wz);
+      // Guarantee shrub bases bury solidly below slope triangle minimums
+      dummy.position.set(wx, footprint.minY + 0.04 * scale, wz);
       dummy.rotation.set(0, rand() * Math.PI, 0);
       dummy.scale.set(scale * 1.25, scale * 0.85, scale * 1.15);
       dummy.updateMatrix();
@@ -1258,7 +1335,8 @@ export function MountainRoadEnvironment({
       sampleRoadFrame(curve, d, totalLength, point, tangent, right, up);
       const alcove = getStallAlcoveBlend(d, roadSegment);
       const inTurnoutB = d >= turnoutB.start - 4 && d <= turnoutB.end + 4;
-      const onOffroadEdge = isOffroad && !inTurnoutB && attempt % 2 === 0;
+      const inDirtStretch = isPureOffroad || (isSplitBaalKuwari && d >= pavedEndDist);
+      const onOffroadEdge = inDirtStretch && !inTurnoutB && attempt % 2 === 0;
       const placeOnHillside = rand() < 0.72;
       const scaleX = onOffroadEdge ? 0.45 + rand() * 0.55 : 0.78 + rand() * 1.18;
       const scaleY = onOffroadEdge ? 0.3 + rand() * 0.35 : 0.56 + rand() * 0.92;
@@ -1285,7 +1363,7 @@ export function MountainRoadEnvironment({
       const footprint = sampleTerrainFootprint(terrainMeshSampler, wx, wz, 0.65 * scaleX);
       if (!footprint) continue;
 
-      dummy.position.set(wx, footprint.minY + scaleY * 0.1, wz);
+      dummy.position.set(wx, footprint.minY + scaleY * 0.02, wz);
       dummy.rotation.set(rand() * 0.5, rand() * Math.PI * 2, rand() * 0.5);
       dummy.scale.set(scaleX, scaleY, scaleX * 0.9);
       dummy.updateMatrix();
@@ -1372,8 +1450,9 @@ export function MountainRoadEnvironment({
       .addScaledVector(right, ROAD_HALF_WIDTH + 5.2)
       .addScaledVector(up, 0.0);
 
-    // 3. Explicit right-hand dirt cut signpost near start of Baal Kuwari off-road leg
-    sampleRoadFrame(curve, 14, totalLength, point, tangent, right, up);
+    // 3. Explicit dirt-track turnoff signpost right after the two right-hand paved bends
+    const signDist = isSplitBaalKuwari ? Math.max(14, pavedEndDist - 4) : 14;
+    sampleRoadFrame(curve, signDist, totalLength, point, tangent, right, up);
     basis.makeBasis(right, up, tangent.clone().negate());
     const offroadSignQuat = new THREE.Quaternion().setFromRotationMatrix(basis);
     const offroadSignPos = point
@@ -1452,16 +1531,28 @@ export function MountainRoadEnvironment({
         shadow-bias={-0.0005}
       />
 
-      {/* Main continuous track: rocky mountain dirt track on `to_baalkuwari`, weathered mountain asphalt elsewhere */}
-      <mesh geometry={geometries.asphalt} receiveShadow={shadowsEnabled}>
-        <meshStandardMaterial
-          color={isOffroad ? '#9f8365' : '#6c7785'}
-          map={(isOffroad ? offroadDirtTex : asphaltTex) ?? undefined}
-          roughness={isOffroad ? 0.98 : 0.88}
-          metalness={isOffroad ? 0.01 : 0.04}
-        />
-      </mesh>
-      {!isOffroad && (
+      {/* Main continuous track: paved road during opening bends on to_baalkuwari, dirt track beyond turnoff */}
+      {!isPureOffroad && (
+        <mesh geometry={geometries.asphalt} receiveShadow={shadowsEnabled}>
+          <meshStandardMaterial
+            color="#6c7785"
+            map={asphaltTex ?? undefined}
+            roughness={0.88}
+            metalness={0.04}
+          />
+        </mesh>
+      )}
+      {geometries.dirtTrack && (
+        <mesh geometry={geometries.dirtTrack} receiveShadow={shadowsEnabled}>
+          <meshStandardMaterial
+            color="#9f8365"
+            map={offroadDirtTex ?? undefined}
+            roughness={0.98}
+            metalness={0.01}
+          />
+        </mesh>
+      )}
+      {!isPureOffroad && (
         <>
           <mesh geometry={geometries.leftEdgeStripe}>
             <meshStandardMaterial color="#e2e8f0" roughness={0.78} />
@@ -1600,44 +1691,7 @@ export function MountainRoadEnvironment({
             phaseOffset={2.7}
           />
         </group>
-      ) : roadSegment === 'to_baalkuwari' ? (
-        <group position={landmarks.stallCenter} quaternion={landmarks.stopQuat}>
-          {/* Separate Roadside Forest Maggi Clearing Pull-Off (No Temple Staircase Attached Here) */}
-          <RoadsideTapriAssembly
-            sideOfRoad="right"
-            stallVariant="maggi_snacks"
-            keeperShirtColor="#0f766e"
-            customerAColor="#334155"
-            customerBColor="#9a3412"
-            showSecondCustomer
-            showParkedScooter={false}
-            includeRetainingPlinth
-            shadowsEnabled={shadowsEnabled}
-            paused={paused}
-            reducedMotion={reducedMotion}
-            phaseOffset={1.5}
-          />
-          {/* Natural mountain clearing stone embankment & rustic trail signpost */}
-          <group position={[3.2, 0, -4.4]}>
-            <mesh position={[0, -1.6, 0]} receiveShadow={shadowsEnabled}>
-              <boxGeometry args={[5.8, 3.2, 4.8]} />
-              <meshStandardMaterial color="#584f3f" roughness={0.96} />
-            </mesh>
-            <mesh position={[-1.1, 0.25, 0.4]} rotation={[0.2, 0.5, 0]} castShadow={shadowsEnabled}>
-              <dodecahedronGeometry args={[0.75, 0]} />
-              <meshStandardMaterial color="#68707c" roughness={0.95} flatShading />
-            </mesh>
-            <mesh position={[0.4, 0.95, 0]} castShadow={shadowsEnabled}>
-              <cylinderGeometry args={[0.07, 0.08, 1.9, 6]} />
-              <meshStandardMaterial color="#5c4033" roughness={0.92} />
-            </mesh>
-            <mesh position={[0.4, 1.65, 0]} rotation={[0, 0.25, 0]} castShadow={shadowsEnabled}>
-              <boxGeometry args={[1.35, 0.28, 0.08]} />
-              <meshStandardMaterial color="#8c5e42" roughness={0.86} />
-            </mesh>
-          </group>
-        </group>
-      ) : roadSegment === 'to_baalkuwari_stairs' ? (
+      ) : roadSegment === 'to_baalkuwari' || roadSegment === 'to_baalkuwari_stairs' ? (
         <group position={landmarks.stallCenter} quaternion={landmarks.stopQuat}>
           {/* Baal Kuwari Staircase Entrance Plaza, Torana Archway & Ascending Hillside Steps */}
           <mesh position={[2.8, -4.5, 0]} receiveShadow={shadowsEnabled}>
@@ -1830,30 +1884,36 @@ export function MountainRoadEnvironment({
         <meshStandardMaterial color="#4e85a1" roughness={0.28} metalness={0.14} />
       </mesh>
 
-      {/* Valley-side steel guardrails & painted dashes segmented cleanly around pull-offs (paved roads only) */}
-      {!isOffroad && (
+      {/* Valley-side steel guardrails & painted dashes segmented cleanly around pull-offs / offroad cut */}
+      {!isPureOffroad && (
         <>
           <mesh geometry={geometries.guardrail1}>
             <meshStandardMaterial color="#cbd5e1" roughness={0.45} metalness={0.35} side={THREE.DoubleSide} />
           </mesh>
-          <mesh geometry={geometries.guardrail2}>
-            <meshStandardMaterial color="#cbd5e1" roughness={0.45} metalness={0.35} side={THREE.DoubleSide} />
-          </mesh>
-          <mesh geometry={geometries.guardrail3}>
-            <meshStandardMaterial color="#cbd5e1" roughness={0.45} metalness={0.35} side={THREE.DoubleSide} />
-          </mesh>
+          {!isSplitBaalKuwari && (
+            <>
+              <mesh geometry={geometries.guardrail2}>
+                <meshStandardMaterial color="#cbd5e1" roughness={0.45} metalness={0.35} side={THREE.DoubleSide} />
+              </mesh>
+              <mesh geometry={geometries.guardrail3}>
+                <meshStandardMaterial color="#cbd5e1" roughness={0.45} metalness={0.35} side={THREE.DoubleSide} />
+              </mesh>
+            </>
+          )}
 
           {/* Instanced dashed centerline markings */}
-          <instancedMesh ref={dashMeshRef} args={[undefined, undefined, dashCount]}>
+          <instancedMesh ref={dashMeshRef} args={[undefined, undefined, Math.max(1, dashCount)]}>
             <boxGeometry args={[0.14, 0.02, 2.3]} />
             <meshStandardMaterial color="#fde68a" roughness={0.8} />
           </instancedMesh>
 
           {/* Instanced yellow kilometer stones along hillside edge */}
-          <instancedMesh ref={milestoneMeshRef} args={[undefined, undefined, 24]}>
-            <boxGeometry args={[0.26, 0.58, 0.18]} />
-            <meshStandardMaterial color="#eab308" roughness={0.6} />
-          </instancedMesh>
+          {!isSplitBaalKuwari && (
+            <instancedMesh ref={milestoneMeshRef} args={[undefined, undefined, 24]}>
+              <boxGeometry args={[0.26, 0.58, 0.18]} />
+              <meshStandardMaterial color="#eab308" roughness={0.6} />
+            </instancedMesh>
+          )}
         </>
       )}
 

@@ -24,8 +24,17 @@ export const NEELKANTH_WALK_BOUNDS: WalkBounds = {
   minX: -7.2,
   maxX: 7.2,
   minZ: -4.95,
-  maxZ: 14.55,
+  maxZ: 27.6,
 };
+
+export const NEELKANTH_CAFE_TABLE_CENTER = { x: 2.85, z: 20.6 } as const;
+
+export const NEELKANTH_CAFE_SEATS = {
+  ishaan: { x: 2.85, z: 21.42, facingYaw: 0 },
+  srishti: { x: 2.85, z: 19.78, facingYaw: Math.PI },
+  friend_plaid: { x: 1.88, z: 20.6, facingYaw: -Math.PI / 2 },
+  friend_black_tee: { x: 3.82, z: 20.6, facingYaw: Math.PI / 2 },
+} as const;
 
 export const NEELKANTH_OBSTACLES: readonly WalkObstacle[] = [
   // Sanctum portico & Garbhagriha steps
@@ -41,18 +50,25 @@ export const NEELKANTH_OBSTACLES: readonly WalkObstacle[] = [
   // Entrance Gopuram left & right gate towers (`wide 3.8m walk opening in middle`)
   { kind: 'box', minX: -7.5, maxX: -1.9, minZ: 3.55, maxZ: 5.05 },
   { kind: 'box', minX: 1.9, maxX: 7.5, minZ: 3.55, maxZ: 5.05 },
-  // Outer temple market stalls (left flower & rudraksha stalls, right prasad & meal corner)
-  { kind: 'box', minX: -6.2, maxX: -3.65, minZ: 6.0, maxZ: 11.75 },
-  { kind: 'box', minX: 3.35, maxX: 6.2, minZ: 6.0, maxZ: 9.25 },
-  // Parked Scooter 1 & Scooter 2 in outer apron (physical collision around bikes)
-  { kind: 'box', minX: 1.05, maxX: 2.75, minZ: 13.45, maxZ: 14.5 },
-  { kind: 'box', minX: -2.25, maxX: -0.55, minZ: 13.45, maxZ: 14.5 },
-  // Respectful darshan queue & outer chatting visitors
+  // Continuous left temple bazaar shops & stalls (`z = 6.0..24.6`)
+  { kind: 'box', minX: -6.8, maxX: -3.65, minZ: 6.0, maxZ: 24.6 },
+  // Right temple bazaar shops (`puja thali -> brass bells -> Chole Bhature cafe -> exit sweets stall`)
+  { kind: 'box', minX: 3.65, maxX: 6.8, minZ: 6.0, maxZ: 14.0 },
+  { kind: 'box', minX: 4.3, maxX: 6.8, minZ: 14.0, maxZ: 25.4 },
+  // Outdoor dining table & 4 chairs at `NEELKANTH_CAFE_TABLE_CENTER` (`z = 20.6`)
+  { kind: 'box', minX: 2.15, maxX: 3.55, minZ: 20.05, maxZ: 21.15 },
+  { kind: 'circle', x: 2.85, z: 21.42, radius: 0.28 },
+  { kind: 'circle', x: 2.85, z: 19.78, radius: 0.28 },
+  { kind: 'circle', x: 1.88, z: 20.6, radius: 0.28 },
+  { kind: 'circle', x: 3.82, z: 20.6, radius: 0.28 },
+  // Parked Scooter 1 & Scooter 2 at Market Exit (`z = 26.2..27.4`)
+  { kind: 'box', minX: 1.05, maxX: 2.75, minZ: 26.2, maxZ: 27.4 },
+  { kind: 'box', minX: -2.25, maxX: -0.55, minZ: 26.2, maxZ: 27.4 },
+  // Respectful darshan queue in courtyard
   { kind: 'circle', x: 3.2, z: -2.35, radius: 0.38 },
   { kind: 'circle', x: 3.3, z: -1.05, radius: 0.38 },
   { kind: 'circle', x: 3.35, z: 0.25, radius: 0.38 },
   { kind: 'circle', x: 3.4, z: 1.55, radius: 0.38 },
-  { kind: 'circle', x: 3.55, z: 10.6, radius: 0.65 },
 ];
 
 export const NEELKANTH_HOTSPOTS: readonly WalkHotspot[] = [
@@ -82,18 +98,18 @@ export const NEELKANTH_HOTSPOTS: readonly WalkHotspot[] = [
   },
   {
     id: 'neelkanth_food',
-    label: 'Have Meal Outside Neelkanth',
-    x: 2.65,
-    z: 8.6,
-    radius: 1.55,
+    label: 'Eat Chhole Bhature at Market Cafe',
+    x: 1.35,
+    z: 20.6,
+    radius: 1.75,
     actionType: 'photo',
   },
   {
     id: 'scooters',
-    label: 'Ride Scooters',
-    x: 0.25,
-    z: 13.05,
-    radius: 1.85,
+    label: 'Ride Scooters · To Baal Kuwari',
+    x: 0.45,
+    z: 25.3,
+    radius: 2.35,
     actionType: 'interact',
   },
 ];
@@ -106,6 +122,7 @@ export interface NeelkanthEnvironmentProps {
   litDiya: boolean;
   hadDarshan: boolean;
   capturedFood?: boolean;
+  activeDarshanPan?: boolean;
 }
 
 const MAX_FOREST_PINES = 64;
@@ -128,13 +145,13 @@ function smoothStep01(t: number): number {
  * Clamped safely below stone foundations inside the courtyard & approach apron corridor.
  */
 function sampleNeelkanthTerrainY(x: number, z: number): number {
-  // Temple + bazaar stone platform spans x in [-9.4, 9.4], z in [-9.6, 13.8];
-  // approach road & parking apron spans |x| < 11.2, z in [13.5, 25].
-  const onParkingApron = z > 13.5 ? 1 : 0;
-  const deckHalfX = onParkingApron ? 11.0 : 9.4;
+  // Temple + bazaar stone platform spans x in [-9.4, 9.4], z in [-9.6, 22.8];
+  // approach road & parking apron spans |x| < 11.2, z in [22.5, 34].
+  const onParkingApron = z > 25.5 ? 1 : 0;
+  const deckHalfX = onParkingApron ? 11.2 : 9.4;
   const sideDist = Math.max(0, Math.abs(x) - deckHalfX);
   const rearDist = z < -9.6 ? -9.6 - z : 0;
-  const frontSlopeDist = z > 25 ? z - 25 : 0;
+  const frontSlopeDist = z > 36 ? z - 36 : 0;
 
   const naturalUndulation =
     Math.sin(x * 0.12 + z * 0.09) * 0.85 +
@@ -150,7 +167,7 @@ function sampleNeelkanthTerrainY(x: number, z: number): number {
   const rawY = baseFloor + (sideRise + rearRise + naturalUndulation * 0.72) * hillBlend - frontDip;
 
   // Guarantee terrain never clips above the stone terrace or paved arrival road.
-  if (Math.abs(x) < 9.35 && z > -9.55 && z < 23.5) {
+  if (Math.abs(x) < 9.4 && z > -9.6 && z < 35.5) {
     return -0.36;
   }
   return rawY;
@@ -177,6 +194,7 @@ export function NeelkanthEnvironment({
   litDiya,
   hadDarshan,
   capturedFood = false,
+  activeDarshanPan = false,
 }: NeelkanthEnvironmentProps) {
   const shadowsEnabled = QUALITY_PRESETS[qualityProfile].shadows;
   const reducedMotion = useReducedMotion();
@@ -309,12 +327,12 @@ export function NeelkanthEnvironment({
         shadow-bias={-0.0005}
       />
 
-      {/* Solid stepped sandstone retaining foundation & hillside anchor beneath temple + bazaar + approach parking */}
-      <mesh position={[0, -2.55, 2.25]} receiveShadow={shadowsEnabled}>
-        <boxGeometry args={[18.2, 4.9, 23.6]} />
+      {/* Solid stepped sandstone retaining foundation & hillside anchor beneath temple + bazaar + market cafe + exit parking */}
+      <mesh position={[0, -2.55, 6.2]} receiveShadow={shadowsEnabled}>
+        <boxGeometry args={[18.2, 4.9, 31.6]} />
         <meshStandardMaterial color="#736655" roughness={0.95} />
       </mesh>
-      <mesh position={[0, -2.4, 17.5]} receiveShadow={shadowsEnabled}>
+      <mesh position={[0, -2.4, 26.2]} receiveShadow={shadowsEnabled}>
         <boxGeometry args={[21.6, 4.6, 9.2]} />
         <meshStandardMaterial color="#675c4e" roughness={0.96} />
       </mesh>
@@ -323,12 +341,12 @@ export function NeelkanthEnvironment({
         <boxGeometry args={[12.8, 0.24, 3.0]} />
         <meshStandardMaterial color="#877867" roughness={0.92} />
       </mesh>
-      <mesh position={[-9.45, -2.45, 2.2]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
-        <boxGeometry args={[0.9, 4.85, 23.8]} />
+      <mesh position={[-9.45, -2.45, 6.2]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+        <boxGeometry args={[0.9, 4.85, 37.8]} />
         <meshStandardMaterial color="#665b4c" roughness={0.94} />
       </mesh>
-      <mesh position={[9.45, -2.45, 2.2]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
-        <boxGeometry args={[0.9, 4.85, 23.8]} />
+      <mesh position={[9.45, -2.45, 9.0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+        <boxGeometry args={[0.9, 4.85, 37.8]} />
         <meshStandardMaterial color="#665b4c" roughness={0.94} />
       </mesh>
       <mesh position={[0, -2.45, -9.85]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
@@ -336,46 +354,46 @@ export function NeelkanthEnvironment({
         <meshStandardMaterial color="#665b4c" roughness={0.94} />
       </mesh>
 
-      {/* Zone A+B+C Flagstone Paving spanning Courtyard (`-7..+4.2`) & Market Passage (`+4.2..+12.8`) */}
-      <mesh position={[0, -0.1, 2.8]} receiveShadow={shadowsEnabled}>
-        <boxGeometry args={[17.8, 0.2, 21.8]} />
+      {/* Zone A+B+C Flagstone Paving spanning Courtyard (`-8.6..+4.2`) & Full Cobblestone Bazaar Street (`+4.2..+27.8`) */}
+      <mesh position={[0, -0.1, 9.6]} receiveShadow={shadowsEnabled}>
+        <boxGeometry args={[18.8, 0.2, 36.8]} />
         <meshStandardMaterial
           color="#a89c8a"
           map={stoneTex ?? undefined}
           roughness={0.88}
         />
       </mesh>
-      {/* Natural carved limestone curb borders framing temple central path */}
-      {[-1.35, 1.35].map((cx) => (
-        <mesh key={cx} position={[cx, 0.008, 3.2]} receiveShadow={shadowsEnabled}>
-          <boxGeometry args={[0.16, 0.016, 17.6]} />
+      {/* Carved market lane curb borders in the lower bazaar approach (keeping upper temple courtyard completely open & clear) */}
+      {[-1.55, 1.55].map((cx) => (
+        <mesh key={cx} position={[cx, 0.008, 15.2]} receiveShadow={shadowsEnabled}>
+          <boxGeometry args={[0.16, 0.016, 20.2]} />
           <meshStandardMaterial color="#877865" roughness={0.92} />
         </mesh>
       ))}
-      {/* Carved sandstone plaza entry threshold right before the parking bay (`z = 12.6`) */}
-      <mesh position={[0, 0.008, 12.65]} receiveShadow={shadowsEnabled}>
-        <boxGeometry args={[6.4, 0.02, 0.9]} />
+      {/* Carved sandstone plaza entry threshold right before market exit parking bay (`z = 25.4`) */}
+      <mesh position={[0, 0.008, 25.4]} receiveShadow={shadowsEnabled}>
+        <boxGeometry args={[6.8, 0.02, 0.9]} />
         <meshStandardMaterial color="#8d7f6c" roughness={0.9} />
       </mesh>
 
-      {/* Outer Parking Bay & Continuing Forest Mountain Highway Behind (`z > 13.4`) */}
-      <mesh position={[0, -0.12, 15.2]} receiveShadow={shadowsEnabled}>
-        <boxGeometry args={[22, 0.18, 6.2]} />
+      {/* Outer Parking Bay & Continuing Forest Mountain Highway Behind (`z > 26.0`) */}
+      <mesh position={[0, -0.12, 28.0]} receiveShadow={shadowsEnabled}>
+        <boxGeometry args={[22, 0.18, 6.4]} />
         <meshStandardMaterial color="#4b5362" roughness={0.92} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, -0.12]} position={[4, -0.02, 18.6]} receiveShadow={shadowsEnabled}>
+      <mesh rotation={[-Math.PI / 2, 0, -0.12]} position={[4, -0.02, 31.2]} receiveShadow={shadowsEnabled}>
         <planeGeometry args={[150, 5.6]} />
         <meshStandardMaterial color="#384152" roughness={0.92} />
       </mesh>
-      {/* Side-by-side Parked Scooters in outer parking apron */}
-      <group position={[1.9, 0, 14.0]} rotation={[0, -Math.PI / 2 + 0.12, 0]}>
+      {/* Side-by-side Parked Scooters at Market Exit apron (`z = 26.8`) */}
+      <group position={[1.9, 0, 26.8]} rotation={[0, -Math.PI / 2 + 0.12, 0]}>
         <PrototypeScooter variant="lead" hideRiders castShadow={shadowsEnabled} />
       </group>
-      <group position={[-1.4, 0, 14.0]} rotation={[0, -Math.PI / 2 - 0.1, 0]}>
+      <group position={[-1.4, 0, 26.8]} rotation={[0, -Math.PI / 2 - 0.1, 0]}>
         <PrototypeScooter variant="companion" hideRiders castShadow={shadowsEnabled} />
       </group>
       {/* Nearby parked visiting tourist hatchback */}
-      <group position={[5.8, -0.015, 15.4]} rotation={[0, -Math.PI / 2 + 0.2, 0]}>
+      <group position={[5.8, -0.015, 27.6]} rotation={[0, -Math.PI / 2 + 0.2, 0]}>
         <StylizedTrafficCar
           color="#e2e8f0"
           style="hatchback"
@@ -718,21 +736,21 @@ export function NeelkanthEnvironment({
         </mesh>
       </group>
 
-      {/* Overhead Bell Archway & Swinging Brass Bell (`z = -1.75`) */}
+      {/* Elevated Bell Archway & Brass Bell (`z = -1.75`) — framed high above Nandi so darshan view of Shivling stays completely clear */}
       <group position={[0, 0, -1.75]}>
-        <mesh position={[-1.4, 1.6, 0]} castShadow={shadowsEnabled}>
-          <cylinderGeometry args={[0.08, 0.1, 3.2, 8]} />
+        <mesh position={[-2.15, 1.85, 0]} castShadow={shadowsEnabled}>
+          <cylinderGeometry args={[0.08, 0.1, 3.7, 8]} />
           <meshStandardMaterial color="#78513c" roughness={0.88} />
         </mesh>
-        <mesh position={[1.4, 1.6, 0]} castShadow={shadowsEnabled}>
-          <cylinderGeometry args={[0.08, 0.1, 3.2, 8]} />
+        <mesh position={[2.15, 1.85, 0]} castShadow={shadowsEnabled}>
+          <cylinderGeometry args={[0.08, 0.1, 3.7, 8]} />
           <meshStandardMaterial color="#78513c" roughness={0.88} />
         </mesh>
-        <mesh position={[0, 3.16, 0]} castShadow={shadowsEnabled}>
-          <boxGeometry args={[3.05, 0.14, 0.18]} />
+        <mesh position={[0, 3.66, 0]} castShadow={shadowsEnabled}>
+          <boxGeometry args={[4.55, 0.14, 0.18]} />
           <meshStandardMaterial color="#92400e" roughness={0.85} />
         </mesh>
-        <group ref={bellPivotRef} position={[0, 3.08, 0]}>
+        <group ref={bellPivotRef} position={[0, 3.58, 0]}>
           <mesh position={[0, -0.44, 0]}>
             <cylinderGeometry args={[0.014, 0.014, 0.88, 6]} />
             <meshStandardMaterial color="#d97706" metalness={0.7} roughness={0.3} />
@@ -838,10 +856,10 @@ export function NeelkanthEnvironment({
       {/* Pilgrimage Market Vendors, Garlands, Prasad Stalls, Queue & Walking Devotees */}
       <NeelkanthMarketAndCrowd paused={paused} castShadow={shadowsEnabled} />
 
-      {/* Subtle floating sparkle motes replacing large floor circles */}
+      {/* Subtle floating sparkle motes (hidden during Darshan focus so Shivling sightline stays crisp) */}
       <HotspotBeaconSparkle
         position={[0, 0, -1.75]}
-        visible={!rangBell}
+        visible={!rangBell && !activeDarshanPan}
         color="#f59e0b"
         height={0.95}
         paused={paused}
@@ -849,7 +867,7 @@ export function NeelkanthEnvironment({
       />
       <HotspotBeaconSparkle
         position={[-2.55, 0, -1.6]}
-        visible={!litDiya}
+        visible={!litDiya && !activeDarshanPan}
         color="#fb923c"
         height={0.92}
         paused={paused}
@@ -857,14 +875,14 @@ export function NeelkanthEnvironment({
       />
       <HotspotBeaconSparkle
         position={[0, 0, -3.1]}
-        visible={!hadDarshan}
+        visible={!hadDarshan && !activeDarshanPan}
         color="#fde047"
         height={1.0}
         paused={paused}
         reducedMotion={reducedMotion}
       />
       <HotspotBeaconSparkle
-        position={[3.78, 0.9, 8.6]}
+        position={[2.85, 0.9, 16.5]}
         visible={!capturedFood}
         color="#f97316"
         height={0.95}
@@ -872,7 +890,7 @@ export function NeelkanthEnvironment({
         reducedMotion={reducedMotion}
       />
       <HotspotBeaconSparkle
-        position={[0.25, 0, 13.05]}
+        position={[0.25, 0, 21.65]}
         visible={hadDarshan || rangBell || litDiya}
         color="#fbbf24"
         height={0.88}

@@ -5,6 +5,7 @@ import type * as THREE from 'three';
 import type { HumanRigRefs } from '@/components/canvas/characters/animateCharacterRig';
 import {
   StylizedPlaceholderCharacter,
+  type CharacterOutfitMode,
   type CharacterVariant,
 } from '@/components/canvas/characters/StylizedPlaceholderCharacter';
 
@@ -20,6 +21,7 @@ interface SingleFriendProps {
   initialYaw: number;
   holdingChaiCup?: boolean;
   holdingFork?: boolean;
+  outfitMode?: CharacterOutfitMode;
   onRegisterRefs: (id: FriendCompanionId, refs: HumanRigRefs) => void;
   id: FriendCompanionId;
 }
@@ -33,6 +35,7 @@ function FriendRigInstance({
   initialYaw,
   holdingChaiCup = false,
   holdingFork = false,
+  outfitMode = 'default',
   onRegisterRefs,
 }: SingleFriendProps) {
   const groupRef = useRef<THREE.Group | null>(null);
@@ -110,6 +113,7 @@ function FriendRigInstance({
       scale={scale}
       holdingChaiCup={holdingChaiCup}
       holdingFork={holdingFork}
+      outfitMode={outfitMode}
     />
   );
 }
@@ -121,18 +125,20 @@ export interface CompanionGroupProps {
   >;
   holdingChaiCup?: boolean;
   holdingFork?: boolean;
+  outfitMode?: CharacterOutfitMode;
   onRigsReady: (rigs: CompanionRigMap) => void;
 }
 
 /**
  * Shared articulated group of Ishaan's three companions:
- * Srishti (verified floral peplum outfit, denim, hair clip & crossbody sling bag) plus
+ * Srishti (verified floral peplum or Day 1 yellow kurti, denim & crossbody sling bag) plus
  * the two verified Scooter 2 friends (`friend_black_tee` and `friend_plaid`).
  */
 export function CompanionGroup({
   initialPositions,
   holdingChaiCup = false,
   holdingFork = false,
+  outfitMode = 'default',
   onRigsReady,
 }: CompanionGroupProps) {
   const rigMapRef = useRef<Partial<CompanionRigMap>>({});
@@ -166,6 +172,7 @@ export function CompanionGroup({
         initialYaw={initialPositions.srishti.yaw}
         holdingChaiCup={holdingChaiCup}
         holdingFork={holdingFork}
+        outfitMode={outfitMode}
         onRegisterRefs={handleRegister}
       />
       <FriendRigInstance
@@ -181,6 +188,7 @@ export function CompanionGroup({
         initialYaw={initialPositions.friend_black_tee.yaw}
         holdingChaiCup={holdingChaiCup}
         holdingFork={holdingFork}
+        outfitMode={outfitMode}
         onRegisterRefs={handleRegister}
       />
       <FriendRigInstance
@@ -196,6 +204,7 @@ export function CompanionGroup({
         initialYaw={initialPositions.friend_plaid.yaw}
         holdingChaiCup={holdingChaiCup}
         holdingFork={holdingFork}
+        outfitMode={outfitMode}
         onRegisterRefs={handleRegister}
       />
     </>

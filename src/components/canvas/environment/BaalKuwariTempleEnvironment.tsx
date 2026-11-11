@@ -450,7 +450,7 @@ export function BaalKuwariTempleEnvironment({
         </mesh>
       </group>
 
-      {/* Panoramic Scenic Summit Lookout Rail & Prayer Flags */}
+      {/* Panoramic Scenic Summit Lookout Rail, Distant Hillside Utility Pole & Prayer Flags */}
       <group position={[0, 0, -5.85]}>
         {[-5.6, -2.8, 2.8, 5.6].map((rx, idx) => (
           <mesh key={idx} position={[rx, 0.52, 0]} castShadow={shadowsEnabled}>
@@ -464,6 +464,17 @@ export function BaalKuwariTempleEnvironment({
             <meshStandardMaterial color="#8d624c" roughness={0.85} />
           </mesh>
         ))}
+      </group>
+      {/* Distant rustic mountain utility pole silhouette overlooking hazy blue-green valley */}
+      <group position={[6.15, -1.85, -7.85]} rotation={[0.02, -0.2, 0.03]}>
+        <mesh position={[0, 2.4, 0]}>
+          <cylinderGeometry args={[0.045, 0.07, 4.8, 7]} />
+          <meshStandardMaterial color="#475569" roughness={0.9} />
+        </mesh>
+        <mesh position={[0, 4.4, 0]}>
+          <boxGeometry args={[0.85, 0.06, 0.06]} />
+          <meshStandardMaterial color="#334155" roughness={0.85} />
+        </mesh>
       </group>
 
       {['#ef4444', '#f59e0b', '#f8fafc', '#22c55e', '#3b82f6'].map((color, idx) => (

@@ -66,6 +66,7 @@ export interface ScooterPrototypeSceneProps {
   startDistance?: number;
   viewpointPullOverNonce?: number;
   transitionToken?: number;
+  autoPlayMode?: boolean;
   simulateMountFailure?: boolean;
   onSceneReady?: (token: number, sceneId: SceneId) => void;
   onArrivedChange: (arrived: boolean) => void;
@@ -154,6 +155,7 @@ export function ScooterPrototypeScene({
   startDistance = LEAD_START_DISTANCE,
   viewpointPullOverNonce = 0,
   transitionToken = 0,
+  autoPlayMode = false,
   simulateMountFailure = false,
   onSceneReady,
   onArrivedChange,
@@ -244,12 +246,14 @@ export function ScooterPrototypeScene({
 
   // Reset ride cleanly whenever resetNonce, active roadSegment, or startDistance changes
   const lastViewpointPullNonceRef = useRef(viewpointPullOverNonce);
+  const autoViewpointStoppedRef = useRef(false);
 
   useEffect(() => {
     const resolvedStart =
       roadSegment === 'to_dhaba'
         ? Math.min(Math.max(LEAD_START_DISTANCE, startDistance), stopDist - 4)
         : LEAD_START_DISTANCE;
+    autoViewpointStoppedRef.current = resolvedStart >= VIEWPOINT_STOP_DISTANCE - 1.5;
     simRef.current = createInitialSimState(resolvedStart);
     trafficRuntimeRef.current = createTrafficRuntime(trafficFleet, resolvedStart);
     if (leadFrontWheelRef.current) leadFrontWheelRef.current.rotation.x = 0;
@@ -316,7 +320,46 @@ export function ScooterPrototypeScene({
 
     const sim = simRef.current;
 
-    const input = inputRef.current;
+    const rawInput = inputRef.current;
+    // In Watch Our Story (`autoPlayMode`), synthesize smooth LHT cruise & pull-over at Viewpoint/Arrival
+    const autoDesiredLat = (() => {
+      if (!autoPlayMode) return sim.leadLateral;
+      let shift = -1.28;
+      const fleet = trafficRuntimeRef.current;
+      for (let i = 0; i < fleet.length; i += 1) {
+        const v = fleet[i];
+        const dz = v.dist - sim.leadDist;
+        if (dz > -4 && dz < 26 && Math.abs(v.lateral - shift) < 1.35) {
+          shift = v.lateral >= 0 ? -1.85 : 1.05;
+        }
+      }
+      return shift;
+    })();
+    const input: DrivingInputState = autoPlayMode
+      ? {
+          throttle: sim.arrived || sim.viewpointArrived ? 0 : 0.94,
+          brake: 0,
+          steer: THREE.MathUtils.clamp((autoDesiredLat - sim.leadLateral) * 0.9, -0.85, 0.85),
+        }
+      : rawInput;
+
+    if (
+      autoPlayMode &&
+      roadSegment === 'to_dhaba' &&
+      !autoViewpointStoppedRef.current &&
+      !sim.arrived &&
+      !sim.viewpointArrived &&
+      !sim.pullingToViewpoint &&
+      sim.leadDist >= VIEWPOINT_TURNOUT_START + 2.0
+    ) {
+      autoViewpointStoppedRef.current = true;
+      sim.pullingToViewpoint = true;
+      sim.viewStopTargetDist = VIEWPOINT_STOP_DISTANCE;
+      if (sim.inViewpointZone) {
+        sim.inViewpointZone = false;
+        onInViewpointZoneChange?.(false);
+      }
+    }
     const prevLeadDist = sim.leadDist;
     const prevLeadLateral = sim.leadLateral;
     const prevCompDist = sim.compDist;
