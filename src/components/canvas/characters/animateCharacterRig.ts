@@ -62,6 +62,7 @@ export interface CharacterRigFrameParams {
   armGesturePhase?: number;
   connectedHandTarget?: ConnectedHandTarget | null;
   reducedMotion?: boolean;
+  prayerWeight?: number;
 }
 
 export type WalkRigFrameParams = CharacterRigFrameParams;
@@ -167,6 +168,7 @@ export function animateCharacterRig({
   armGesturePhase = 0,
   connectedHandTarget = null,
   reducedMotion = false,
+  prayerWeight = 1,
 }: CharacterRigFrameParams): void {
   const {
     group,
@@ -190,6 +192,12 @@ export function animateCharacterRig({
     const seated = idlePose.startsWith('sit_') && strideRatio <= 0.03;
     hem.position.y = THREE.MathUtils.damp(hem.position.y, seated ? 0.035 : hem.userData.standingY, 10, delta);
     hem.scale.y = THREE.MathUtils.damp(hem.scale.y, seated ? 0.64 : 1, 10, delta);
+  }
+  const dupatta = torso?.children.find(child => child.name === 'festive-dupatta');
+  if (dupatta) {
+    const seated = idlePose.startsWith('sit_') && strideRatio <= 0.03;
+    dupatta.scale.y = THREE.MathUtils.damp(dupatta.scale.y, seated ? 0.88 : 1, 8, delta);
+    dupatta.rotation.x = THREE.MathUtils.damp(dupatta.rotation.x, seated ? -0.055 : 0, 8, delta);
   }
 
   group.position.x = posX;
@@ -327,6 +335,10 @@ export function animateCharacterRig({
     targetForearmX = 0.35;
     targetTorsoX = -0.33;
     targetHeadX = -0.24;
+    const bow = THREE.MathUtils.clamp(prayerWeight, 0, 1);
+    targetLeftArmX *= bow; targetLeftArmZ *= bow;
+    targetRightArmX *= bow; targetRightArmZ *= bow;
+    targetForearmX *= bow; targetTorsoX *= bow; targetHeadX *= bow;
   } else if (idlePose === 'hands_behind_back') {
     targetLeftArmX = -0.28;
     targetLeftArmZ = 0.14;

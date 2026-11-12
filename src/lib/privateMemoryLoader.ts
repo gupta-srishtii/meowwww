@@ -174,13 +174,15 @@ async function refreshPrivateCloudMedia(): Promise<boolean> {
     const response = await fetch('/api/media', { credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(15_000) });
     if (!response.ok) { cloudMediaFailures.set('catalog', response.status); notifyMemoryListeners(); return false; }
     const data = await response.json() as { media?: { id: string; url: string }[] };
-    if (!Array.isArray(data.media) || data.media.length === 0) return false;
+    if (!Array.isArray(data.media) || data.media.length === 0 || data.media.some(item =>
+      !item || typeof item.id !== 'string' || typeof item.url !== 'string')) throw new Error('Invalid catalog');
     for (const item of data.media) {
       if (item.url !== `/api/media/${item.id}`) continue;
       if (Object.hasOwn(POLAROID_MEMORY_SPECS, item.id)) cloudUrls.set(item.id, item.url);
       if (item.id === 'finale_song') { finaleSongUrl = new URL(item.url, window.location.origin).href; finaleSongName = 'Bhai Dooj'; }
       if (item.id === 'temple_song') { templeSongUrl = new URL(item.url, window.location.origin).href; templeSongName = 'Har Har Mahadev'; }
     }
+    notifyMemoryListeners();
     const expected = [...Object.values(POLAROID_MEMORY_SPECS).filter(s => s.matchedFilename).map(s => s.id), 'temple_song', 'finale_song'];
     const catalog = new Set(data.media.filter(item => item.url === `/api/media/${item.id}`).map(item => item.id));
     // Check authorization, privacy, signing and MIME without downloading originals.

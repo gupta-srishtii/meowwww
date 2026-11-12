@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { prayerBeatWeight } from '@/lib/storyTraversal';
+import { constrainCameraBoom } from '@/lib/cameraClearance';
 import {
   CompanionGroup,
   type CompanionRigMap,
@@ -165,6 +167,8 @@ export function Scene10_BaalKuwariTemple({
   }, []);
 
   const autoLastTriggerAtRef = useRef<Record<string, number>>({});
+  const prayerElapsedRef = useRef(7);
+  useEffect(() => { prayerElapsedRef.current = rangBell ? 0 : 7; }, [rangBell]);
 
   useEffect(() => {
     autoLastTriggerAtRef.current = {};
@@ -206,10 +210,15 @@ export function Scene10_BaalKuwariTemple({
 
     const sim = simRef.current;
     const t = state.clock.elapsedTime;
+    prayerElapsedRef.current += delta;
+    const praying = prayerElapsedRef.current < 6.8;
     let strideRatio = 0;
     let walkSpeed = 0;
 
-    if (arrivalCinematicActive) {
+    if (praying) {
+      sim.velX = 0; sim.velZ = 0;
+      sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, 0, 6, delta);
+    } else if (arrivalCinematicActive) {
       const dur = reducedMotion ? 0.65 : 14.5;
       sim.arrivalTimer += delta;
       sim.velX = 0;
@@ -326,6 +335,8 @@ export function Scene10_BaalKuwariTemple({
       strideRatio,
       stridePhase: sim.stridePhase,
       groundY: playerFloorY,
+      idlePose: praying ? 'pray_bow' : 'default',
+      prayerWeight: prayerBeatWeight(prayerElapsedRef.current),
       elapsed: t,
       delta,
       reducedMotion,
@@ -357,7 +368,12 @@ export function Scene10_BaalKuwariTemple({
         bounds: BAAL_KUWARI_TEMPLE_WALK_BOUNDS,
         obstacles: BAAL_KUWARI_TEMPLE_OBSTACLES,
         delta,
-        mode: 'follow',
+        mode: praying ? 'prayer' : 'follow',
+        explicitTargets: praying ? {
+          srishti: { x: -0.9, z: -1.25, facingYaw: 0 },
+          friend_black_tee: { x: 0.9, z: -0.8, facingYaw: 0 },
+          friend_plaid: { x: 1.8, z: -0.25, facingYaw: 0 },
+        } : undefined,
       });
     } else {
       const shreeAgent = companionStatesRef.current.find((a) => a.id === 'srishti');
@@ -389,6 +405,8 @@ export function Scene10_BaalKuwariTemple({
           elapsed: t,
           delta,
           reducedMotion,
+          forcePrayBow: praying,
+          prayerWeight: prayerBeatWeight(prayerElapsedRef.current),
         });
         if (rig.group) {
           rig.group.position.y = isShreeBookPose ? -1.96 : compFloorY;
@@ -443,13 +461,20 @@ export function Scene10_BaalKuwariTemple({
       scratch.smoothLook.y = THREE.MathUtils.damp(scratch.smoothLook.y, scratch.lookAt.y, 10, delta);
       scratch.smoothLook.z = THREE.MathUtils.damp(scratch.smoothLook.z, scratch.lookAt.z, 10, delta);
     }
+    if (!arrivalCinematicActive && !bookPhotoActive) constrainCameraBoom(camera.position, scratch.lookAt, BAAL_KUWARI_TEMPLE_OBSTACLES);
     camera.lookAt(scratch.smoothLook);
 
     const nearest =
-      arrivalCinematicActive || bookPhotoActive
+      arrivalCinematicActive || bookPhotoActive || praying
         ? null
         : findNearestWalkHotspot(sim.posX, sim.posZ, BAAL_KUWARI_TEMPLE_HOTSPOTS);
     const nextId = nearest?.id ?? null;
+    if (!autoPlayMode && nearest?.actionType === 'photo' &&
+      !(nearest.id === 'book_polaroid' ? capturedBookPolaroid : capturedPolaroid) &&
+      performance.now() - (autoLastTriggerAtRef.current[nearest.id] ?? -Infinity) > 3000) {
+      autoLastTriggerAtRef.current[nearest.id] = performance.now();
+      onAutoTriggerHotspot?.(nearest.id);
+    }
     if (nextId !== sim.lastHotspotId) {
       sim.lastHotspotId = nextId;
       onNearbyHotspotChange(nearest);

@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { prayerBeatWeight } from '@/lib/storyTraversal';
+import { constrainCameraBoom } from '@/lib/cameraClearance';
 import {
   CompanionGroup,
   type CompanionRigMap,
@@ -32,6 +34,7 @@ import {
   WALK_SPEED_MPS,
   findNearestWalkHotspot,
   stepWalkSimulation,
+  stepAutoWalkTowardTarget,
   type WalkHotspot,
   type WalkInputState,
 } from '@/hooks/useWalkController';
@@ -276,7 +279,7 @@ export function Scene07_NeelkanthTemple({
       darshanElapsedRef.current += delta;
       // Align Ishaan cleanly in left-center of devotional lower-third arc facing Garbhagriha (-Z)
       sim.posX = THREE.MathUtils.damp(sim.posX, -0.95, 8, delta);
-      sim.posZ = THREE.MathUtils.damp(sim.posZ, -4.8, 8, delta);
+      sim.posZ = THREE.MathUtils.damp(sim.posZ, -4.55, 8, delta);
       sim.velX = 0;
       sim.velZ = 0;
       sim.facingYaw = THREE.MathUtils.damp(
@@ -310,20 +313,10 @@ export function Scene07_NeelkanthTemple({
               : 'scooters';
       const targetSpot = NEELKANTH_HOTSPOTS.find((h) => h.id === targetId);
       if (targetSpot) {
-        const dx = targetSpot.x - sim.posX;
-        const dz = targetSpot.z - sim.posZ;
-        const dist = Math.hypot(dx, dz);
-        if (dist > 0.72) {
-          const step = Math.min(dist, WALK_SPEED_MPS * 0.92 * delta);
-          sim.velX = (dx / dist) * WALK_SPEED_MPS * 0.92;
-          sim.velZ = (dz / dist) * WALK_SPEED_MPS * 0.92;
-          sim.posX += (dx / dist) * step;
-          sim.posZ += (dz / dist) * step;
-          sim.facingYaw = Math.atan2(-dx, -dz);
-          walkSpeed = WALK_SPEED_MPS * 0.92;
-          strideRatio = 0.88;
-          sim.stridePhase += step * 3.8;
-        } else if (!autoFiredSetRef.current.has(targetId)) {
+        const result = stepAutoWalkTowardTarget(sim, targetSpot.x, targetSpot.z, delta, NEELKANTH_WALK_BOUNDS, NEELKANTH_OBSTACLES);
+        strideRatio = result.strideRatio;
+        walkSpeed = result.walkSpeed;
+        if (result.arrived && !autoFiredSetRef.current.has(targetId)) {
           autoFiredSetRef.current.add(targetId);
           onAutoTriggerHotspot(targetId);
         }
@@ -365,6 +358,7 @@ export function Scene07_NeelkanthTemple({
       elapsed: t,
       delta,
       idlePose,
+      prayerWeight: activeDarshanPan ? reducedMotion ? 1 : prayerBeatWeight(darshanElapsedRef.current) : 0,
       armGesturePhase: cafeElapsedRef.current * 0.4,
       reducedMotion,
     });
@@ -425,6 +419,7 @@ export function Scene07_NeelkanthTemple({
           elapsed: t,
           delta,
           forcePrayBow: activeDarshanPan,
+          prayerWeight: reducedMotion ? 1 : prayerBeatWeight(darshanElapsedRef.current),
           idlePoseOverride: eatingCafeActive
             ? i === 0
               ? 'sit_laugh'
@@ -511,6 +506,7 @@ export function Scene07_NeelkanthTemple({
         delta
       );
     }
+    if (!activeDarshanPan && !eatingCafeActive) constrainCameraBoom(camera.position, scratch.desiredLookAt, NEELKANTH_OBSTACLES);
     camera.lookAt(scratch.smoothedLookAt);
 
     // 4. Hotspot proximity detection

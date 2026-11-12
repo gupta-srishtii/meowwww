@@ -7,6 +7,7 @@ import {
 } from '@/components/canvas/characters/animateCharacterRig';
 import {
   resolveWalkCollisions,
+  sweepWalkMovement,
   type WalkBounds,
   type WalkObstacle,
 } from '@/hooks/useWalkController';
@@ -194,11 +195,11 @@ export function stepGroupCompanions({
 
     const prevX = agent.posX;
     const prevZ = agent.posZ;
-    agent.posX += agent.velX * safeDelta;
-    agent.posZ += agent.velZ * safeDelta;
-
     if (mode !== 'sit_dine') {
-      resolveWalkCollisions(agent, COMPANION_RADIUS, bounds, obstacles);
+      sweepWalkMovement(agent, agent.velX * safeDelta, agent.velZ * safeDelta, COMPANION_RADIUS, bounds, obstacles);
+    } else {
+      agent.posX += agent.velX * safeDelta;
+      agent.posZ += agent.velZ * safeDelta;
     }
 
     if (mode === 'follow') {
@@ -271,6 +272,7 @@ export function applyCompanionRigFrame({
   downhillJogging = false,
   idlePoseOverride,
   forcePrayBow = false,
+  prayerWeight,
   reducedMotion = false,
 }: {
   agent: CompanionRuntimeState;
@@ -285,6 +287,7 @@ export function applyCompanionRigFrame({
   downhillJogging?: boolean;
   idlePoseOverride?: CharacterIdlePose;
   forcePrayBow?: boolean;
+  prayerWeight?: number;
   reducedMotion?: boolean;
 }): void {
   const speed = Math.hypot(agent.velX, agent.velZ);
@@ -321,5 +324,6 @@ export function applyCompanionRigFrame({
     headTargetYawOffset,
     armGesturePhase: config.gesturePhase,
     reducedMotion,
+    prayerWeight,
   });
 }

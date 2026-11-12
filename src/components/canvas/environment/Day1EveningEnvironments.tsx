@@ -20,6 +20,7 @@ import { getOffroadDirtTrackTexture } from '@/lib/proceduralTextures';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { createTerrainMeshSampler } from '@/lib/terrainMeshSampler';
+import { MarketRoadLife, MarketShopSign } from './MarketRoadLife';
 
 export const DAY1_WATERFALL_WALK_BOUNDS: WalkBounds = {
   minX: -4.2,
@@ -87,8 +88,8 @@ export function sampleMarketStreetY(z: number): number {
 }
 
 export const DAY1_MARKET_WALK_BOUNDS: WalkBounds = {
-  minX: -2.15,
-  maxX: 2.15,
+  minX: -4.55,
+  maxX: -3.0,
   minZ: -10.8,
   maxZ: 11.4,
 };
@@ -96,8 +97,8 @@ export const DAY1_MARKET_WALK_BOUNDS: WalkBounds = {
 export const DAY1_MARKET_HOTSPOTS: readonly WalkHotspot[] = [
   {
     id: 'join_dhaba',
-    label: 'Park & Meet Ishaan, Manish & Yash Outside Dhaba',
-    x: 0,
+    label: 'Walk Inside for Dinner Together',
+    x: -3.8,
     z: -9.4,
     radius: 2.35,
     actionType: 'interact',
@@ -118,7 +119,7 @@ function smooth01(t: number): number {
   return c * c * (3 - 2 * c);
 }
 
-function sampleWaterfallGorgeY(wx: number, wz: number): number {
+export function sampleWaterfallGorgeY(wx: number, wz: number): number {
   // Keep left road shoulder / gravel turnout gentle & drivable around x = -6..-0.6,
   // drop cleanly into stream channel on the RIGHT (x = +2.4..+6.8), and rise steeply up forest walls.
   if (wx >= -6.2 && wx <= 0.8 && wz >= -8 && wz <= 26) {
@@ -508,6 +509,12 @@ export function Day1WaterfallEnvironment({
       ))}
 
       {/* Parked Scooters once everyone dismounts on the left turnout */}
+      {sittingOnBoulders && [DAY1_WATERFALL_ROCK_SEATS.ishaan, DAY1_WATERFALL_ROCK_SEATS.friend_black_tee].map((seat, i) => (
+        <group key={`chips-${i}`} position={[seat.x + 0.2, seat.rockTopY + 0.1, seat.z - 0.05]} rotation={[0.15, seat.yaw, -0.2]}>
+          <mesh><boxGeometry args={[0.13, 0.2, 0.06]} /><meshStandardMaterial color={i ? '#dc2626' : '#eab308'} roughness={0.65} /></mesh>
+          <mesh position={[0, 0.025, -0.032]}><circleGeometry args={[0.04, 12]} /><meshStandardMaterial color="#fef3c7" side={THREE.DoubleSide} /></mesh>
+        </group>
+      ))}
       {scootersParked && (
         <>
           <group position={[-3.35, 0.02, -1.6]} rotation={[0, -0.25, 0]}>
@@ -832,8 +839,10 @@ export function Day1MarketWalkEnvironment({
       <fog attach="fog" args={['#0c1528', 16, 78]} />
 
       <hemisphereLight args={['#3b537a', '#26212c', 0.54]} />
+      <directionalLight position={[-6, 8, 12]} intensity={0.85} color="#ffe0ab" />
       <directionalLight position={[-10, 16, 12]} intensity={0.42} color="#93c5fd" />
       <pointLight position={[0, 2.5, 6]} intensity={2.2} color="#fbbf24" distance={13} />
+      <pointLight position={[-4.0, 3.2, 5]} intensity={9} color="#ffd9a1" distance={18} />
       <pointLight position={[0, 2.2, -1]} intensity={2.4} color="#f59e0b" distance={14} />
       <pointLight position={[0, 2.1, -8.5]} intensity={3.1} color="#fbbf24" distance={15} />
 
@@ -862,15 +871,15 @@ export function Day1MarketWalkEnvironment({
         return (
           <group key={`mkt-road-${idx}`} position={[0, yCenter, sz]} rotation={[slopePitch, 0, 0]}>
             <mesh position={[0, -0.04, 0]} receiveShadow={shadowsEnabled}>
-              <boxGeometry args={[4.85, 0.14, 2.25]} />
+              <boxGeometry args={[9.4, 0.14, 2.25]} />
               <meshStandardMaterial color={idx % 2 === 0 ? '#5b5852' : '#53514c'} roughness={0.93} />
             </mesh>
             {/* Raised narrow concrete shop sidewalks */}
-            <mesh position={[-2.95, 0.04, 0]} receiveShadow={shadowsEnabled}>
+            <mesh position={[-4.15, 0.06, 0]} receiveShadow={shadowsEnabled}>
               <boxGeometry args={[1.15, 0.22, 2.25]} />
               <meshStandardMaterial color="#6e685f" roughness={0.94} />
             </mesh>
-            <mesh position={[2.95, 0.04, 0]} receiveShadow={shadowsEnabled}>
+            <mesh position={[4.15, 0.06, 0]} receiveShadow={shadowsEnabled}>
               <boxGeometry args={[1.15, 0.22, 2.25]} />
               <meshStandardMaterial color="#6e685f" roughness={0.94} />
             </mesh>
@@ -881,7 +890,7 @@ export function Day1MarketWalkEnvironment({
       {/* Lit Small Market Shops Along Both Sides of Street */}
       {MARKET_SHOP_BUILDINGS.map((b, idx) => {
         const baseY = sampleMarketStreetY(b.z);
-        const cx = b.side * 4.55;
+        const cx = b.side * 6.1;
         const innerFaceOffset = -b.side * 1.32;
         return (
           <group key={`shop-${idx}`} position={[cx, baseY, b.z]}>
@@ -903,6 +912,7 @@ export function Day1MarketWalkEnvironment({
               <boxGeometry args={[0.1, 0.42, b.w * 0.72]} />
               <meshStandardMaterial color={b.sign} emissive={b.sign} emissiveIntensity={0.28} />
             </mesh>
+            <MarketShopSign side={b.side} label={['Ganga Cafe', 'Pahadi Dhaba', 'Valley Stay', 'Chai & Books', 'Handloom House'][idx % 5]} />
           </group>
         );
       })}
@@ -933,7 +943,7 @@ export function Day1MarketWalkEnvironment({
       {[-6.5, -2.0, 2.5, 6.2].map((sz, sIdx) => (
         <group
           key={`curb-stall-${sIdx}`}
-          position={[sIdx % 2 === 0 ? -2.65 : 2.65, sampleMarketStreetY(sz), sz]}
+          position={[sIdx % 2 === 0 ? -5.0 : 5.0, sampleMarketStreetY(sz), sz]}
         >
           <mesh position={[0, 0.42, 0]}>
             <boxGeometry args={[0.72, 0.84, 1.45]} />
@@ -967,10 +977,10 @@ export function Day1MarketWalkEnvironment({
           </group>
         );
       })}
-      <group position={[-1.92, sampleMarketStreetY(2.2), 2.2]} rotation={[0, 0.14, 0]}>
+      <group position={[-5.0, sampleMarketStreetY(2.2), 2.2]} rotation={[0, 0.14, 0]}>
         <PrototypeScooter variant="companion" castShadow={shadowsEnabled} hideRiders outfitMode="day1" />
       </group>
-      <group position={[1.88, sampleMarketStreetY(-4.4), -4.4]} rotation={[0, -0.18, 0]}>
+      <group position={[5.0, sampleMarketStreetY(-4.4), -4.4]} rotation={[0, -0.18, 0]}>
         <PrototypeScooter variant="lead" castShadow={shadowsEnabled} hideRiders outfitMode="day1" />
       </group>
 
@@ -978,7 +988,7 @@ export function Day1MarketWalkEnvironment({
       {MARKET_BYSTANDERS.map((p, idx) => (
         <group
           key={`mkt-person-${idx}`}
-          position={[p.x, sampleMarketStreetY(p.z), p.z]}
+          position={[p.x < 0 ? -5.15 : 5.15, sampleMarketStreetY(p.z), p.z]}
           rotation={[0, p.rotY, 0]}
         >
           <mesh position={[-0.07, 0.39, 0]}>
@@ -1000,6 +1010,7 @@ export function Day1MarketWalkEnvironment({
         </group>
       ))}
 
+      <MarketRoadLife paused={paused} sampleY={sampleMarketStreetY} />
       {/* Glowing Dhaba Entry Beacon Ahead at Road Bottom (`z = -9.4`) */}
       <group position={[0, sampleMarketStreetY(-11.5), -11.6]}>
         <mesh position={[0, 1.65, -0.5]}>
@@ -1011,36 +1022,6 @@ export function Day1MarketWalkEnvironment({
           <meshStandardMaterial color="#b45309" emissive="#f59e0b" emissiveIntensity={0.65} />
         </mesh>
       </group>
-      {/* Outside Dhaba: Ishaan, Manish & Yash waiting outside on the sidewalk */}
-      <group position={[-1.75, sampleMarketStreetY(-9.5), -9.5]} rotation={[0, 0.22, 0]}>
-        <PrototypeScooter variant="lead" castShadow={shadowsEnabled} hideRiders outfitMode="day1" />
-      </group>
-      <group position={[2.15, sampleMarketStreetY(-9.7), -9.7]} rotation={[0, -0.28, 0]}>
-        <PrototypeScooter variant="companion" castShadow={shadowsEnabled} hideRiders outfitMode="day1" />
-      </group>
-      <group position={[-0.75, sampleMarketStreetY(-9.6), -9.6]} rotation={[0, 0.18, 0]}>
-        <StylizedPlaceholderCharacter
-          characterVariant="ishaan"
-          outfitMode="day1"
-          castShadow={shadowsEnabled}
-          showNameTag
-        />
-      </group>
-      <group position={[0.65, sampleMarketStreetY(-9.6), -9.5]} rotation={[0, -0.24, 0]}>
-        <StylizedPlaceholderCharacter
-          characterVariant="friend_black_tee"
-          castShadow={shadowsEnabled}
-          showNameTag
-        />
-      </group>
-      <group position={[1.42, sampleMarketStreetY(-9.8), -9.8]} rotation={[0, -0.38, 0]}>
-        <StylizedPlaceholderCharacter
-          characterVariant="friend_plaid"
-          castShadow={shadowsEnabled}
-          showNameTag
-        />
-      </group>
-
       <HotspotBeaconSparkle
         position={[DAY1_MARKET_HOTSPOTS[0].x, sampleMarketStreetY(DAY1_MARKET_HOTSPOTS[0].z) + 0.06, DAY1_MARKET_HOTSPOTS[0].z]}
         color="#fbbf24"

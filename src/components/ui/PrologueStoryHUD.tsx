@@ -337,7 +337,7 @@ export function PrologueStoryHUD({
         <>
           <MinimalTopBar
             title="Day 1 ~9:00 PM · Illuminated Rishikesh Market"
-            subtitle="Evening ride & walk past bright bazaar lights, scooters & shopfronts toward the dhaba"
+            subtitle="Walk together past bright bazaar lights and shopfronts toward the dhaba"
             polaroidCount={polaroidCount}
             audioMuted={audioMuted}
             onToggleAudioMute={onToggleAudioMute}
@@ -354,7 +354,7 @@ export function PrologueStoryHUD({
           )}
           <div className="pointer-events-none fixed inset-x-0 bottom-4 z-20 flex justify-center px-4">
             <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-amber-300/50 bg-slate-950/90 px-4 py-2 text-xs text-amber-100 shadow-xl">
-              <span>~9:00 PM scooter ride through illuminated Rishikesh bazaar...</span>
+              <span>Walking together through the illuminated Rishikesh bazaar...</span>
               {onSkipDay1Phase && (
                 <button
                   type="button"

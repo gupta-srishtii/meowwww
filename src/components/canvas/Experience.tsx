@@ -164,7 +164,21 @@ export default function Experience() {
   const [resetNonce, setResetNonce] = useState(0);
 
   // Prologue & Day 1 progression state
-  const [day1Phase, setDay1Phase] = useState<Day1Phase>('stay_meet');
+  const [day1Phase, setDay1PhaseImmediately] = useState<Day1Phase>('stay_meet');
+  const [day1Traveling, setDay1Traveling] = useState(false);
+  const day1TransitionBusyRef = useRef(false);
+  const setDay1Phase = useCallback((next: Day1Phase) => {
+    if (useProgressStore.getState().committedSceneId !== 2 || next === 'stay_meet') {
+      setDay1PhaseImmediately(next); return;
+    }
+    if (day1TransitionBusyRef.current) return;
+    day1TransitionBusyRef.current = true;
+    setDay1Traveling(true);
+    setStoryTimeout(() => {
+      setDay1PhaseImmediately(next);
+      setStoryTimeout(() => { setDay1Traveling(false); day1TransitionBusyRef.current = false; }, 380);
+    }, 320);
+  }, [setStoryTimeout]);
   const [day1TerraceNonce, setDay1TerraceNonce] = useState(0);
   const [day1WaterfallSitNonce, setDay1WaterfallSitNonce] = useState(0);
   const [day1CallActive, setDay1CallActive] = useState(false);
@@ -900,7 +914,7 @@ export default function Experience() {
                 3000
               );
             },
-            reducedMotion ? 320 : 4100
+            reducedMotion ? 1200 : 6800
           );
           return;
         }
@@ -1506,10 +1520,11 @@ export default function Experience() {
       mode,
       musicVolume,
       sfxVolume,
-      templeDarshanTriggered: activeDarshanPan || hadDarshan,
+      templeDarshanTriggered: rangBell || activeDarshanPan || hadDarshan,
     });
   }, [
     activeDarshanPan,
+    rangBell,
     audioMuted,
     day1Phase,
     escalatedToFallback,
@@ -1583,6 +1598,8 @@ export default function Experience() {
   // Cancel outgoing work and reset transient state on switches and explicit restarts.
   useEffect(() => {
     clearStoryTimers();
+    setDay1Traveling(false);
+    day1TransitionBusyRef.current = false;
     setArrived(false);
     setInViewpointZone(false);
     setViewpointArrived(false);
@@ -2019,6 +2036,7 @@ export default function Experience() {
       onPointerUp={(event) => handleOrbitDragEnd(event.pointerId)}
       onPointerCancel={(event) => handleOrbitDragEnd(event.pointerId)}
     >
+      <div aria-hidden="true" className={`pointer-events-none absolute inset-0 z-30 bg-[#080e17] transition-opacity duration-300 motion-reduce:duration-0 ${day1Traveling ? 'opacity-100' : 'opacity-0'}`} />
       <Canvas
         dpr={activePreset.dpr}
         shadows={activePreset.shadows}

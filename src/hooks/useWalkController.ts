@@ -324,6 +324,20 @@ export function resolveWalkCollisions(
  * Integrates one clamped delta-time walk step with velocity smoothing, clearing perimeter clamping,
  * and AABB/circle obstacle push-out. Returns actual displacement distance in meters.
  */
+export function sweepWalkMovement(
+  state: { posX: number; posZ: number }, dx: number, dz: number,
+  radius: number, bounds: WalkBounds, obstacles: readonly WalkObstacle[]
+): number {
+  const startX = state.posX, startZ = state.posZ;
+  const steps = Math.max(1, Math.ceil(Math.hypot(dx, dz) / (radius * 0.5)));
+  for (let i = 0; i < steps; i++) {
+    state.posX += dx / steps;
+    state.posZ += dz / steps;
+    resolveWalkCollisions(state, radius, bounds, obstacles);
+  }
+  return Math.hypot(state.posX - startX, state.posZ - startZ);
+}
+
 export function stepWalkSimulation(
   state: {
     posX: number;
@@ -390,10 +404,7 @@ export function stepWalkSimulation(
 
   const prevX = state.posX;
   const prevZ = state.posZ;
-  state.posX += state.velX * delta;
-  state.posZ += state.velZ * delta;
-
-  resolveWalkCollisions(state, WALK_PLAYER_RADIUS, bounds, obstacles);
+  sweepWalkMovement(state, state.velX * delta, state.velZ * delta, WALK_PLAYER_RADIUS, bounds, obstacles);
 
   return Math.hypot(state.posX - prevX, state.posZ - prevZ);
 }
@@ -435,9 +446,7 @@ export function stepAutoWalkTowardTarget(
 
   const prevX = state.posX;
   const prevZ = state.posZ;
-  state.posX += nx * stepDist;
-  state.posZ += nz * stepDist;
-  resolveWalkCollisions(state, WALK_PLAYER_RADIUS, bounds, obstacles);
+  sweepWalkMovement(state, nx * stepDist, nz * stepDist, WALK_PLAYER_RADIUS, bounds, obstacles);
 
   const movedX = state.posX - prevX;
   const movedZ = state.posZ - prevZ;
@@ -452,7 +461,7 @@ export function stepAutoWalkTowardTarget(
   state.facingYaw += angleDiff * (1 - Math.exp(-10 * delta));
   state.stridePhase += moved * 3.8;
 
-  const strideRatio = THREE.MathUtils.clamp(moved / Math.max(1e-4, delta) / WALK_SPEED_MPS, 0.25, 1);
+  const strideRatio = THREE.MathUtils.clamp(moved / Math.max(1e-4, delta) / WALK_SPEED_MPS, 0, 1);
   return { arrived: false, strideRatio, walkSpeed: speed };
 }
 

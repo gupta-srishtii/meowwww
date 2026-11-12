@@ -12,6 +12,7 @@ import {
   type HimalayanRidgeSpec,
 } from '@/components/canvas/environment/DistantHimalayanRidges';
 import { HotspotBeaconSparkle } from '@/components/canvas/environment/HotspotBeaconSparkle';
+import { DevotionalGate } from './DevotionalGate';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
 import { createTerrainMeshSampler } from '@/lib/terrainMeshSampler';
@@ -854,6 +855,8 @@ export function BaalKuwariStairsEnvironment({
         castShadow={shadowsEnabled}
       />
 
+      <DevotionalGate position={[WAYPOINTS[0].x, WAYPOINTS[0].y, WAYPOINTS[0].z]} />
+      <DevotionalGate position={[summitWaypoint.x, summitWaypoint.y, summitWaypoint.z - 1.2]} />
       {/* Summit Archway crowning Step 400 */}
       <group position={[summitWaypoint.x, summitWaypoint.y, summitWaypoint.z]}>
         <mesh position={[-1.8, 1.6, 0]} castShadow={shadowsEnabled}>

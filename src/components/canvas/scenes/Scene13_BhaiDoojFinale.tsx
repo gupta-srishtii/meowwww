@@ -14,6 +14,7 @@ import { ambientAudio } from '@/lib/ambientAudio';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
 import type { SceneId } from '@/lib/sceneConfig';
 import { registerVirtualMemory } from '@/lib/privateMemoryLoader';
+import { createHandContactSolver } from '@/lib/handContact';
 
 export type BhaiDoojPhase =
   | 'arrival'
@@ -120,16 +121,10 @@ export function Scene13_BhaiDoojFinale({
       smoothLook: new THREE.Vector3(),
       forehead: new THREE.Vector3(),
       handTarget: new THREE.Vector3(),
-      direction: new THREE.Vector3(),
-      bend: new THREE.Vector3(),
-      elbow: new THREE.Vector3(),
-      down: new THREE.Vector3(0, -1, 0),
-      armRotation: new THREE.Quaternion(),
-      forearmRotation: new THREE.Quaternion(),
-      inverseArm: new THREE.Quaternion(),
     }),
     []
   );
+  const solveHandContact = useMemo(createHandContactSolver, []);
 
   useEffect(() => {
     if (!tilakApplied) return;
@@ -345,30 +340,10 @@ export function Scene13_BhaiDoojFinale({
         ishaanGroupRef.current?.updateWorldMatrix(true, true);
         shreeGroupRef.current?.updateWorldMatrix(true, true);
         head.localToWorld(scratch.forehead.set(0, 0.044, -0.128));
-        arm.parent.worldToLocal(scratch.handTarget.copy(scratch.forehead));
-        scratch.handTarget.sub(arm.position);
-        const upper = forearm.position.length();
-        const lower = 0.178; // Right-hand center in the existing Shree rig.
-        const distance = THREE.MathUtils.clamp(scratch.handTarget.length(), 0.02, upper + lower - 0.001);
-        scratch.direction.copy(scratch.handTarget).normalize();
-        scratch.bend.set(0, 0, -1).addScaledVector(scratch.direction, scratch.direction.z);
-        if (scratch.bend.lengthSq() < 0.001) scratch.bend.set(1, 0, 0);
-        scratch.bend.normalize();
-        const along = (upper * upper - lower * lower + distance * distance) / (2 * distance);
-        scratch.elbow.copy(scratch.direction).multiplyScalar(along)
-          .addScaledVector(scratch.bend, Math.sqrt(Math.max(0, upper * upper - along * along)));
-        scratch.armRotation.setFromUnitVectors(scratch.down, scratch.handTarget.copy(scratch.elbow).normalize());
-        scratch.inverseArm.copy(scratch.armRotation).invert();
-        scratch.handTarget.copy(scratch.direction).multiplyScalar(distance).sub(scratch.elbow)
-          .normalize().applyQuaternion(scratch.inverseArm);
-        scratch.forearmRotation.setFromUnitVectors(scratch.down, scratch.handTarget);
-        arm.quaternion.slerp(scratch.armRotation, tilakReachWeight);
-        forearm.quaternion.slerp(scratch.forearmRotation, tilakReachWeight);
-        forearm.updateWorldMatrix(true, false);
-        forearm.localToWorld(scratch.handTarget.set(0, -lower, 0));
+        const contactError = solveHandContact(arm, forearm, scratch.forehead, 0.178, tilakReachWeight);
         const dur = reducedMotion ? 0.65 : TILAK_DURATION_SEC;
         if (!sim.tilakMarkFired && sim.timer / dur >= 0.48 &&
-          scratch.handTarget.distanceTo(scratch.forehead) < 0.035) {
+          contactError < 0.035) {
           sim.tilakMarkFired = true;
           ambientAudio.playTilakBlessingTone();
           onTilakApplied();
@@ -423,6 +398,19 @@ export function Scene13_BhaiDoojFinale({
           6,
           delta
         );
+      }
+    }
+
+    if (phase === 'eating_together' && calmEatReachWeight > 0) {
+      // Each sibling tastes their own mithai once; hands follow the articulated mouth position.
+      for (const [root, head, arm, forearm, lower] of [
+        [ishaanGroupRef.current, ishaanHeadRef.current, ishaanRArmRef.current, ishaanRForearmRef.current, 0.195],
+        [shreeGroupRef.current, shreeHeadRef.current, shreeRArmRef.current, shreeRForearmRef.current, 0.178],
+      ] as const) {
+        if (!root || !head) continue;
+        root.updateWorldMatrix(true, true);
+        head.localToWorld(scratch.handTarget.set(0, -0.08, -0.18));
+        solveHandContact(arm, forearm, scratch.handTarget, lower, calmEatReachWeight);
       }
     }
 

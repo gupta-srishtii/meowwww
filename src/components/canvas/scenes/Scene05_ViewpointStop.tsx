@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { constrainCameraBoom } from '@/lib/cameraClearance';
 import { PrototypeScooter } from '@/components/canvas/PrototypeScooter';
 import { StylizedPlaceholderCharacter } from '@/components/canvas/characters/StylizedPlaceholderCharacter';
 import {
@@ -226,6 +227,13 @@ export function Scene05_ViewpointStop({
       strideRatio = THREE.MathUtils.clamp(walkSpeed / WALK_SPEED_MPS, 0, 1);
       if (strideRatio > 0.03) {
         sim.stridePhase += moveDist * 3.8;
+      }
+      const photoSpot = VIEWPOINT_HOTSPOTS.find(h => h.actionType === 'photo' &&
+        !(h.id === 'viewpoint_shree' ? capturedShree : h.id === 'viewpoint_solo' ? capturedSolo : capturedGroup) &&
+        Math.hypot(sim.posX - h.x, sim.posZ - h.z) < h.radius * 0.65);
+      if (photoSpot && !autoFiredSetRef.current.has(photoSpot.id)) {
+        autoFiredSetRef.current.add(photoSpot.id);
+        onAutoTriggerHotspot?.(photoSpot.id);
       }
     }
 
@@ -525,6 +533,7 @@ export function Scene05_ViewpointStop({
         delta
       );
     }
+    if (activePhotoMoment === 'none') constrainCameraBoom(camera.position, scratch.desiredLookAt, VIEWPOINT_OBSTACLES);
     camera.lookAt(scratch.smoothedLookAt);
 
     const nearest =

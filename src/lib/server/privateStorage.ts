@@ -9,6 +9,20 @@ export const MEDIA_KINDS: Record<string, 'image' | 'video' | 'audio'> = {
   scene10_baalkuwari_book: 'image', temple_song: 'audio', finale_song: 'audio',
 };
 
+function unavailable(id: string, stage: string, status: number, upstreamStatus?: number): Response {
+  // Deliberately exclude keys, bucket/object paths, signed URLs and provider error bodies.
+  console.warn('[private-media]', { id: Object.hasOwn(MEDIA_KINDS, id) ? id : 'unknown', stage, upstreamStatus });
+  return Response.json({ error: 'Memory temporarily unavailable' }, { status, headers: {
+    'Cache-Control': 'private, no-store', 'X-Memory-Status': stage,
+  } });
+}
+
+const EXTENSION_MIME: Record<string, string> = {
+  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp',
+  mp4: 'video/mp4', webm: 'video/webm', mp3: 'audio/mpeg', wav: 'audio/wav',
+  m4a: 'audio/mp4', ogg: 'audio/ogg', aac: 'audio/aac', flac: 'audio/flac',
+};
+
 export function storageConfiguration() {
   const project = (process.env.SUPABASE_URL ?? '').trim().replace(/\/$/, '');
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
@@ -32,7 +46,7 @@ export function storageConfiguration() {
 /** Short-lived provider URLs stay server-side; Range requests keep videos/audio seekable. */
 export async function readPrivateMedia(id: string, range: string | null, head = false): Promise<Response> {
   const config = storageConfiguration();
-  if (!config) return Response.json({ error: 'Private media is not configured' }, { status: 503 });
+  if (!config) return unavailable(id, 'configuration', 503);
   if (!Object.hasOwn(config.objects, id)) return new Response(null, { status: 404 });
   if (range && !/^bytes=(?:\d+-\d*|-\d+)$/.test(range)) return new Response(null, { status: 416 });
   const path = [config.bucket, ...config.objects[id].split('/')].map(encodeURIComponent).join('/');
@@ -42,25 +56,34 @@ export async function readPrivateMedia(id: string, range: string | null, head = 
       cache: 'no-store', signal: AbortSignal.timeout(10_000),
     });
     if (!bucket.ok || (await bucket.json() as { public?: boolean }).public !== false) {
-      return Response.json({ error: 'Private bucket required' }, { status: 503 });
+      return unavailable(id, 'bucket-privacy', 503, bucket.status);
     }
     const signed = await fetch(`${config.project}/storage/v1/object/sign/${path}`, {
       method: 'POST', headers: { Authorization: `Bearer ${config.key}`, apikey: config.key, 'Content-Type': 'application/json' },
       body: JSON.stringify({ expiresIn: 300 }), cache: 'no-store', signal: AbortSignal.timeout(10_000),
     });
-    if (!signed.ok) return new Response(null, { status: signed.status === 404 ? 404 : 502 });
+    if (!signed.ok) {
+      const problem = await signed.json().catch(() => null) as { statusCode?: string | number } | null;
+      return unavailable(id, 'signing', signed.status === 404 || Number(problem?.statusCode) === 404 ? 404 : 502, signed.status);
+    }
     const data = await signed.json() as { signedURL?: string };
-    if (!data.signedURL?.startsWith('/object/sign/')) return new Response(null, { status: 502 });
+    if (!data.signedURL?.startsWith('/object/sign/')) return unavailable(id, 'signing-response', 502);
     const url = new URL(`${config.project}/storage/v1${data.signedURL}`);
-    if (url.origin !== config.project) return new Response(null, { status: 502 });
+    if (url.origin !== config.project) return unavailable(id, 'signing-origin', 502);
     const media = await fetch(url, { method: head ? 'HEAD' : 'GET', headers: range ? { Range: range } : {}, cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(30_000) });
-    if (![200, 206, 416].includes(media.status)) return new Response(null, { status: media.status === 404 ? 404 : 502 });
-    const type = media.headers.get('content-type') ?? '';
-    if (media.status !== 416 && !type.startsWith(`${MEDIA_KINDS[id]}/`)) return new Response(null, { status: 502 });
+    if (![200, 206, 416].includes(media.status)) return unavailable(id, 'download', media.status === 404 ? 404 : 502, media.status);
+    let type = media.headers.get('content-type') ?? '';
+    // Dashboard uploads sometimes retain a generic MIME. Only allowlisted file
+    // extensions matching this memory's kind may supply the fallback type.
+    if (type.split(';')[0].trim().toLowerCase() === 'application/octet-stream') {
+      type = EXTENSION_MIME[config.objects[id].split('.').pop()!.toLowerCase()] ?? '';
+    }
+    if (media.status !== 416 && !type.startsWith(`${MEDIA_KINDS[id]}/`)) return unavailable(id, 'mime-type', 502);
     const headers = new Headers({ 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' });
     for (const name of ['content-type', 'content-length', 'content-range', 'accept-ranges']) {
       const value = media.headers.get(name); if (value) headers.set(name, value);
     }
+    if (media.status !== 416) headers.set('content-type', type);
     return new Response(head ? null : media.body, { status: media.status, headers });
-  } catch { return Response.json({ error: 'Media temporarily unavailable' }, { status: 502 }); }
+  } catch { return unavailable(id, 'connection', 502); }
 }

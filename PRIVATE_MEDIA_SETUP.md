@@ -93,3 +93,15 @@ After approval and rights confirmation, upload originals through Supabase Dashbo
 Still required: configure all seven production values, upload the approved 13 originals, then verify photo loading, video seeking and songs on a real device before activation. The Play/Watch click unlocks browser audio after entering the gift code. A browser can still require the song playback button after a policy rejection.
 
 Server-side authentication protects the experience, catalog and every media GET/HEAD request. Unknown objects are rejected, provider URLs expire after five minutes, and public buckets are refused. Live Supabase objects, credentials, MIME types, upload rights, Vercel environment scope and Git auto-deploy settings cannot be verified from repository code. Keep auto-deployment off until approval. No deployment or upload is performed by these instructions.
+## Refinement configuration notes
+
+The final product is **Memories Relive**: *Some journeys end. Their memories never do.*
+Vercel's project name/domain remain separate settings; this refinement keeps the existing hosting identity.
+
+`PRIVATE_MEDIA_BUCKET` must equal the existing private bucket's actual ID, including spaces. Both `trip-memories` and `trip memories` are now accepted; do not rename a bucket or make it public to work around validation. Project URLs accept a trailing slash. Object keys remain exact and case-sensitive.
+
+When an authorized media request fails, its response includes a safe `X-Memory-Status` category and Vercel function logs include `[private-media]` with the approved memory ID, stage and upstream HTTP status. No object paths, signed URLs, credentials or provider error bodies are logged. Categories distinguish configuration, bucket/privacy verification, signing, download, MIME and connection failures. Generic application/octet-stream uploads receive a MIME fallback only from an allowlisted extension matching the memory kind. Other MIME mismatches fail closed.
+
+The Our Memories panel checks all 13 approved original IDs with authenticated HEAD requests, at most three at a time. Retry refreshes the catalog and checks again; a 401 asks the viewer to reopen the gift session. This checks availability without downloading originals. Actual decoding, playback, seeking and permission to use recordings still need verification with the real files.
+
+For live verification: Vercel project > Deployments > the production deployment matching the pushed Git SHA must show **Ready**. In Logs, filter `/api/media`; after gift login, inspect each request and its diagnostic header. Confirm the production environment's bucket ID and object mapping without copying secret values into chat or Git. Then open all nine images, play/seek both stream videos and play both authorized audio tracks after Play/Watch. Check on a real phone. Earlier setup text describing deployment as unapproved is historical; the current task explicitly authorizes a normal validated main push and deployment verification, without changing secret values, uploads or bucket privacy.

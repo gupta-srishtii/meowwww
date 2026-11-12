@@ -420,6 +420,7 @@ export function HotelReturnEnvironment({
         shadow-camera-bottom={-28}
       />
       <pointLight position={[0, 2.55, 0.5]} intensity={1.7} color="#fbbf24" distance={14} />
+      {nightReturn && <pointLight position={[-1.1, 3.4, 5.5]} intensity={9} color="#ffdcaa" distance={18} />}
       <pointLight position={[0, TERRACE_Y + 2.25, -3.2]} intensity={1.45} color="#fde68a" distance={15} />
 
       {nightReturn && (
@@ -901,6 +902,14 @@ export function HotelReturnEnvironment({
         </mesh>
       </group>
 
+      {/* Open field behind the stay, between the house and the distant neighborhood. */}
+      <mesh position={[0, 0.012, -9.4]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow={shadowsEnabled}>
+        <planeGeometry args={[9, 5.8]} /><meshStandardMaterial color="#496143" roughness={1} />
+      </mesh>
+      {[-4.7, 4.7].map(x => <group key={`field-fence-${x}`} position={[x, 0, -9.4]}>
+        {[-2.5, -1, 0.5, 2].map(z => <mesh key={z} position={[0, 0.42, z]}><boxGeometry args={[0.09, 0.84, 0.09]} /><meshStandardMaterial color="#75634c" /></mesh>)}
+        <mesh position={[0, 0.6, 0]}><boxGeometry args={[0.06, 0.06, 5.8]} /><meshStandardMaterial color="#75634c" /></mesh>
+      </group>)}
       {/* 5. SURROUNDING NEIGHBORHOOD HOUSES & ROOFTOP WATER TANKS FOR TERRACE HORIZON */}
       {[
         { pos: [-11.5, 0, -4.5] as const, w: 6.4, h: 5.2, d: 6.2, col: '#dfd5c6' },

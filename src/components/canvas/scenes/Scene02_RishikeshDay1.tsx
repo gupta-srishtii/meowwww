@@ -25,6 +25,7 @@ import {
   Day1NightDhabaEnvironment,
   Day1WaterfallEnvironment,
   sampleMarketStreetY,
+  sampleWaterfallGorgeY,
 } from '@/components/canvas/environment/Day1EveningEnvironments';
 import {
   DAY1_HOTSPOTS,
@@ -47,6 +48,8 @@ import {
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
 import type { SceneId } from '@/lib/sceneConfig';
+import { sampleStoryRoute, type StoryWaypoint } from '@/lib/storyTraversal';
+import { constrainCameraBoom } from '@/lib/cameraClearance';
 import type { Day1StoryPhase } from '@/components/ui/PrologueStoryHUD';
 
 export type Day1Phase = Day1StoryPhase;
@@ -72,11 +75,11 @@ export interface Scene02RishikeshDay1Props {
 const STAY_HOLD_BEFORE_WALK_SEC = 2.2;
 const WATERFALL_RIDE_DURATION_SEC = 4.6;
 const WATERFALL_WALK_IN_DURATION_SEC = 3.0;
-const WATERFALL_TOTAL_DURATION_SEC = 17.0;
-const EVENING_MAGGI_DURATION_SEC = 5.8;
+const WATERFALL_TOTAL_DURATION_SEC = 33;
+const EVENING_MAGGI_DURATION_SEC = 12;
 const RETURN_ROLLOUT_DURATION_SEC = 2.8;
-const NIGHT_DHABA_DURATION_SEC = 6.2;
-const NIGHT_RETURN_DURATION_SEC = 4.6;
+const NIGHT_DHABA_DURATION_SEC = 14;
+const NIGHT_RETURN_DURATION_SEC = 22;
 
 function useRigRefs(): HumanRigRefs & {
   groupRef: RefObject<THREE.Group | null>;
@@ -196,7 +199,6 @@ export function Scene02_RishikeshDay1({
   const compScooterRef = useRef<THREE.Group>(null);
   const returnScooter1Ref = useRef<THREE.Group>(null);
   const returnScooter2Ref = useRef<THREE.Group>(null);
-  const marketScooterRef = useRef<THREE.Group>(null);
 
   const readyTokenRef = useRef(-1);
   const phaseTimerRef = useRef(0);
@@ -204,6 +206,7 @@ export function Scene02_RishikeshDay1({
   const phaseAdvancedRef = useRef(false);
   const callTriggeredRef = useRef(false);
   const streamVideoUnlockedRef = useRef(false);
+  const streamSeatedElapsedRef = useRef(0);
   const prevHotspotIdRef = useRef<string | null>(null);
   const onTerraceRef = useRef(false);
   const waterfallSeatedRef = useRef(false);
@@ -235,6 +238,7 @@ export function Scene02_RishikeshDay1({
     phaseAdvancedRef.current = false;
     callTriggeredRef.current = false;
     streamVideoUnlockedRef.current = false;
+    streamSeatedElapsedRef.current = 0;
     prevHotspotIdRef.current = null;
     onNearbyHotspotChange(null);
     if (day1Phase !== 'waterfall_ride_stop') {
@@ -267,7 +271,7 @@ export function Scene02_RishikeshDay1({
       waterfallSeatedRef.current = false;
       setWaterfallSeated(false);
     } else if (day1Phase === 'market_street_walk') {
-      simRef.current.posX = 0.0;
+      simRef.current.posX = -3.8;
       simRef.current.posZ = 10.2;
       simRef.current.velX = 0;
       simRef.current.velZ = 0;
@@ -440,6 +444,7 @@ export function Scene02_RishikeshDay1({
           scratch.currentLookAt.lerp(scratch.desiredLookAt, 1 - Math.exp(-delta * 6));
           camera.lookAt(scratch.currentLookAt);
         } else if (waterfallSeatedRef.current) {
+          streamSeatedElapsedRef.current += delta;
           if (walkElapsed >= WATERFALL_WALK_IN_DURATION_SEC + 1.2 && !streamVideoUnlockedRef.current) {
             streamVideoUnlockedRef.current = true;
             onUnlockDay1StreamVideo?.();
@@ -455,7 +460,7 @@ export function Scene02_RishikeshDay1({
             stridePhase: 0,
             elapsed: sim.elapsed,
             delta,
-            idlePose: 'sit_laugh',
+            idlePose: 'sit_eat',
             reducedMotion,
           });
           animateCharacterRig({
@@ -472,8 +477,32 @@ export function Scene02_RishikeshDay1({
             armGesturePhase: 1.4,
             reducedMotion,
           });
+          // Only Ishaan and Manish leave the seated group. The clear bank corridor
+          // curves upstream into greenery and returns to the same two rock seats.
+          const runTime = streamSeatedElapsedRef.current - 4;
+          if (runTime >= 0 && runTime < 12) {
+            for (const [rig, seat, offset] of [[ishaanRig, rockSeatIshaan, 0], [manishRig, rockSeatManish, 0.7]] as const) {
+              const route: StoryWaypoint[] = [[seat.x, 0.02, seat.z], [-0.8 - offset, 0.02, -3.4],
+                [-0.8 - offset, 0.02, -7.2], [0.2 - offset, sampleWaterfallGorgeY(0.2 - offset, -8.2), -8.2]];
+              const returning = runTime >= 6;
+              const point = sampleStoryRoute(returning ? [...route].reverse() : route, (returning ? runTime - 6 : runTime) * 1.8);
+              animateCharacterRig({ refs: rig, posX: point.x, posZ: point.z, groundY: point.y,
+                facingYaw: point.yaw, strideRatio: point.arrived ? 0 : 1.12,
+                stridePhase: runTime * 9.5 + offset, elapsed: sim.elapsed, delta,
+                downhillJogging: true, reducedMotion });
+            }
+          } else {
+            animateCharacterRig({ refs: manishRig, posX: rockSeatManish.x, posZ: rockSeatManish.z,
+              facingYaw: rockSeatManish.yaw, groundY: rockSeatManish.rockTopY - 0.45,
+              strideRatio: 0, stridePhase: 0, elapsed: sim.elapsed, delta, idlePose: 'sit_eat', reducedMotion });
+          }
           scratch.desiredCamPos.set(-1.35 + Math.sin(sitT * 1.15) * 0.6, 2.05, 1.95 - sitT * 0.65);
           scratch.desiredLookAt.set(3.25, 1.12, -1.65);
+          if (runTime >= 0 && runTime < 12 && ishaanRig.group) {
+            const p = ishaanRig.group.position;
+            scratch.desiredCamPos.set(p.x - 3.8, p.y + 2.7, p.z + 5.4);
+            scratch.desiredLookAt.set(p.x + 0.5, p.y + 1, p.z);
+          }
           camera.position.lerp(scratch.desiredCamPos, 1 - Math.exp(-delta * 4.5));
           scratch.currentLookAt.lerp(scratch.desiredLookAt, 1 - Math.exp(-delta * 5.2));
           camera.lookAt(scratch.currentLookAt);
@@ -700,25 +729,25 @@ export function Scene02_RishikeshDay1({
     }
 
     // ---------------------------------------------------------
-    // PHASE 3B: ~9:00 PM SCOOTER RIDE THROUGH ILLUMINATED RISHIKESH MARKET
+    // PHASE 3B: THE FOUR FRIENDS WALK TO DINNER THROUGH THE MARKET
     // ---------------------------------------------------------
     if (day1Phase === 'market_street_walk') {
       phaseTimerRef.current += delta;
       const input = walkInputRef.current;
-      let leanAngle = 0;
 
       if (autoPlayMode) {
         const target = DAY1_MARKET_HOTSPOTS[0];
         const targetZ = target.z + 0.6;
-        const targetX = Math.sin((10.2 - sim.posZ) * 0.14) * 0.22;
+        const targetX = -3.8 + Math.sin((10.2 - sim.posZ) * 0.14) * 0.12;
         const dz = targetZ - sim.posZ;
         if (Math.abs(dz) > 0.35) {
-          const speed = Math.abs(dz) < 2.8 ? 1.8 : 3.0;
+          const speed = 1.35;
           const stepZ = Math.min(Math.abs(dz), speed * delta);
           sim.posZ -= stepZ;
           sim.posX = THREE.MathUtils.damp(sim.posX, targetX, 5, delta);
           sim.facingYaw = Math.atan2(-(targetX - sim.posX), 2.5) * 0.45;
-          leanAngle = -sim.facingYaw * 0.45;
+          sim.strideRatio = 0.6;
+          sim.stridePhase += stepZ * 3.8;
         } else {
           sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, 0, 6, delta);
           if (!phaseAdvancedRef.current && phaseTimerRef.current >= 6.8) {
@@ -727,29 +756,26 @@ export function Scene02_RishikeshDay1({
           }
         }
       } else if (input) {
-        const throttle = THREE.MathUtils.clamp(input.moveZ, -1, 1);
-        const steer = THREE.MathUtils.clamp(input.moveX, -1, 1);
-        const driveSpeed = throttle !== 0 ? throttle * 5.6 : 0;
-        sim.posZ = THREE.MathUtils.clamp(sim.posZ - driveSpeed * delta, -9.2, 10.6);
-        sim.posX = THREE.MathUtils.clamp(sim.posX + steer * 2.2 * delta, -1.45, 1.45);
-        leanAngle = -steer * 0.09;
-        sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, -steer * 0.22, 8, delta);
+        const moved = stepWalkSimulation(sim, input, delta, DAY1_MARKET_WALK_BOUNDS, []);
+        sim.stridePhase += moved * 3.8;
+        sim.strideRatio = Math.min(1, Math.hypot(sim.velX, sim.velZ) / WALK_SPEED_MPS);
       }
 
       const streetY = sampleMarketStreetY(sim.posZ);
-      if (marketScooterRef.current) {
-        marketScooterRef.current.position.set(sim.posX, streetY + 0.02, sim.posZ);
-        marketScooterRef.current.rotation.set(-0.04, sim.facingYaw, leanAngle);
+      for (const [rig, x, z] of [[ishaanRig, -0.42, 0], [shreeRig, 0.42, 0.1], [manishRig, -0.42, 1.1], [yashRig, 0.42, 1.2]] as const) {
+        animateCharacterRig({ refs: rig, posX: sim.posX + x, posZ: sim.posZ + z,
+          groundY: sampleMarketStreetY(sim.posZ + z) + 0.17, facingYaw: sim.facingYaw,
+          strideRatio: sim.strideRatio, stridePhase: sim.stridePhase + z, elapsed: sim.elapsed, delta, reducedMotion });
       }
 
       const isNarrow = size.width < 768;
       scratch.desiredCamPos.set(
-        sim.posX * 0.65 + (isNarrow ? 0.45 : 0.35),
+        sim.posX + (isNarrow ? 1.0 : 1.3),
         streetY + 2.05,
         sim.posZ + (isNarrow ? 4.4 : 3.7)
       );
       scratch.desiredLookAt.set(
-        sim.posX * 0.5,
+        sim.posX + 0.3,
         streetY + 1.18,
         sim.posZ - 4.2
       );
@@ -852,16 +878,15 @@ export function Scene02_RishikeshDay1({
     if (day1Phase === 'night_hotel_return') {
       phaseTimerRef.current += delta;
       const t = phaseTimerRef.current;
-      const walkAlpha = Math.min(1, t / 2.6);
-      const walkEase = walkAlpha * walkAlpha * (3 - 2 * walkAlpha);
-      const zPos = THREE.MathUtils.lerp(6.4, 2.0, walkEase);
-      const walking = walkAlpha < 1;
+      const approach = sampleStoryRoute([[0, 0, 12], [-0.8, 0, 9.6], [0.85, 0, 7.7], [-0.3, 0, 5.2], [0, 0, 2]], t * 1.1);
+      const zPos = approach.z;
+      const walking = !approach.arrived;
 
       animateIshaanWalkRig({
         refs: ishaanRig,
-        posX: -0.42,
+        posX: approach.x - 0.42,
         posZ: zPos,
-        facingYaw: 0,
+        facingYaw: approach.yaw,
         strideRatio: walking ? 0.72 : 0,
         stridePhase: sim.elapsed * 5.8,
         elapsed: sim.elapsed,
@@ -871,19 +896,26 @@ export function Scene02_RishikeshDay1({
       });
       animateCharacterRig({
         refs: shreeRig,
-        posX: 0.42,
-        posZ: zPos + 0.15,
-        facingYaw: walking ? 0 : -0.35,
-        strideRatio: walking ? 0.72 : 0,
+        posX: walking ? approach.x + 0.42 : Math.min(3.42, 0.42 + Math.max(0, t - 10.5) * 0.85),
+        posZ: walking ? zPos + 0.15 : t < 14.1 ? 2 : THREE.MathUtils.lerp(1.5, -1.5, Math.min(1, (t - 14.1) / 5.4)),
+        groundY: t < 14.1 ? 0 : THREE.MathUtils.lerp(0, TERRACE_Y, Math.min(1, (t - 14.1) / 5.4)),
+        facingYaw: walking ? approach.yaw : t < 14.1 ? -Math.PI / 2 : 0,
+        climbingStairs: !walking && t >= 14.1 && t < 19.5,
+        strideRatio: walking || t < 19.5 ? 0.65 : 0,
         stridePhase: sim.elapsed * 5.8 + 0.4,
         elapsed: sim.elapsed,
         delta,
         idlePose: walking ? 'chat_nod' : 'group_wave',
         reducedMotion,
       });
+      for (const [rig, offset] of [[manishRig, -0.7], [yashRig, 0.7]] as const) {
+        animateCharacterRig({ refs: rig, posX: approach.x + offset, posZ: zPos + 1.1,
+          facingYaw: approach.yaw, strideRatio: walking ? 0.6 : 0, stridePhase: t * 4.5 + offset,
+          elapsed: sim.elapsed, delta, idlePose: 'group_wave', reducedMotion });
+      }
 
-      scratch.desiredCamPos.set(-1.95, 2.15, zPos + 4.4);
-      scratch.desiredLookAt.set(0, 1.35, zPos - 2.2);
+      scratch.desiredCamPos.set(-1.95, t > 14 ? 3.4 : 2.15, zPos + 4.4);
+      scratch.desiredLookAt.set(t > 14 ? 1.5 : 0, t > 14 ? 2.2 : 1.35, zPos - 2.2);
       camera.position.lerp(scratch.desiredCamPos, 1 - Math.exp(-delta * 4.5));
       scratch.currentLookAt.lerp(scratch.desiredLookAt, 1 - Math.exp(-delta * 5));
       camera.lookAt(scratch.currentLookAt);
@@ -1010,6 +1042,8 @@ export function Scene02_RishikeshDay1({
     scratch.currentLookAt.lerp(scratch.desiredLookAt, 1 - Math.exp(-delta * 10));
     camera.lookAt(scratch.currentLookAt);
 
+    constrainCameraBoom(camera.position, scratch.desiredLookAt, activeObstacles);
+    camera.lookAt(scratch.currentLookAt);
     const hotspot = findNearestWalkHotspot(sim.posX, sim.posZ, activeHotspots);
     if ((hotspot?.id ?? null) !== prevHotspotIdRef.current) {
       prevHotspotIdRef.current = hotspot?.id ?? null;
@@ -1226,18 +1260,16 @@ export function Scene02_RishikeshDay1({
   }
 
   if (day1Phase === 'market_street_walk') {
-    return (
-      <>
-        <Day1MarketWalkEnvironment qualityProfile={qualityProfile} paused={paused} />
-        <group
-          ref={marketScooterRef}
-          position={[0.0, sampleMarketStreetY(10.2) + 0.02, 10.2]}
-          rotation={[-0.04, 0, 0]}
-        >
-          <PrototypeScooter variant="lead" soloRiderVariant="srishti" castShadow={shadowsEnabled} outfitMode="day1" />
-        </group>
-      </>
-    );
+    return <><Day1MarketWalkEnvironment qualityProfile={qualityProfile} paused={paused} />
+        {([[ishaanRig, 'ishaan'], [shreeRig, 'srishti'], [manishRig, 'friend_black_tee'], [yashRig, 'friend_plaid']] as const).map(([rig, variant]) => (
+          <StylizedPlaceholderCharacter key={variant} characterVariant={variant} outfitMode="day1"
+            groupRef={rig.groupRef} torsoRef={rig.torsoRef} headRef={rig.headRef}
+            leftLegRef={rig.leftLegRef} leftKneeRef={rig.leftKneeRef}
+            rightLegRef={rig.rightLegRef} rightKneeRef={rig.rightKneeRef}
+            leftArmRef={rig.leftArmRef} rightArmRef={rig.rightArmRef} rightForearmRef={rig.rightForearmRef}
+            castShadow={shadowsEnabled} />
+        ))}
+    </>;
   }
 
   if (day1Phase === 'night_dhaba_dinner') {
@@ -1340,40 +1372,14 @@ export function Scene02_RishikeshDay1({
           nightReturn
           day1Done
         />
-        <StylizedPlaceholderCharacter
-          characterVariant="ishaan"
-          outfitMode="day1"
-          groupRef={ishaanRig.groupRef}
-          torsoRef={ishaanRig.torsoRef}
-          headRef={ishaanRig.headRef}
-          leftLegRef={ishaanRig.leftLegRef}
-          leftKneeRef={ishaanRig.leftKneeRef}
-          rightLegRef={ishaanRig.rightLegRef}
-          rightKneeRef={ishaanRig.rightKneeRef}
-          leftArmRef={ishaanRig.leftArmRef}
-          rightArmRef={ishaanRig.rightArmRef}
-          rightForearmRef={ishaanRig.rightForearmRef}
-          position={[-0.42, 0, 6.4]}
-          rotationY={0}
-          castShadow={shadowsEnabled}
-        />
-        <StylizedPlaceholderCharacter
-          characterVariant="srishti"
-          outfitMode="day1"
-          groupRef={shreeRig.groupRef}
-          torsoRef={shreeRig.torsoRef}
-          headRef={shreeRig.headRef}
-          leftLegRef={shreeRig.leftLegRef}
-          leftKneeRef={shreeRig.leftKneeRef}
-          rightLegRef={shreeRig.rightLegRef}
-          rightKneeRef={shreeRig.rightKneeRef}
-          leftArmRef={shreeRig.leftArmRef}
-          rightArmRef={shreeRig.rightArmRef}
-          rightForearmRef={shreeRig.rightForearmRef}
-          position={[0.42, 0, 6.55]}
-          rotationY={0}
-          castShadow={shadowsEnabled}
-        />
+        {([[ishaanRig, 'ishaan'], [shreeRig, 'srishti'], [manishRig, 'friend_black_tee'], [yashRig, 'friend_plaid']] as const).map(([rig, variant]) => (
+          <StylizedPlaceholderCharacter key={variant} characterVariant={variant} outfitMode="day1"
+            groupRef={rig.groupRef} torsoRef={rig.torsoRef} headRef={rig.headRef}
+            leftLegRef={rig.leftLegRef} leftKneeRef={rig.leftKneeRef}
+            rightLegRef={rig.rightLegRef} rightKneeRef={rig.rightKneeRef}
+            leftArmRef={rig.leftArmRef} rightArmRef={rig.rightArmRef} rightForearmRef={rig.rightForearmRef}
+            castShadow={shadowsEnabled} />
+        ))}
       </>
     );
   }

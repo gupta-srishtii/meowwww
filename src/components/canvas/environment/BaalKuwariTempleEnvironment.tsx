@@ -13,6 +13,7 @@ import {
   type HimalayanRidgeSpec,
 } from '@/components/canvas/environment/DistantHimalayanRidges';
 import { HotspotBeaconSparkle } from '@/components/canvas/environment/HotspotBeaconSparkle';
+import { SummitFlowers } from './SummitFlowers';
 import type { WalkBounds, WalkHotspot, WalkObstacle } from '@/hooks/useWalkController';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { getStoneCourtyardTexture } from '@/lib/proceduralTextures';
@@ -294,6 +295,7 @@ export function BaalKuwariTempleEnvironment({
         receiveShadow={shadowsEnabled}
       />
       <DistantHimalayanRidges ridges={SUMMIT_RIDGES} />
+      <SummitFlowers count={qualityProfile === 'low' ? 24 : 64} />
 
       {/* Natural Granite Outcrops Nestling Sanctuary Courtyard into Summit Ridge */}
       {[

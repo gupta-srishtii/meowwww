@@ -13,7 +13,7 @@ export function PrivateMediaBootstrap() {
   }, []);
   useEffect(load, [load]);
   const failures = [...cloudMediaFailures];
-  return <aside className="fixed bottom-3 right-3 z-50 max-w-[min(20rem,calc(100vw-1.5rem))] rounded-xl border border-amber-100/15 bg-slate-950/90 px-3 py-2 text-xs text-amber-50 shadow-lg">
+  return <aside className="fixed top-3 left-3 z-50 max-w-[min(20rem,calc(100vw-1.5rem))] rounded-xl border border-amber-100/15 bg-slate-950/90 px-3 py-2 text-xs text-amber-50 shadow-lg">
     <div className="flex items-center gap-3">
       <button type="button" aria-expanded={details} onClick={() => setDetails(v => !v)}>Our Memories</button>
       <span role="status" className="text-[10px] text-amber-100/65">{loading ? 'Connecting…' : failures.length ? `${failures.length} unavailable` : 'Connected'}</span>

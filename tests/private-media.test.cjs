@@ -15,7 +15,7 @@ function fixture(extra = {}, fetcher = async () => { throw Error('No real networ
     const source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
     const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
     vm.runInNewContext(code, { exports, Buffer, URL, URLSearchParams, Request, Response, Headers, AbortSignal, setTimeout,
-      process: { env }, fetch: fetcher, require: name => name.startsWith('@/') ? load(`src/${name.slice(2)}.ts`) : require(name) });
+      process: { env }, window: { location: { origin: 'https://gift.test' } }, fetch: fetcher, require: name => name.startsWith('@/') ? load(`src/${name.slice(2)}.ts`) : require(name) });
     return exports;
   };
   return { env, load, access: load('src/lib/server/experienceAccess.ts') };
@@ -137,4 +137,47 @@ test('bucket names cannot introduce path segments or invisible whitespace', () =
   for (const bucket of ['trip/memories', '../memories', ' trip memories', 'trip memories ', 'trip\nmemories']) {
     assert.equal(fixture({ ...storageEnv, PRIVATE_MEDIA_BUCKET: bucket }).load('src/lib/server/privateStorage.ts').storageConfiguration(), null);
   }
+});
+
+test('generic upload MIME is corrected only for approved media types', async () => {
+  let calls = 0;
+  const storage = fixture(storageEnv, async () => {
+    calls++;
+    if (calls === 1) return Response.json({ public: false });
+    if (calls === 2) return Response.json({ signedURL: '/object/sign/trip-memories/stream.mp4?token=test' });
+    return new Response('TEST', { headers: { 'content-type': 'application/octet-stream' } });
+  }).load('src/lib/server/privateStorage.ts');
+  assert.equal((await storage.readPrivateMedia('scene02_day1_stream_video', null)).headers.get('content-type'), 'video/mp4');
+});
+
+test('provider missing-object errors preserve 404 and reveal only a safe diagnostic category', async () => {
+  let calls = 0;
+  const storage = fixture(storageEnv, async () => ++calls === 1 ? Response.json({ public: false }) :
+    Response.json({ statusCode: '404', message: 'PRIVATE-PROVIDER-DETAIL' }, { status: 400 })).load('src/lib/server/privateStorage.ts');
+  const result = await storage.readPrivateMedia('scene02_day1_stream_video', null);
+  assert.equal(result.status, 404);
+  assert.equal(result.headers.get('x-memory-status'), 'signing');
+  assert(!(await result.text()).includes('PRIVATE-PROVIDER-DETAIL'));
+});
+
+test('cloud health checks every mapped original, limits concurrency, and retry clears partial failures', async () => {
+  let retry = false, active = 0, peak = 0;
+  const checked = new Set();
+  const f = fixture({}, async (url, options) => {
+    if (url === '/api/media') return Response.json({ media: Object.keys(f.load('src/lib/server/privateStorage.ts').MEDIA_KINDS).map(id => ({ id, url: `/api/media/${id}` })) });
+    assert.equal(options.method, 'HEAD');
+    checked.add(url); active++; peak = Math.max(peak, active);
+    await new Promise(resolve => setImmediate(resolve)); active--;
+    return new Response(null, { status: !retry && url.endsWith('/scene03_tea_stop') ? 502 : 200 });
+  });
+  const loader = f.load('src/lib/privateMemoryLoader.ts');
+  const first = loader.loadPrivateCloudMedia();
+  assert.equal(loader.loadPrivateCloudMedia(), first);
+  assert.equal(await first, false);
+  assert.equal(loader.cloudMediaFailures.size, 1);
+  assert.equal(loader.cloudMediaFailures.get('scene03_tea_stop'), 502);
+  assert.equal(checked.size, 13); assert(peak <= 3);
+  retry = true;
+  assert.equal(await loader.loadPrivateCloudMedia(), true);
+  assert.equal(loader.cloudMediaFailures.size, 0);
 });

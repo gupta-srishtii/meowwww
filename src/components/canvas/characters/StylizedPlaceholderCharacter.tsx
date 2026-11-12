@@ -235,13 +235,13 @@ export function StylizedPlaceholderCharacter({
           )}
 
           {/* Thin pleated fabric follows the torso, with soft shoulder tails. */}
-          {isFestive && <group>
-            <mesh position={[0, 0.30, -0.14]} rotation={[0.08, 0, 0.05]}>
-              <DrapedFabricGeometry width={0.29} height={0.12} depth={0.008} shoulderDrape />
+          {isFestive && <group name="festive-dupatta">
+            <mesh position={[0, 0.31, -0.126]} rotation={[0.08, 0, 0.05]}>
+              <DrapedFabricGeometry width={0.29} height={0.12} depth={0.005} shoulderDrape />
               <meshStandardMaterial color="#fbbf24" side={THREE.DoubleSide} roughness={0.92} />
             </mesh>
-            {[-1, 1].map(side => <mesh key={side} position={[side * 0.125, 0.15, -0.118]} rotation={[0.08, side * 0.18, side * 0.08]}>
-              <DrapedFabricGeometry width={0.075} height={0.40} depth={0.008} />
+            {[-1, 1].map(side => <mesh key={side} position={[side * 0.125, 0.15, -0.108]} rotation={[0.08, side * 0.18, side * 0.08]}>
+              <DrapedFabricGeometry width={0.075} height={0.40} depth={0.005} />
               <meshStandardMaterial color="#facc15" side={THREE.DoubleSide} roughness={0.9} />
             </mesh>)}
           </group>}
