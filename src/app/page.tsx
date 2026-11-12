@@ -2,6 +2,7 @@ import ExperienceWrapper from '@/components/canvas/ExperienceWrapper';
 import { cookies } from 'next/headers';
 import { accessConfigured, localDevelopment, SESSION_COOKIE, verifySession } from '@/lib/server/experienceAccess';
 import { PrivateMediaBootstrap } from '@/components/ui/PrivateMediaBootstrap';
+import { PRODUCT_NAME, PRODUCT_SUBTITLE } from '@/lib/branding';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,7 +12,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
     return (
       <main className="flex min-h-dvh items-center justify-center bg-slate-950 px-6 text-amber-50">
         <section className="w-full max-w-sm space-y-5 rounded-2xl border border-amber-300/30 p-7">
-          <h1 className="font-serif text-2xl">A little journey for Ishaan</h1>
+          <h1 className="font-serif text-2xl">{PRODUCT_NAME}</h1>
+          <p className="text-sm text-amber-100/80">{PRODUCT_SUBTITLE}</p>
           {accessConfigured() ? <form action="/api/access" method="post" className="space-y-4">
             <label className="block text-sm" htmlFor="gift-code">Enter your gift code</label>
             {(await searchParams).access === 'retry' && <p role="alert" className="text-sm text-amber-200">That code did not open the gift. Please try again.</p>}

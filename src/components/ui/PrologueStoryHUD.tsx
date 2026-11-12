@@ -122,10 +122,10 @@ export function PrologueStoryHUD({
                 For Ishaan
               </p>
               <h1 className="mt-1.5 text-xl font-semibold text-white">
-                Welcome to one of our favourite memories.
+                Memories Relive
               </h1>
               <p className="mt-1.5 text-xs leading-relaxed text-slate-300">
-                Some journeys are worth experiencing again.
+                Some journeys end. Their memories never do.
               </p>
 
               <div className="mt-4 grid gap-2.5 sm:grid-cols-2">

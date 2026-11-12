@@ -1,4 +1,4 @@
-# The Road That Made Us Family
+# Memories Relive
 ## MASTER_PLAN.md — v3.1 (Phase 5A — Final Story Accuracy, Gameplay Modes & World Refinement)
 
 **Status:** PHASE 5A COMPLETE (Uncommitted — Pending User Review & Local Verification)  
@@ -119,7 +119,7 @@ Created as a Bhai Dooj gift for **Ishaan**: you play in third-person as **Ishaan
 | 11 | Evening Safe Return to Rishikesh | GAMEPLAY | Act 3 | 2 min | [CORE] (Calm downhill scooter return before evening bus) |
 | 12 | Rishikesh Stay Reunion & Rooftop Terrace Sunset | GAMEPLAY / CINEMATIC | Act 3 | 90s | [CORE] (Lane reunion w/ Kanishka & friends -> group Rooftop Terrace sunset -> `"There's one more little thing…"` / `"Open It"`) |
 | 13 | Virtual Bhai Dooj Finale (Ishaan & Shree) | GAMEPLAY | Epilogue | 2–3 min | [CORE] (`Phase 4 Playable`: Kitaabi callback, Tilak, Mithai, serene Eating Together & Personal Letter) |
-| 14 | The Road That Made Us Family — Ending Showcase | ENDING | Epilogue | Open-ended | [CORE] (`Phase 4 Playable`: Polaroid pedestals, Replay Journey, View Memories, Celebrate Again) |
+| 14 | Memories Relive — Ending Showcase | ENDING | Epilogue | Open-ended | [CORE] (`Phase 4 Playable`: Polaroid pedestals, Replay Journey, View Memories, Celebrate Again) |
 
 **Scene type definitions:**
 - **SYSTEM** — engine/UI state or cozy title backdrop
@@ -140,7 +140,7 @@ Created as a Bhai Dooj gift for **Ishaan**: you play in third-person as **Ishaan
 
 **Camera:** Stylized 3D title backdrop — deep indigo night sky, soft stars, a single glowing cozy reading lamp beside an open book `[CORE]`  
 **What happens:**  
-Loading screen renders over a warm, tranquil 3D book-and-lamp scene. A page-turning progress indicator fills as core assets preload. Title card appears: *"The Road That Made Us Family"*. Once ready, a soft prompt invites the player to tap/click to unlock Web Audio and begin.
+Loading screen renders over a warm, tranquil 3D book-and-lamp scene. A page-turning progress indicator fills as core assets preload. Title card appears: *"Memories Relive"*. Once ready, a soft prompt invites the player to tap/click to unlock Web Audio and begin.
 
 **Narration / Title hook:** `[PROPOSED — Requires User Approval]` *"Kuch kahaniyan kitaabon se shuru hoti hain... aur kuch khud ek kahani ban jaati hain."*  
 **Assets loading:** Core character GLBs (Srishti, Ishaan, Manish, Yash), scooter GLB, shared palette atlas, Scene 1 library environment  

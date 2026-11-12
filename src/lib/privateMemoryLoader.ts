@@ -146,6 +146,14 @@ export interface PrivateMediaSessionState {
 const localObjectUrls = new Map<string, string>();
 const cloudUrls = new Map<string, string>();
 const virtualMemories = new Map<string, string>();
+export const cloudMediaFailures = new Map<string, number>();
+let cloudLoad: Promise<boolean> | null = null;
+
+export function reportMemoryFailure(id: string): void {
+  if (!cloudUrls.has(id) || cloudMediaFailures.get(id) === 0) return;
+  cloudMediaFailures.set(id, 0);
+  notifyMemoryListeners();
+}
 
 export function registerVirtualMemory(id: string, dataUrl: string): void {
   if (id !== 'scene13_bhaidooj_tilak' || !dataUrl.startsWith('data:image/')) return;
@@ -154,10 +162,17 @@ export function registerVirtualMemory(id: string, dataUrl: string): void {
 }
 
 /** Catalog contains same-origin authenticated routes, never storage credentials or object keys. */
-export async function loadPrivateCloudMedia(): Promise<boolean> {
+export function loadPrivateCloudMedia(): Promise<boolean> {
+  if (cloudLoad) return cloudLoad;
+  cloudLoad = refreshPrivateCloudMedia().finally(() => { cloudLoad = null; });
+  return cloudLoad;
+}
+
+async function refreshPrivateCloudMedia(): Promise<boolean> {
+  cloudMediaFailures.clear();
   try {
-    const response = await fetch('/api/media', { credentials: 'same-origin', cache: 'no-store' });
-    if (!response.ok) return false;
+    const response = await fetch('/api/media', { credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(15_000) });
+    if (!response.ok) { cloudMediaFailures.set('catalog', response.status); notifyMemoryListeners(); return false; }
     const data = await response.json() as { media?: { id: string; url: string }[] };
     if (!Array.isArray(data.media) || data.media.length === 0) return false;
     for (const item of data.media) {
@@ -166,10 +181,22 @@ export async function loadPrivateCloudMedia(): Promise<boolean> {
       if (item.id === 'finale_song') { finaleSongUrl = new URL(item.url, window.location.origin).href; finaleSongName = 'Bhai Dooj'; }
       if (item.id === 'temple_song') { templeSongUrl = new URL(item.url, window.location.origin).href; templeSongName = 'Har Har Mahadev'; }
     }
+    const expected = [...Object.values(POLAROID_MEMORY_SPECS).filter(s => s.matchedFilename).map(s => s.id), 'temple_song', 'finale_song'];
+    const catalog = new Set(data.media.filter(item => item.url === `/api/media/${item.id}`).map(item => item.id));
+    // Check authorization, privacy, signing and MIME without downloading originals.
+    for (let offset = 0; offset < expected.length; offset += 3) {
+      await Promise.all(expected.slice(offset, offset + 3).map(async id => {
+        if (!catalog.has(id)) { cloudMediaFailures.set(id, 404); return; }
+        try {
+          const probe = await fetch(`/api/media/${id}`, { method: 'HEAD', credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(50_000) });
+          if (!probe.ok) cloudMediaFailures.set(id, probe.status);
+        } catch { cloudMediaFailures.set(id, 0); }
+      }));
+    }
     lastStatusNote = 'Private memories connected';
     notifyMemoryListeners();
-    return true;
-  } catch { return false; }
+    return cloudMediaFailures.size === 0;
+  } catch { cloudMediaFailures.set('catalog', 0); notifyMemoryListeners(); return false; }
 }
 let linkedFolderLabel: string | null = null;
 let finaleSongName: string | null = null;

@@ -112,4 +112,29 @@ test('unlisted objects and invalid range requests are rejected without a provide
   const storage = fixture(storageEnv).load('src/lib/server/privateStorage.ts');
   assert.equal((await storage.readPrivateMedia('not-approved', null)).status, 404);
   assert.equal((await storage.readPrivateMedia('scene02_day1_stream_video', 'bytes=0-2,4-8')).status, 416);
+  assert.equal((await storage.readPrivateMedia('scene02_day1_stream_video', 'bytes=-')).status, 416);
+});
+
+test('space-containing bucket names are accepted and encoded as one path segment', async () => {
+  const calls = [];
+  const f = fixture({ ...storageEnv, PRIVATE_MEDIA_BUCKET: 'trip memories', SUPABASE_URL: 'https://qa-only.supabase.co/' }, async (url, options) => {
+    calls.push({ url: String(url), options });
+    if (calls.length === 1) return Response.json({ public: false });
+    if (calls.length === 2) return Response.json({ signedURL: '/object/sign/trip%20memories/stream.mp4?token=synthetic-only' });
+    return new Response(null, { headers: { 'Content-Type': 'video/mp4', 'Content-Length': '100' } });
+  });
+  const storage = f.load('src/lib/server/privateStorage.ts');
+  assert(storage.storageConfiguration());
+  const result = await storage.readPrivateMedia('scene02_day1_stream_video', null, true);
+  assert.equal(result.status, 200);
+  assert(calls[0].url.endsWith('/bucket/trip%20memories'));
+  assert(calls[1].url.includes('/object/sign/trip%20memories/stream.mp4'));
+  assert.equal(calls[2].options.method, 'HEAD');
+  assert.equal(await result.text(), '');
+});
+
+test('bucket names cannot introduce path segments or invisible whitespace', () => {
+  for (const bucket of ['trip/memories', '../memories', ' trip memories', 'trip memories ', 'trip\nmemories']) {
+    assert.equal(fixture({ ...storageEnv, PRIVATE_MEDIA_BUCKET: bucket }).load('src/lib/server/privateStorage.ts').storageConfiguration(), null);
+  }
 });

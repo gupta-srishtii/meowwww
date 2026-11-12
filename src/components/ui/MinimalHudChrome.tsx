@@ -5,6 +5,7 @@ import {
   connectPrivateMediaInteractively,
   getResolvedPolaroidMemory,
   usePolaroidMemoryRevision,
+  reportMemoryFailure,
 } from '@/lib/privateMemoryLoader';
 import type { WalkHotspot } from '@/hooks/useWalkController';
 
@@ -92,11 +93,12 @@ export function PolaroidToastCard({
   onConnectPhotos,
   onDismiss,
 }: PolaroidToastCardProps) {
-  usePolaroidMemoryRevision();
+  const mediaRevision = usePolaroidMemoryRevision();
   const resolvedMem = polaroidId ? getResolvedPolaroidMemory(polaroidId) : null;
   const resolvedUrl = resolvedMem?.resolvedUrl ?? null;
   const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [resolvedUrl]);
+  useEffect(() => setFailed(false), [resolvedUrl, mediaRevision]);
+  const onMediaError = () => { setFailed(true); if (polaroidId) reportMemoryFailure(polaroidId); };
 
   const handleConnectClick = () => {
     if (onConnectPhotos) {
@@ -125,7 +127,7 @@ export function PolaroidToastCard({
               resolvedMem?.mediaKind === 'video' ? (
                 <video
                   src={resolvedUrl}
-                  onError={() => setFailed(true)}
+                  onError={onMediaError}
                   autoPlay
                   loop
                   muted
@@ -136,7 +138,7 @@ export function PolaroidToastCard({
               ) : (
                 <img
                   src={resolvedUrl}
-                  onError={() => setFailed(true)}
+                  onError={onMediaError}
                   alt={title}
                   style={{ imageOrientation: 'from-image' }}
                   className="max-h-full max-w-full rounded object-contain transition-transform duration-500 ease-out group-hover:scale-[1.03]"
@@ -145,10 +147,10 @@ export function PolaroidToastCard({
             ) : (
               <div className="flex flex-col items-center gap-2 px-2 text-center">
                 <span className="rounded-full border border-slate-900/15 bg-white/75 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider text-slate-700 uppercase">
-                  {resolvedMem?.matchedFilename ? 'Media unavailable' : 'Virtual scene memory'}
+                  {resolvedMem?.matchedFilename ? 'A moment to remember' : 'Virtual scene memory'}
                 </span>
                 <p className="line-clamp-2 text-[11px] font-medium leading-snug text-slate-800">
-                  {process.env.NODE_ENV === 'production' ? 'The moment is remembered. Its media is currently unavailable.' : resolvedMem?.matchedFilename
+                  {process.env.NODE_ENV === 'production' ? caption : resolvedMem?.matchedFilename
                     ? `Needs local folder access for "${resolvedMem.matchedFilename}"`
                     : caption}
                 </p>

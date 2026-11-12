@@ -10,10 +10,11 @@ export const MEDIA_KINDS: Record<string, 'image' | 'video' | 'audio'> = {
 };
 
 export function storageConfiguration() {
-  const project = process.env.SUPABASE_URL ?? '';
+  const project = (process.env.SUPABASE_URL ?? '').trim().replace(/\/$/, '');
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
   const bucket = process.env.PRIVATE_MEDIA_BUCKET ?? '';
-  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(project) || !key || !/^[a-zA-Z0-9_-]+$/.test(bucket)) return null;
+  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(project) || !key ||
+    !/^[a-zA-Z0-9_-][a-zA-Z0-9 _-]*$/.test(bucket) || bucket.trim() !== bucket) return null;
   try {
     const raw: unknown = JSON.parse(process.env.PRIVATE_MEDIA_OBJECTS ?? '{}');
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
@@ -33,7 +34,7 @@ export async function readPrivateMedia(id: string, range: string | null, head = 
   const config = storageConfiguration();
   if (!config) return Response.json({ error: 'Private media is not configured' }, { status: 503 });
   if (!Object.hasOwn(config.objects, id)) return new Response(null, { status: 404 });
-  if (range && !/^bytes=\d*-\d*$/.test(range)) return new Response(null, { status: 416 });
+  if (range && !/^bytes=(?:\d+-\d*|-\d+)$/.test(range)) return new Response(null, { status: 416 });
   const path = [config.bucket, ...config.objects[id].split('/')].map(encodeURIComponent).join('/');
   try {
     const bucket = await fetch(`${config.project}/storage/v1/bucket/${encodeURIComponent(config.bucket)}`, {

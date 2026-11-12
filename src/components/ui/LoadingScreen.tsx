@@ -1,3 +1,5 @@
+import { PRODUCT_NAME, PRODUCT_SUBTITLE } from '@/lib/branding';
+
 interface LoadingScreenProps {
   status?: string;
 }
@@ -12,9 +14,10 @@ export function LoadingScreen({
           Rishikesh · Bhai Dooj
         </p>
         <h1 className="text-xl font-semibold tracking-tight text-slate-50 sm:text-2xl">
-          Initializing 3D Canvas
+          {PRODUCT_NAME}
         </h1>
-        <p className="text-sm text-slate-400">{status}</p>
+        <p className="text-sm text-slate-300">{PRODUCT_SUBTITLE}</p>
+        <p role="status" className="text-xs text-slate-400">{status}</p>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
           <div className="h-full w-1/2 animate-pulse rounded-full bg-amber-400/90" />
         </div>
