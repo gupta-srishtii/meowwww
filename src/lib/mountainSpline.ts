@@ -9,14 +9,14 @@ export type MountainRoadSegmentId =
 export type MountainRoadSubStage = 'driving' | 'viewpoint_walk';
 export type BaalKuwariSubStage = 'driving' | 'maggi_stop' | 'driving_to_stairs';
 
-export const ROAD_WIDTH = 7.0;
+export const ROAD_WIDTH = 6.6;
 export const ROAD_HALF_WIDTH = ROAD_WIDTH / 2; // 3.5m
 export const SCOOTER_HALF_WIDTH = 0.4; // 0.8m full body width
 export const SOFT_BOUNDARY_THRESHOLD = 2.3; // meters from centerline during cruise
-export const HARD_CENTER_CLAMP = 2.9; // 2.9m + 0.4m = 3.3m (< 3.5m road edge)
+export const HARD_CENTER_CLAMP = 2.7; // full scooter footprint remains inside the 3.3m road edge
 export const BOUNDARY_SPRING_K = 18.0;
 
-export const SCOOTER_MAX_SPEED = 12.5; // m/s (~45 km/h cruising feel)
+export const SCOOTER_MAX_SPEED = 75 / 3.6; // game ceiling; curvature and stops impose lower limits
 export const SCOOTER_ACCEL = 7.8; // m/s^2
 export const SCOOTER_BRAKE_DECEL = 12.5; // m/s^2
 export const SCOOTER_COAST_DRAG = 0.34; // /s smooth deceleration
@@ -75,29 +75,40 @@ export function createMountainRoadCurve(
       ? [
           new THREE.Vector3(0, 0, 0),
           new THREE.Vector3(5, 1.0, -38),
-          new THREE.Vector3(-12, 2.5, -78),
-          new THREE.Vector3(-26, 4.2, -120),
-          new THREE.Vector3(-14, 6.0, -165),
-          new THREE.Vector3(10, 8.0, -210),
+          new THREE.Vector3(-18, 2.5, -78),
+          new THREE.Vector3(-40, 4.2, -112),
+          new THREE.Vector3(-22, 6.0, -147),
+          new THREE.Vector3(18, 8.0, -188),
           new THREE.Vector3(24, 9.6, -252), // sweeps smoothly past roadside dhaba pull-off
           new THREE.Vector3(28, 10.6, -296), // road continues around valley bend
           new THREE.Vector3(10, 11.8, -342),
           new THREE.Vector3(-24, 13.0, -386),
           new THREE.Vector3(-64, 14.2, -418),
+          new THREE.Vector3(-82, 16.5, -468),
+          new THREE.Vector3(-46, 20, -494),
+          new THREE.Vector3(-6, 23, -468),
+          new THREE.Vector3(34, 27, -508),
+          new THREE.Vector3(2, 31, -570),
+          new THREE.Vector3(-66, 35, -620),
         ]
       : segment === 'to_neelkanth'
         ? [
             new THREE.Vector3(0, 0, 0),
             new THREE.Vector3(-14, 1.8, -44),
-            new THREE.Vector3(-36, 4.2, -90),
-            new THREE.Vector3(-14, 6.6, -138),
-            new THREE.Vector3(22, 9.0, -186),
-            new THREE.Vector3(42, 11.4, -234),
+            new THREE.Vector3(-46, 4.2, -90),
+            new THREE.Vector3(-26, 6.6, -122),
+            new THREE.Vector3(12, 9.0, -105),
+            new THREE.Vector3(46, 11.4, -156),
             new THREE.Vector3(24, 13.4, -280),
             new THREE.Vector3(-6, 15.0, -330), // Neelkanth Mahadev gateway plaza ~324m
             new THREE.Vector3(-38, 16.4, -376), // road curves past temple toward future Baal Kuwari forest route
             new THREE.Vector3(-76, 17.6, -418),
             new THREE.Vector3(-116, 18.8, -450),
+            new THREE.Vector3(-146, 21, -510),
+            new THREE.Vector3(-104, 24, -545),
+            new THREE.Vector3(-52, 28, -515),
+            new THREE.Vector3(-10, 32, -570),
+            new THREE.Vector3(-46, 36, -638),
           ]
         : segment === 'to_baalkuwari'
           ? [

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, type RefObject } from 'react';
+import { createRef, useEffect, useMemo, useRef, type RefObject } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { constrainCameraBoom } from '@/lib/cameraClearance';
@@ -71,7 +71,7 @@ export function Scene05_ViewpointStop({
   onNearbyHotspotChange,
   onSceneReady,
 }: Scene05ViewpointStopProps) {
-  const { camera, size, clock } = useThree();
+  const { camera, size, clock, gl } = useThree();
   const shadowsEnabled = QUALITY_PRESETS[qualityProfile].shadows;
   const reducedMotion = useReducedMotion();
 
@@ -129,6 +129,12 @@ export function Scene05_ViewpointStop({
   );
 
   const autoFiredSetRef = useRef(new Set<string>());
+  const arrivalTimeRef = useRef(0);
+  const farewellHoldRef = useRef(0);
+  const friendLegs = useMemo(() => [0, 1, 2].map(() => ({
+    leftLeg: createRef<THREE.Group>(), rightLeg: createRef<THREE.Group>(),
+    leftKnee: createRef<THREE.Group>(), rightKnee: createRef<THREE.Group>(),
+  })), []);
 
   useEffect(() => {
     autoFiredSetRef.current.clear();
@@ -167,10 +173,23 @@ export function Scene05_ViewpointStop({
 
     const sim = simRef.current;
     const t = state.clock.elapsedTime;
+    arrivalTimeRef.current += delta;
+    const arriving = arrivalTimeRef.current < 8;
+    const allPhotos = capturedShree && capturedSolo && capturedGroup && ['viewpoint_shree', 'viewpoint_solo', 'viewpoint_group'].every(id => autoFiredSetRef.current.has(id));
+    if (allPhotos && activePhotoMoment === 'none') farewellHoldRef.current += delta;
     let strideRatio = 0;
     let idlePose: CharacterIdlePose = 'default';
 
-    if (activePhotoMoment === 'shree') {
+    if (arriving) {
+      const u = THREE.MathUtils.clamp((arrivalTimeRef.current - 1) / 5.8, 0, 1);
+      sim.posX = THREE.MathUtils.lerp(0.25, -2.2, u);
+      sim.posZ = THREE.MathUtils.lerp(1.55, -2.7, u);
+      sim.facingYaw = -0.5;
+      strideRatio = u > 0 && u < 1 ? 0.65 : 0;
+      sim.stridePhase += delta * 5;
+    } else if (allPhotos && farewellHoldRef.current < 5) {
+      sim.velX = 0; sim.velZ = 0;
+    } else if (activePhotoMoment === 'shree') {
       sim.posX = THREE.MathUtils.damp(sim.posX, -3.38, 8, delta);
       sim.posZ = THREE.MathUtils.damp(sim.posZ, -2.55, 8, delta);
       sim.velX = 0;
@@ -191,12 +210,12 @@ export function Scene05_ViewpointStop({
       sim.velZ = 0;
       sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, Math.PI - 0.14, 8, delta);
       idlePose = 'group_wave';
-    } else if (autoPlayMode && onAutoTriggerHotspot) {
-      const targetId = !capturedShree
+    } else if (onAutoTriggerHotspot) {
+      const targetId = !autoFiredSetRef.current.has('viewpoint_shree')
         ? 'viewpoint_shree'
-        : !capturedSolo
+        : !autoFiredSetRef.current.has('viewpoint_solo')
           ? 'viewpoint_solo'
-          : !capturedGroup
+          : !autoFiredSetRef.current.has('viewpoint_group')
             ? 'viewpoint_group'
             : 'scooters';
       const targetSpot = VIEWPOINT_HOTSPOTS.find((h) => h.id === targetId);
@@ -210,7 +229,7 @@ export function Scene05_ViewpointStop({
           VIEWPOINT_OBSTACLES
         );
         strideRatio = res.strideRatio;
-        if (res.arrived && !autoFiredSetRef.current.has(targetId)) {
+        if (res.arrived && (targetId !== 'scooters' || farewellHoldRef.current >= 10) && !autoFiredSetRef.current.has(targetId)) {
           autoFiredSetRef.current.add(targetId);
           onAutoTriggerHotspot(targetId);
         }
@@ -228,13 +247,7 @@ export function Scene05_ViewpointStop({
       if (strideRatio > 0.03) {
         sim.stridePhase += moveDist * 3.8;
       }
-      const photoSpot = VIEWPOINT_HOTSPOTS.find(h => h.actionType === 'photo' &&
-        !(h.id === 'viewpoint_shree' ? capturedShree : h.id === 'viewpoint_solo' ? capturedSolo : capturedGroup) &&
-        Math.hypot(sim.posX - h.x, sim.posZ - h.z) < h.radius * 0.65);
-      if (photoSpot && !autoFiredSetRef.current.has(photoSpot.id)) {
-        autoFiredSetRef.current.add(photoSpot.id);
-        onAutoTriggerHotspot?.(photoSpot.id);
-      }
+
     }
 
     // 1. Third-person Ishaan walk + pose animation
@@ -483,8 +496,32 @@ export function Scene05_ViewpointStop({
       0.06,
       0.42
     );
+    const traveling = arriving || allPhotos && farewellHoldRef.current >= 5;
+    const returnU = THREE.MathUtils.clamp((farewellHoldRef.current - 5) / 4.5, 0, 1);
+    for (const [i, group, end] of [[0, srishtiGroupRef.current, SRISHTI_POS], [1, compAGroupRef.current, COMP_A_POS], [2, compBGroupRef.current, COMP_B_POS]] as const) {
+      const u = THREE.MathUtils.clamp((arrivalTimeRef.current - 1) / 5.8, 0, 1);
+      if (group && traveling) {
+        const walkU = arriving ? u : 1 - returnU;
+        group.position.set(THREE.MathUtils.lerp(-0.1 - i * 0.75, end[0], walkU), 0,
+          THREE.MathUtils.lerp(1.9 - i * 0.2, end[2], walkU));
+        group.rotation.y = arriving ? -0.2 : Math.PI;
+      }
+      const moving = arriving ? u > 0 && u < 1 : traveling && returnU < 1;
+      const swing = moving ? Math.sin(arrivalTimeRef.current * 6 + i) * 0.36 : 0;
+      const legs = friendLegs[i];
+      if (legs.leftLeg.current) legs.leftLeg.current.rotation.x = swing;
+      if (legs.rightLeg.current) legs.rightLeg.current.rotation.x = -swing;
+      if (legs.leftKnee.current) legs.leftKnee.current.rotation.x = moving ? -Math.max(0, swing) : 0;
+      if (legs.rightKnee.current) legs.rightKnee.current.rotation.x = moving ? -Math.max(0, -swing) : 0;
+    }
 
-    if (activePhotoMoment === 'shree') {
+    if (arriving && arrivalTimeRef.current < 2.5 || allPhotos && farewellHoldRef.current < 5) {
+      scratch.desiredCamPos.set(-8, 8, 10);
+      scratch.desiredLookAt.set(0, -4, -26);
+    } else if (arriving) {
+      scratch.desiredCamPos.set(-5, 3, 4);
+      scratch.desiredLookAt.set(0, 1, -2.8);
+    } else if (activePhotoMoment === 'shree') {
       scratch.desiredCamPos.set(-2.55, 1.48, -1.65);
       scratch.desiredLookAt.set(-3.2, 1.15, -6.5);
     } else if (activePhotoMoment === 'solo') {
@@ -535,10 +572,13 @@ export function Scene05_ViewpointStop({
     }
     if (activePhotoMoment === 'none') constrainCameraBoom(camera.position, scratch.desiredLookAt, VIEWPOINT_OBSTACLES);
     camera.lookAt(scratch.smoothedLookAt);
+    if (process.env.NODE_ENV === 'development') gl.domElement.dataset.viewpointFrame = JSON.stringify({
+      arrival: arrivalTimeRef.current, farewell: farewellHoldRef.current, photos: [...autoFiredSetRef.current], moment: activePhotoMoment,
+    });
 
     const nearest =
-      activePhotoMoment === 'none'
-        ? findNearestWalkHotspot(sim.posX, sim.posZ, VIEWPOINT_HOTSPOTS)
+      !arriving && activePhotoMoment === 'none'
+        ? findNearestWalkHotspot(sim.posX, sim.posZ, VIEWPOINT_HOTSPOTS.filter(h => h.id !== 'scooters' || allPhotos && farewellHoldRef.current >= 10))
         : null;
     const nextId = nearest?.id ?? null;
     if (nextId !== sim.lastHotspotId) {
@@ -584,6 +624,8 @@ export function Scene05_ViewpointStop({
       {/* Srishti beside the scenic rail wearing her verified floral outfit & sling bag */}
       <StylizedPlaceholderCharacter
         characterVariant="srishti"
+        leftLegRef={friendLegs[0].leftLeg} rightLegRef={friendLegs[0].rightLeg}
+        leftKneeRef={friendLegs[0].leftKnee} rightKneeRef={friendLegs[0].rightKnee}
         groupRef={srishtiGroupRef}
         torsoRef={srishtiTorsoRef}
         headRef={srishtiHeadRef}
@@ -600,6 +642,8 @@ export function Scene05_ViewpointStop({
 
       <StylizedPlaceholderCharacter
         characterVariant="friend_black_tee"
+        leftLegRef={friendLegs[1].leftLeg} rightLegRef={friendLegs[1].rightLeg}
+        leftKneeRef={friendLegs[1].leftKnee} rightKneeRef={friendLegs[1].rightKnee}
         groupRef={compAGroupRef}
         torsoRef={compATorsoRef}
         headRef={compAHeadRef}
@@ -612,6 +656,8 @@ export function Scene05_ViewpointStop({
       />
       <StylizedPlaceholderCharacter
         characterVariant="friend_plaid"
+        leftLegRef={friendLegs[2].leftLeg} rightLegRef={friendLegs[2].rightLeg}
+        leftKneeRef={friendLegs[2].leftKnee} rightKneeRef={friendLegs[2].rightKnee}
         groupRef={compBGroupRef}
         torsoRef={compBTorsoRef}
         headRef={compBHeadRef}

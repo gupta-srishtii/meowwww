@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { MountainRoadEnvironment } from '@/components/canvas/MountainRoadEnvironment';
+import { MountainRoadEnvironment, STALL_DISTS_BY_SEGMENT } from '@/components/canvas/MountainRoadEnvironment';
 import { PrototypeScooter } from '@/components/canvas/PrototypeScooter';
 import {
   RoadTrafficVisuals,
@@ -15,6 +15,7 @@ import {
 } from '@/components/canvas/RoadTrafficSystem';
 import type { DrivingInputState } from '@/hooks/useDrivingInput';
 import { ambientAudio } from '@/lib/ambientAudio';
+import { indicatedKmh, roadCurvature, safeRideSpeed, stepRideSpeed } from '@/lib/drivingMotion';
 import {
   ARRIVAL_ZONE_DISTANCE,
   BOUNDARY_SPRING_K,
@@ -102,6 +103,7 @@ interface SimulationState {
   cameraInitialized: boolean;
   telemetryTimer: number;
   boundaryWarnActive: boolean;
+  viewpointRollout: boolean;
 }
 
 function hasCrossTrafficConflict(
@@ -143,6 +145,7 @@ function createInitialSimState(initialLeadDist = LEAD_START_DISTANCE): Simulatio
     cameraInitialized: false,
     telemetryTimer: 0.08,
     boundaryWarnActive: false,
+    viewpointRollout: false,
   };
 }
 
@@ -247,6 +250,7 @@ export function ScooterPrototypeScene({
   // Reset ride cleanly whenever resetNonce, active roadSegment, or startDistance changes
   const lastViewpointPullNonceRef = useRef(viewpointPullOverNonce);
   const autoViewpointStoppedRef = useRef(false);
+  const viewpointReportedRef = useRef(false);
 
   useEffect(() => {
     const resolvedStart =
@@ -254,7 +258,14 @@ export function ScooterPrototypeScene({
         ? Math.min(Math.max(LEAD_START_DISTANCE, startDistance), stopDist - 4)
         : LEAD_START_DISTANCE;
     autoViewpointStoppedRef.current = resolvedStart >= VIEWPOINT_STOP_DISTANCE - 1.5;
+    viewpointReportedRef.current = false;
     simRef.current = createInitialSimState(resolvedStart);
+    if (roadSegment === 'to_dhaba' && Math.abs(resolvedStart - VIEWPOINT_STOP_DISTANCE) < 0.5) {
+      simRef.current.viewpointRollout = true;
+      simRef.current.leadLateral = VIEWPOINT_PARK_LEAD_LATERAL;
+      simRef.current.compLateral = VIEWPOINT_PARK_COMP_LATERAL;
+      simRef.current.compDist = resolvedStart;
+    }
     trafficRuntimeRef.current = createTrafficRuntime(trafficFleet, resolvedStart);
     if (leadFrontWheelRef.current) leadFrontWheelRef.current.rotation.x = 0;
     if (leadRearWheelRef.current) leadRearWheelRef.current.rotation.x = 0;
@@ -344,13 +355,12 @@ export function ScooterPrototypeScene({
       : rawInput;
 
     if (
-      autoPlayMode &&
       roadSegment === 'to_dhaba' &&
       !autoViewpointStoppedRef.current &&
       !sim.arrived &&
       !sim.viewpointArrived &&
       !sim.pullingToViewpoint &&
-      sim.leadDist >= VIEWPOINT_TURNOUT_START + 2.0
+      sim.leadDist >= VIEWPOINT_APPROACH_START
     ) {
       autoViewpointStoppedRef.current = true;
       sim.pullingToViewpoint = true;
@@ -365,6 +375,15 @@ export function ScooterPrototypeScene({
     const prevCompDist = sim.compDist;
     const prevCompLateral = sim.compLateral;
     const remainingDist = Math.max(0, stopDist - sim.leadDist);
+    const curveNow = roadCurvature(curve, sim.leadDist, totalLength);
+    const curveAhead = roadCurvature(curve, Math.min(totalLength - 5, sim.leadDist + 18), totalLength);
+    const nextStoryStop = roadSegment === 'to_dhaba' && !autoViewpointStoppedRef.current
+      ? VIEWPOINT_STOP_DISTANCE : stopDist;
+    let safetyLimit = safeRideSpeed(Math.max(Math.abs(curveNow), Math.abs(curveAhead)), nextStoryStop - sim.leadDist,
+      roadSegment === 'to_baalkuwari' || roadSegment === 'to_baalkuwari_stairs');
+    if (trafficRuntimeRef.current.some(v => v.dist > sim.leadDist && v.dist - sim.leadDist < 18 && Math.abs(v.lateral - sim.leadLateral) < 1.1)) safetyLimit = Math.min(safetyLimit, 4.5);
+    // Authored roadside stalls include pedestrians; approach them at town pace.
+    if (STALL_DISTS_BY_SEGMENT[roadSegment].some(d => Math.abs(d - sim.leadDist) < 16)) safetyLimit = Math.min(safetyLimit, 4.5);
 
     // Check discrete scenic Viewpoint approach/turnout window along `to_dhaba`
     const inViewZoneNow =
@@ -408,6 +427,11 @@ export function ScooterPrototypeScene({
       sim.leadSpeed = 0;
       sim.leadLateral = THREE.MathUtils.damp(sim.leadLateral, VIEWPOINT_PARK_LEAD_LATERAL, 6.0, delta);
       sim.leadSteerSmoothed = THREE.MathUtils.damp(sim.leadSteerSmoothed, 0, 8.0, delta);
+    } else if (sim.viewpointRollout) {
+      sim.leadSpeed = stepRideSpeed(sim.leadSpeed, 0.6, 0, 2.8, delta);
+      sim.leadLateral = THREE.MathUtils.damp(sim.leadLateral, LEAD_START_LATERAL, 1.5, delta);
+      sim.leadDist += sim.leadSpeed * delta;
+      if (Math.abs(sim.leadLateral - LEAD_START_LATERAL) < 0.12) sim.viewpointRollout = false;
     } else if (sim.pullingToViewpoint) {
       const remViewDist = Math.max(0, sim.viewStopTargetDist - sim.leadDist);
       const viewProgress = THREE.MathUtils.clamp(remViewDist / 18.0, 0, 1);
@@ -449,7 +473,6 @@ export function ScooterPrototypeScene({
         sim.pullingToViewpoint = false;
         sim.pullOffWaitSec = 0;
         sim.viewpointArrived = true;
-        onViewpointArrivedChange?.(true);
       }
     } else if (!sim.arrived) {
       if (remainingDist <= ARRIVAL_ZONE_DISTANCE) {
@@ -505,25 +528,11 @@ export function ScooterPrototypeScene({
         }
       } else {
         // Normal manual cruise driving along mountain highway
-        const baseMaxSpeed =
-          roadSegment === 'to_baalkuwari' || roadSegment === 'to_baalkuwari_stairs'
-            ? SCOOTER_MAX_SPEED * 0.86
-            : SCOOTER_MAX_SPEED;
+        const baseMaxSpeed = safetyLimit;
         const segmentMaxSpeed = autoPlayMode ? Math.min(baseMaxSpeed, 9.6) : baseMaxSpeed;
-        if (input.throttle > 0) {
-          sim.leadSpeed += SCOOTER_ACCEL * input.throttle * delta;
-        }
-        if (input.brake > 0) {
-          sim.leadSpeed -= SCOOTER_BRAKE_DECEL * input.brake * delta;
-        } else if (input.throttle === 0) {
-          sim.leadSpeed -= sim.leadSpeed * SCOOTER_COAST_DRAG * delta;
-          if (sim.leadSpeed < 0.03) {
-            sim.leadSpeed = 0;
-          }
-        }
-        sim.leadSpeed = THREE.MathUtils.clamp(sim.leadSpeed, 0, segmentMaxSpeed);
+        sim.leadSpeed = stepRideSpeed(sim.leadSpeed, input.throttle, input.brake, segmentMaxSpeed, delta);
 
-        const steerAuthority = THREE.MathUtils.clamp(sim.leadSpeed / 4.0, 0.25, 1.0);
+        const steerAuthority = THREE.MathUtils.clamp(sim.leadSpeed / 4.0, 0.25, 1.0) * (1 - sim.leadSpeed / SCOOTER_MAX_SPEED * 0.28);
         sim.leadLateral += input.steer * SCOOTER_STEER_SPEED * steerAuthority * delta;
 
         if (sim.leadLateral > SOFT_BOUNDARY_THRESHOLD) {
@@ -541,10 +550,11 @@ export function ScooterPrototypeScene({
             delta
           );
         }
+        const roadClamp = roadSegment === 'to_baalkuwari' || roadSegment === 'to_baalkuwari_stairs' ? 1.95 : HARD_CENTER_CLAMP;
         sim.leadLateral = THREE.MathUtils.clamp(
           sim.leadLateral,
-          -HARD_CENTER_CLAMP,
-          HARD_CENTER_CLAMP
+          -roadClamp,
+          roadClamp
         );
 
         sim.leadSteerSmoothed = THREE.MathUtils.damp(sim.leadSteerSmoothed, input.steer, 10.0, delta);
@@ -582,6 +592,12 @@ export function ScooterPrototypeScene({
         4.4,
         delta
       );
+      if (sim.viewpointArrived && !viewpointReportedRef.current &&
+        Math.abs(sim.compDist - sim.viewStopTargetDist) < 0.1 &&
+        Math.abs(sim.compLateral - VIEWPOINT_PARK_COMP_LATERAL) < 0.1) {
+        viewpointReportedRef.current = true;
+        onViewpointArrivedChange?.(true);
+      }
     } else if (!sim.arrived && nextRemainingDist > companionParkZone) {
       const desiredCompDist = Math.max(0, sim.leadDist - FOLLOW_TARGET_GAP);
       sim.compDist = THREE.MathUtils.damp(sim.compDist, desiredCompDist, FOLLOW_DAMP_LAMBDA, delta);
@@ -675,7 +691,7 @@ export function ScooterPrototypeScene({
       scratch.roadQuat.setFromRotationMatrix(scratch.basis);
 
       const leadSpeedRatio = sim.leadSpeed / SCOOTER_MAX_SPEED;
-      const leanAngle = -sim.leadSteerSmoothed * 0.14 * leadSpeedRatio;
+      const leanAngle = THREE.MathUtils.clamp(-Math.atan(sim.leadSpeed ** 2 * curveNow / 9.81) * 0.6 - sim.leadSteerSmoothed * 0.14 * leadSpeedRatio, -0.38, 0.38);
       scratch.leanEuler.set(
         leadBump.pitchRad * leadMotionScale,
         -sim.leadSteerSmoothed * 0.08 * leadSpeedRatio,
@@ -742,7 +758,7 @@ export function ScooterPrototypeScene({
     }
 
     // 5. Smooth third-person follow camera looking cleanly down the continuing road ahead
-    const rawCamDist = sim.leadDist - CAM_BACK_DISTANCE;
+    const rawCamDist = sim.leadDist - (CAM_BACK_DISTANCE + sim.leadSpeed / SCOOTER_MAX_SPEED * 2.2);
     sampleRoadFrame(
       curve,
       Math.max(0, rawCamDist),
@@ -763,7 +779,7 @@ export function ScooterPrototypeScene({
       .addScaledVector(scratch.camRight, followLateralMix + leadBump.rollRad * leadMotionScale * 1.4)
       .addScaledVector(scratch.camUp, CAM_HEIGHT_OFFSET + camTrackHeave * 0.72);
 
-    const lookDist = Math.min(totalLength - 1, sim.leadDist + CAM_LOOK_AHEAD);
+    const lookDist = Math.min(totalLength - 1, sim.leadDist + CAM_LOOK_AHEAD + sim.leadSpeed / SCOOTER_MAX_SPEED * 3);
     sampleRoadFrame(
       curve,
       lookDist,
@@ -813,7 +829,7 @@ export function ScooterPrototypeScene({
     if (sim.telemetryTimer >= 0.08) {
       sim.telemetryTimer = 0;
 
-      const kmh = sim.arrived || sim.viewpointArrived ? 0 : Math.round(sim.leadSpeed * 3.6);
+      const kmh = sim.arrived || sim.viewpointArrived ? 0 : indicatedKmh(sim.leadSpeed);
       const progressed = Math.max(0, Math.round(sim.leadDist - LEAD_START_DISTANCE));
       const maxRoute = Math.max(1, Math.round(stopDist - LEAD_START_DISTANCE));
       const gapMeters = Math.max(0, sim.leadDist - sim.compDist);

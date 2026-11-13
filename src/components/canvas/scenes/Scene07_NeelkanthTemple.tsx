@@ -57,6 +57,7 @@ export interface Scene07NeelkanthTempleProps {
   ateCafe?: boolean;
   eatingCafeActive?: boolean;
   activeDarshanPan: boolean;
+  onDarshanComplete: () => void;
   autoPlayMode?: boolean;
   onAutoTriggerHotspot?: (hotspotId: string) => void;
   onNearbyHotspotChange: (hotspot: WalkHotspot | null) => void;
@@ -104,19 +105,19 @@ const NEELKANTH_COMPANION_CONFIGS: readonly CompanionAgentConfig[] = [
 
 const PRAYER_TARGETS: Record<FriendCompanionId, CompanionTargetSlot> = {
   srishti: {
-    x: 0.44,
-    z: -2.68,
-    facingYaw: yawTowardTarget(0.44, -2.68, 0, -6.2),
+    x: 0.25,
+    z: -2.35,
+    facingYaw: yawTowardTarget(0.25, -2.35, 0, -6.2),
   },
   friend_black_tee: {
-    x: -1.16,
-    z: -2.42,
-    facingYaw: yawTowardTarget(-1.16, -2.42, 0, -6.2),
+    x: -1.85,
+    z: -1.45,
+    facingYaw: yawTowardTarget(-1.85, -1.45, 0, -6.2),
   },
   friend_plaid: {
-    x: 1.18,
-    z: -2.42,
-    facingYaw: yawTowardTarget(1.18, -2.42, 0, -6.2),
+    x: 1.35,
+    z: -1.4,
+    facingYaw: yawTowardTarget(1.35, -1.4, 0, -6.2),
   },
 };
 
@@ -151,6 +152,7 @@ export function Scene07_NeelkanthTemple({
   ateCafe = false,
   eatingCafeActive = false,
   activeDarshanPan,
+  onDarshanComplete,
   autoPlayMode = false,
   onAutoTriggerHotspot,
   onNearbyHotspotChange,
@@ -160,7 +162,7 @@ export function Scene07_NeelkanthTemple({
     throw new Error('Simulated fault while mounting Neelkanth Mahadev Temple.');
   }
 
-  const { camera, size, clock } = useThree();
+  const { camera, size, clock, gl } = useThree();
   const shadowsEnabled = QUALITY_PRESETS[qualityProfile].shadows;
   const reducedMotion = useReducedMotion();
 
@@ -235,6 +237,8 @@ export function Scene07_NeelkanthTemple({
   }, [camera, size.width, size.height]);
 
   const darshanElapsedRef = useRef(0);
+  const darshanReadyRef = useRef(false);
+  const darshanDoneRef = useRef(false);
   const cafeElapsedRef = useRef(0);
   const autoFiredSetRef = useRef(new Set<string>());
 
@@ -242,6 +246,8 @@ export function Scene07_NeelkanthTemple({
     useProgressStore.getState().setNeelkanthDarshanActive(activeDarshanPan);
     if (!activeDarshanPan) {
       darshanElapsedRef.current = 0;
+      darshanReadyRef.current = false;
+      darshanDoneRef.current = false;
     }
     return () => {
       useProgressStore.getState().setNeelkanthDarshanActive(false);
@@ -276,15 +282,15 @@ export function Scene07_NeelkanthTemple({
     let idlePose: CharacterIdlePose = 'default';
 
     if (activeDarshanPan) {
-      darshanElapsedRef.current += delta;
+      if (darshanReadyRef.current) darshanElapsedRef.current += delta;
       // Align Ishaan cleanly in left-center of devotional lower-third arc facing Garbhagriha (-Z)
       sim.posX = THREE.MathUtils.damp(sim.posX, -0.95, 8, delta);
-      sim.posZ = THREE.MathUtils.damp(sim.posZ, -4.55, 8, delta);
+      sim.posZ = THREE.MathUtils.damp(sim.posZ, -2.55, 5, delta);
       sim.velX = 0;
       sim.velZ = 0;
       sim.facingYaw = THREE.MathUtils.damp(
         sim.facingYaw,
-        yawTowardTarget(-0.95, -4.8, 0, -6.2),
+        yawTowardTarget(-0.95, -2.55, 0, -6.2),
         8,
         delta
       );
@@ -358,7 +364,7 @@ export function Scene07_NeelkanthTemple({
       elapsed: t,
       delta,
       idlePose,
-      prayerWeight: activeDarshanPan ? reducedMotion ? 1 : prayerBeatWeight(darshanElapsedRef.current) : 0,
+      prayerWeight: activeDarshanPan ? prayerBeatWeight(darshanElapsedRef.current) : 0,
       armGesturePhase: cafeElapsedRef.current * 0.4,
       reducedMotion,
     });
@@ -418,8 +424,8 @@ export function Scene07_NeelkanthTemple({
               : lookPeer.posZ,
           elapsed: t,
           delta,
-          forcePrayBow: activeDarshanPan,
-          prayerWeight: reducedMotion ? 1 : prayerBeatWeight(darshanElapsedRef.current),
+          forcePrayBow: activeDarshanPan && darshanReadyRef.current,
+          prayerWeight: prayerBeatWeight(darshanElapsedRef.current - i * 0.1),
           idlePoseOverride: eatingCafeActive
             ? i === 0
               ? 'sit_laugh'
@@ -430,15 +436,37 @@ export function Scene07_NeelkanthTemple({
       }
     }
 
+    if (activeDarshanPan) {
+      const settled = companionStatesRef.current.every(agent => {
+        const target = PRAYER_TARGETS[agent.id as FriendCompanionId];
+        const yawDifference = Math.atan2(Math.sin(agent.facingYaw - target.facingYaw), Math.cos(agent.facingYaw - target.facingYaw));
+        return Math.hypot(agent.posX - target.x, agent.posZ - target.z) < 0.13 && Math.abs(yawDifference) < 0.15;
+      }) && Math.hypot(sim.posX + 0.95, sim.posZ + 2.55) < 0.15;
+      if (settled) darshanReadyRef.current = true;
+      // Completion is driven by rendered simulation time, including recovery.
+      if (darshanReadyRef.current && darshanElapsedRef.current >= 7.4 && !darshanDoneRef.current) {
+        darshanDoneRef.current = true;
+        onDarshanComplete();
+      }
+    } else if (rangBell && (litDiya || sim.posZ < -3) && !hadDarshan && sim.posZ < -0.8 && !autoFiredSetRef.current.has('darshan')) {
+      autoFiredSetRef.current.add('darshan');
+      onAutoTriggerHotspot?.('darshan');
+    }
+    if (process.env.NODE_ENV === 'development') {
+      gl.domElement.dataset.prayerFrame = JSON.stringify({ active: activeDarshanPan, elapsed: darshanElapsedRef.current,
+        ready: darshanReadyRef.current, actors: [playerTorsoRef.current, ...companionStatesRef.current.map(a => companionRigsRef.current?.[a.id as FriendCompanionId]?.torso)]
+          .map((torso, i) => ({ bow: torso?.rotation.x ?? 0, yaw: i === 0 ? sim.facingYaw : companionStatesRef.current[i - 1].facingYaw })) });
+    }
+
     // 3. Clear wide-angle darshan camera (unobstructed behind all 4 friends facing Shivalinga) or café orbit
     if (activeDarshanPan) {
-      const dPan = Math.min(1, darshanElapsedRef.current / 4.0);
+      const dPan = Math.min(1, darshanElapsedRef.current / 7.4);
       scratch.desiredCamPos.set(
-        1.55 + Math.sin(dPan * Math.PI) * 0.2,
-        1.85 - dPan * 0.06,
-        -3.45 - dPan * 0.25
+        4.5 + Math.sin(dPan * Math.PI) * 0.25,
+        3.0,
+        2.7 - dPan * 0.4
       );
-      scratch.desiredLookAt.set(0, 1.32, -5.95);
+      scratch.desiredLookAt.set(-0.15, 1.0, -2.7);
     } else if (eatingCafeActive) {
       const cPan = Math.min(1, cafeElapsedRef.current / 4.2);
       scratch.desiredCamPos.set(

@@ -7,12 +7,14 @@ import { StylizedPlaceholderCharacter } from '@/components/canvas/characters/Sty
 import { animateCharacterRig, animateIshaanWalkRig } from '@/components/canvas/characters/animateCharacterRig';
 import {
   DAY2_MORNING_HOTSPOTS,
+  DAY2_MORNING_OBSTACLES,
   DAY2_MORNING_WALK_BOUNDS,
   HotelReturnEnvironment,
 } from '@/components/canvas/environment/HotelReturnEnvironment';
 import { PrototypeScooter } from '@/components/canvas/PrototypeScooter';
 import {
   findNearestWalkHotspot,
+  sweepWalkMovement,
   type WalkHotspot,
   type WalkInputState,
 } from '@/hooks/useWalkController';
@@ -38,7 +40,7 @@ export interface Scene03Day2MorningProps {
 }
 
 const KNOCK_DURATION_SEC = 2.6;
-const BREAKFAST_DURATION_SEC = 5.4;
+const BREAKFAST_DURATION_SEC = 8.5;
 
 /**
  * Scene 3 — Day 2 Morning outside the Rishikesh Lane Stay:
@@ -265,16 +267,9 @@ export function Scene03_Day2Morning({
         const steerSign = sim.rideSpeed >= -0.2 ? 1 : -1;
         sim.facingYaw += steer * steerSign * 2.1 * delta;
       }
-      sim.posX = THREE.MathUtils.clamp(
-        sim.posX - Math.sin(sim.facingYaw) * sim.rideSpeed * delta,
-        DAY2_MORNING_WALK_BOUNDS.minX,
-        DAY2_MORNING_WALK_BOUNDS.maxX
-      );
-      sim.posZ = THREE.MathUtils.clamp(
-        sim.posZ - Math.cos(sim.facingYaw) * sim.rideSpeed * delta,
-        Math.max(1.2, DAY2_MORNING_WALK_BOUNDS.minZ),
-        DAY2_MORNING_WALK_BOUNDS.maxZ
-      );
+      sweepWalkMovement(sim, -Math.sin(sim.facingYaw) * sim.rideSpeed * delta,
+        -Math.cos(sim.facingYaw) * sim.rideSpeed * delta, 0.48,
+        { ...DAY2_MORNING_WALK_BOUNDS, minZ: 1.2 }, DAY2_MORNING_OBSTACLES);
     }
 
     if (ridingScooters) {
@@ -291,8 +286,10 @@ export function Scene03_Day2Morning({
       const cdist = Math.hypot(cdx, cdz);
       if (cdist > 0.25) {
         const cStep = Math.min(cdist, 7.6 * delta);
-        sim.compX += (cdx / cdist) * cStep;
-        sim.compZ += (cdz / cdist) * cStep;
+        const companionPosition = { posX: sim.compX, posZ: sim.compZ };
+        sweepWalkMovement(companionPosition, cdx / cdist * cStep, cdz / cdist * cStep, 0.48,
+          DAY2_MORNING_WALK_BOUNDS, DAY2_MORNING_OBSTACLES);
+        sim.compX = companionPosition.posX; sim.compZ = companionPosition.posZ;
         const cYaw = Math.atan2(-cdx, -cdz);
         const cDiff = Math.atan2(Math.sin(cYaw - sim.compYaw), Math.cos(cYaw - sim.compYaw));
         sim.compYaw += cDiff * Math.min(1, delta * 5.0);
@@ -401,8 +398,8 @@ export function Scene03_Day2Morning({
       scratch.camPos.set(1.55, 1.72, 2.75);
       scratch.lookAt.set(-0.42, 1.18, 0.45);
     } else if (breakfastActive) {
-      scratch.camPos.set(35.85, 1.92, 11.45);
-      scratch.lookAt.set(33.55, 1.05, 8.35);
+      scratch.camPos.set(37.8, 3.3, 13.5);
+      scratch.lookAt.set(33.3, 1.2, 7.8);
     } else {
       const fwdX = -Math.sin(sim.facingYaw);
       const fwdZ = -Math.cos(sim.facingYaw);

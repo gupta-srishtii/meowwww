@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { ambientAudio } from '@/lib/ambientAudio';
 import {
   ContextualActionPill,
   MinimalTopBar,
@@ -57,6 +58,11 @@ export function NeelkanthHUD({
   usePolaroidMemoryRevision();
   const mediaState = getPrivateMediaSessionState();
   const templeAudioInputRef = useRef<HTMLInputElement | null>(null);
+  const [audioBlocked, setAudioBlocked] = useState(false);
+  useEffect(() => {
+    const timer = window.setInterval(() => setAudioBlocked(ambientAudio.isTempleTrackBlocked()), 500);
+    return () => window.clearInterval(timer);
+  }, []);
 
   return (
     <>
@@ -68,6 +74,8 @@ export function NeelkanthHUD({
         onOpenChapters={onOpenChapters}
         onPause={onPause}
       />
+      {audioBlocked && !audioMuted && <button type="button" onClick={() => { ambientAudio.unlock(); setAudioBlocked(false); }}
+        className="fixed bottom-4 left-4 z-20 rounded-full border border-amber-300/50 bg-slate-950/90 px-4 py-2 text-xs text-amber-100">Play temple audio</button>}
 
       {process.env.NODE_ENV !== 'production' && !mediaState.templeSongUrl && (
         <>

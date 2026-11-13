@@ -676,6 +676,9 @@ class AmbientAudioController {
   isCustomTrackBlocked(): boolean {
     return this.customTrackBlocked;
   }
+  isTempleTrackBlocked(): boolean {
+    return this.templeTrackBlocked;
+  }
 
   syncState(next: AmbientState): void {
     const normalized: Required<AmbientState> = {

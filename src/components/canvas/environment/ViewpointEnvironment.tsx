@@ -19,6 +19,7 @@ import {
   type HimalayanRidgeSpec,
 } from '@/components/canvas/environment/DistantHimalayanRidges';
 import { HotspotBeaconSparkle } from '@/components/canvas/environment/HotspotBeaconSparkle';
+import { DistantValleyRoad } from './DistantValleyRoad';
 
 export const VIEWPOINT_WALK_BOUNDS: WalkBounds = {
   minX: -6.4,
@@ -427,6 +428,7 @@ export function ViewpointEnvironment({
       })}
 
       {/* Valley river winding deep in the rocky gorge below the overlook */}
+      <DistantValleyRoad heightAt={sampleViewpointTerrainY} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-4, -12.35, -44]}>
         <planeGeometry args={[230, 12.5]} />
         <meshStandardMaterial color="#4e85a1" roughness={0.28} metalness={0.14} />

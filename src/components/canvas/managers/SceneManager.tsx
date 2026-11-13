@@ -357,6 +357,7 @@ export interface SceneStageProps {
   ateNeelkanthCafe: boolean;
   neelkanthCafeActive?: boolean;
   activeDarshanPan: boolean;
+  onDarshanComplete: () => void;
   ateTrailheadMaggi: boolean;
   trailheadEatingActive: boolean;
   onTrailheadMaggiComplete: () => void;
@@ -432,6 +433,7 @@ export function SceneStage({
   ateNeelkanthCafe,
   neelkanthCafeActive = false,
   activeDarshanPan,
+  onDarshanComplete,
   ateTrailheadMaggi,
   trailheadEatingActive,
   onTrailheadMaggiComplete,
@@ -664,6 +666,7 @@ export function SceneStage({
               ateCafe={ateNeelkanthCafe}
               eatingCafeActive={neelkanthCafeActive}
               activeDarshanPan={activeDarshanPan}
+              onDarshanComplete={onDarshanComplete}
               autoPlayMode={autoPlayMode}
               onAutoTriggerHotspot={onAutoTriggerHotspot}
               onNearbyHotspotChange={onNearbyHotspotChange}

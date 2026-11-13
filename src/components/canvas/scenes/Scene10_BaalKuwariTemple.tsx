@@ -114,7 +114,7 @@ export function Scene10_BaalKuwariTemple({
     throw new Error('Simulated fault while mounting Baal Kuwari Temple.');
   }
 
-  const { camera, size, clock } = useThree();
+  const { camera, size, clock, gl } = useThree();
   const shadowsEnabled = QUALITY_PRESETS[qualityProfile].shadows;
   const reducedMotion = useReducedMotion();
 
@@ -168,7 +168,8 @@ export function Scene10_BaalKuwariTemple({
 
   const autoLastTriggerAtRef = useRef<Record<string, number>>({});
   const prayerElapsedRef = useRef(7);
-  useEffect(() => { prayerElapsedRef.current = rangBell ? 0 : 7; }, [rangBell]);
+  const prayerGatheredRef = useRef(false);
+  useEffect(() => { prayerElapsedRef.current = rangBell ? 0 : 8; prayerGatheredRef.current = false; }, [rangBell]);
 
   useEffect(() => {
     autoLastTriggerAtRef.current = {};
@@ -210,13 +211,15 @@ export function Scene10_BaalKuwariTemple({
 
     const sim = simRef.current;
     const t = state.clock.elapsedTime;
-    prayerElapsedRef.current += delta;
-    const praying = prayerElapsedRef.current < 6.8;
+    if (prayerGatheredRef.current) prayerElapsedRef.current += delta;
+    const praying = rangBell && prayerElapsedRef.current < 7.4;
     let strideRatio = 0;
     let walkSpeed = 0;
 
     if (praying) {
       sim.velX = 0; sim.velZ = 0;
+      sim.posX = THREE.MathUtils.damp(sim.posX, 0, 5, delta);
+      sim.posZ = THREE.MathUtils.damp(sim.posZ, -1.9, 5, delta);
       sim.facingYaw = THREE.MathUtils.damp(sim.facingYaw, 0, 6, delta);
     } else if (arrivalCinematicActive) {
       const dur = reducedMotion ? 0.65 : 14.5;
@@ -405,8 +408,8 @@ export function Scene10_BaalKuwariTemple({
           elapsed: t,
           delta,
           reducedMotion,
-          forcePrayBow: praying,
-          prayerWeight: prayerBeatWeight(prayerElapsedRef.current),
+          forcePrayBow: praying && prayerGatheredRef.current,
+          prayerWeight: prayerBeatWeight(prayerElapsedRef.current - i * 0.1),
         });
         if (rig.group) {
           rig.group.position.y = isShreeBookPose ? -1.96 : compFloorY;
@@ -422,7 +425,12 @@ export function Scene10_BaalKuwariTemple({
       });
     }
 
-    if (arrivalCinematicActive) {
+    if (praying) {
+      const slots = [[-0.9, -1.25], [0.9, -0.8], [1.8, -0.25]];
+      if (companionStatesRef.current.every((a, i) => Math.hypot(a.posX - slots[i][0], a.posZ - slots[i][1]) < 0.22)) prayerGatheredRef.current = true;
+      scratch.camPos.set(4.6, 2.9, 3.2);
+      scratch.lookAt.set(0, 1.0, -1.6);
+    } else if (arrivalCinematicActive) {
       const sweepU = Math.min(1, sim.arrivalTimer / 14.5);
       const smoothU = sweepU * sweepU * (3 - 2 * sweepU);
       scratch.camPos.set(
@@ -469,6 +477,8 @@ export function Scene10_BaalKuwariTemple({
         ? null
         : findNearestWalkHotspot(sim.posX, sim.posZ, BAAL_KUWARI_TEMPLE_HOTSPOTS);
     const nextId = nearest?.id ?? null;
+    if (process.env.NODE_ENV === 'development') gl.domElement.dataset.summitPrayer = JSON.stringify({ praying,
+      elapsed: prayerElapsedRef.current, actors: [playerTorsoRef.current, ...companionStatesRef.current.map(a => companionRigsRef.current?.[a.id as FriendCompanionId]?.torso)].map(r => r?.rotation.x ?? 0) });
     if (!autoPlayMode && nearest?.actionType === 'photo' &&
       !(nearest.id === 'book_polaroid' ? capturedBookPolaroid : capturedPolaroid) &&
       performance.now() - (autoLastTriggerAtRef.current[nearest.id] ?? -Infinity) > 3000) {

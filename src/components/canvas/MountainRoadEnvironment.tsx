@@ -43,7 +43,7 @@ export interface MountainRoadEnvironmentProps {
   paused?: boolean;
 }
 
-const STALL_DISTS_BY_SEGMENT: Record<MountainRoadSegmentId, readonly number[]> = {
+export const STALL_DISTS_BY_SEGMENT: Record<MountainRoadSegmentId, readonly number[]> = {
   to_dhaba: [48, 96, 214],
   to_neelkanth: [96, 242],
   to_baalkuwari: [76, 178],

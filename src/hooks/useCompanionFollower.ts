@@ -136,13 +136,15 @@ export function stepGroupCompanions({
     const dz = goal.z - agent.posZ;
     const dist = Math.hypot(dx, dz);
     // Stop the spring before its minimum walking speed oscillates around a dining seat.
-    if (mode === 'sit_dine' && dist < 0.12) {
+    if ((mode === 'sit_dine' || mode === 'prayer') && dist < 0.12) {
       agent.posX = goal.x;
       agent.posZ = goal.z;
       agent.velX = 0;
       agent.velZ = 0;
       agent.isMovingToTarget = false;
-      if (goal.yaw !== undefined) agent.facingYaw = goal.yaw;
+      if (goal.yaw !== undefined) agent.facingYaw = mode === 'prayer'
+        ? agent.facingYaw + normalizeAngleDelta(goal.yaw, agent.facingYaw) * (1 - Math.exp(-7 * safeDelta))
+        : goal.yaw;
       continue;
     }
 

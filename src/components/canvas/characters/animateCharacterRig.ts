@@ -1,4 +1,11 @@
 import * as THREE from 'three';
+import { createHandContactSolver } from '@/lib/handContact';
+
+const prayerHandContact = createHandContactSolver();
+const prayerHandPoint = new THREE.Vector3();
+const prayerArmDirection = new THREE.Vector3();
+const prayerArmRotation = new THREE.Quaternion();
+const downArmAxis = new THREE.Vector3(0, -1, 0);
 
 export type CharacterIdlePose =
   | 'default'
@@ -204,7 +211,9 @@ export function animateCharacterRig({
   group.position.z = posZ;
   group.rotation.y = facingYaw;
 
-  if (strideRatio > 0.03) {
+  // Prayer owns the upper-body pose even while the formation settles. Locomotion
+  // previously returned here before the bow could ever reach companion torsos.
+  if (strideRatio > 0.03 && idlePose !== 'pray_bow') {
     const legGain = downhillJogging ? 1.15 : climbingStairs ? 1.24 : 1.0;
     const kneeGain = downhillJogging ? 0.88 : climbingStairs ? 0.78 : 0.55;
     const swing = Math.sin(stridePhase) * 0.44 * Math.min(1.18, strideRatio) * legGain;
@@ -329,12 +338,12 @@ export function animateCharacterRig({
 
   if (isPray) {
     targetLeftArmX = 1.04;
-    targetLeftArmZ = 0.27;
+    targetLeftArmZ = 0.44;
     targetRightArmX = 1.04;
-    targetRightArmZ = -0.27;
+    targetRightArmZ = -0.44;
     targetForearmX = 0.35;
-    targetTorsoX = -0.33;
-    targetHeadX = -0.24;
+    targetTorsoX = -0.70;
+    targetHeadX = -0.30;
     const bow = THREE.MathUtils.clamp(prayerWeight, 0, 1);
     targetLeftArmX *= bow; targetLeftArmZ *= bow;
     targetRightArmX *= bow; targetRightArmZ *= bow;
@@ -468,6 +477,19 @@ export function animateCharacterRig({
               : ambientScan;
     head.rotation.y = THREE.MathUtils.damp(head.rotation.y, headLookY, 7, delta);
     head.rotation.x = THREE.MathUtils.damp(head.rotation.x, targetHeadX, 6.5, delta);
+  }
+  if (isPray && torso && leftArm && prayerWeight > 0) {
+    // The left arm is a single existing segment; aim its palm at the chest.
+    // The articulated right arm reaches the adjoining palm without stretching.
+    const weight = THREE.MathUtils.clamp(prayerWeight, 0, 1);
+    const chestY = torsoBaseY < 0.8 ? 0.15 : 0.24;
+    const chestZ = torsoBaseY < 0.8 ? -0.27 : -0.26;
+    prayerArmDirection.set(-0.015, chestY, chestZ).sub(leftArm.position).normalize();
+    prayerArmRotation.setFromUnitVectors(downArmAxis, prayerArmDirection);
+    leftArm.quaternion.slerp(prayerArmRotation, weight);
+    torso.updateWorldMatrix(true, true);
+    torso.localToWorld(prayerHandPoint.set(0.015, chestY, chestZ));
+    prayerHandContact(rightArm, rightForearm ?? null, prayerHandPoint, torsoBaseY < 0.8 ? 0.178 : 0.195, weight);
   }
   if (connectedHandTarget) {
     applyConnectedArmTarget(

@@ -149,6 +149,12 @@ export function PrototypeHUD({
       />
 
       {/* Subtle boundary nudge / traffic brush toast */}
+      <aside aria-label="Scooter speed" className="pointer-events-none fixed bottom-28 left-4 z-20 rounded-2xl border border-amber-200/30 bg-slate-950/90 px-4 py-3 text-amber-50 shadow-xl backdrop-blur-sm sm:bottom-5">
+        <p className="text-[9px] uppercase tracking-[0.18em] text-amber-200/60">Mountain ride · max 75</p>
+        <span ref={telemetryRefs.speedEl} className="mt-1 block text-2xl font-semibold tabular-nums">0 km/h</span>
+        <p className="mt-1 text-[10px] text-slate-300">W / ↑ accelerate · S / ↓ brake</p>
+        <p className="text-[10px] text-slate-400">Touch: Gas / Brake · A / D steer</p>
+      </aside>
       <div className="pointer-events-none absolute inset-x-0 top-16 z-20 flex flex-col items-center gap-1.5 px-4">
         <span
           ref={telemetryRefs.boundaryEl}
@@ -193,15 +199,7 @@ export function PrototypeHUD({
                 Step Off at Viewpoint (E) →
               </button>
             )}
-            {onContinuePastViewpoint && (
-              <button
-                type="button"
-                onClick={onContinuePastViewpoint}
-                className="rounded-full border border-slate-600 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-200 transition hover:bg-slate-700"
-              >
-                Keep Riding →
-              </button>
-            )}
+
           </div>
         </div>
       )}

@@ -20,7 +20,8 @@ import { getOffroadDirtTrackTexture } from '@/lib/proceduralTextures';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { createTerrainMeshSampler } from '@/lib/terrainMeshSampler';
-import { MarketRoadLife, MarketShopSign } from './MarketRoadLife';
+import { MarketRoadLife } from './MarketRoadLife';
+import { MarketBuilding } from './MarketBuilding';
 
 export const DAY1_WATERFALL_WALK_BOUNDS: WalkBounds = {
   minX: -4.2,
@@ -894,25 +895,8 @@ export function Day1MarketWalkEnvironment({
         const innerFaceOffset = -b.side * 1.32;
         return (
           <group key={`shop-${idx}`} position={[cx, baseY, b.z]}>
-            <mesh position={[0, b.h * 0.5, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
-              <boxGeometry args={[2.55, b.h, b.w]} />
-              <meshStandardMaterial color={b.wall} roughness={0.88} />
-            </mesh>
-            {/* Lit shop window / open shutter glow */}
-            <mesh position={[innerFaceOffset, 1.08, 0]}>
-              <boxGeometry args={[0.12, 1.55, b.w * 0.68]} />
-              <meshStandardMaterial color="#fde68a" emissive="#f59e0b" emissiveIntensity={0.62} />
-            </mesh>
-            {/* Colorful awning + illuminated signboard */}
-            <mesh position={[innerFaceOffset - b.side * 0.42, 2.08, 0]} rotation={[0, 0, b.side * 0.22]}>
-              <boxGeometry args={[0.92, 0.08, b.w * 0.85]} />
-              <meshStandardMaterial color={b.awning} roughness={0.78} />
-            </mesh>
-            <mesh position={[innerFaceOffset - b.side * 0.08, 2.45, 0]}>
-              <boxGeometry args={[0.1, 0.42, b.w * 0.72]} />
-              <meshStandardMaterial color={b.sign} emissive={b.sign} emissiveIntensity={0.28} />
-            </mesh>
-            <MarketShopSign side={b.side} label={['Ganga Cafe', 'Pahadi Dhaba', 'Valley Stay', 'Chai & Books', 'Handloom House'][idx % 5]} />
+            <MarketBuilding side={b.side} height={b.h} width={b.w} wall={b.wall} awning={b.awning}
+              night label={['Ganga Cafe', 'Pahadi Dhaba', 'Valley Stay', 'Chai & Books', 'Handloom House'][idx % 5]} />
           </group>
         );
       })}

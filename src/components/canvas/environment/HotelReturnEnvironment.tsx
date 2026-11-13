@@ -20,6 +20,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { getAsphaltRoadTexture, getStoneCourtyardTexture } from '@/lib/proceduralTextures';
 import { QUALITY_PRESETS, type QualityProfile } from '@/lib/qualityProfile';
 import { createTerrainMeshSampler } from '@/lib/terrainMeshSampler';
+import { MorningMarketExtension } from './MorningMarketExtension';
 
 export const TERRACE_Y = 4.65;
 
@@ -471,6 +472,7 @@ export function HotelReturnEnvironment({
         <meshStandardMaterial color="#2a4e32" roughness={0.9} flatShading />
       </instancedMesh>
 
+      {isMorning && <MorningMarketExtension paused={paused} />}
       {/* 1. RISHIKESH MAIN ROAD (`z = 7.4..12.6`) + SIDEWALK extending down toward morning bun-maska stall */}
       <mesh position={[8, -0.005, 10.1]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow={shadowsEnabled}>
         <planeGeometry args={[112, 5.4]} />

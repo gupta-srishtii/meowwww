@@ -43,7 +43,7 @@ export function ViewpointHUD({
   onResumeRiding,
 }: ViewpointHUDProps) {
   const capturedInViewpoint = [capturedShree, capturedSolo, capturedGroup].filter(Boolean).length;
-  const readyToContinue = capturedInViewpoint > 0;
+  const readyToContinue = capturedInViewpoint === 3 && nearbyHotspot?.id === 'scooters';
 
   const toastMeta =
     polaroidToastKind === 'shree'

@@ -217,7 +217,6 @@ export default function Experience() {
   const [neelkanthCafeActive, setNeelkanthCafeActive] = useState(false);
   const morningToastTimerRef = useRef<number | null>(null);
   const neelkanthToastTimerRef = useRef<number | null>(null);
-  const neelkanthDarshanTimerRef = useRef<number | null>(null);
   const neelkanthCafeTimerRef = useRef<number | null>(null);
 
   // Scene 9/10 (Baal Kuwari ~400 Stairs & Temple) UI state
@@ -416,7 +415,7 @@ export default function Experience() {
     clearInputsRef.current();
     sceneController.requestRoadSubStageTransition('driving', {
       roadSegment: 'to_dhaba',
-      resumeDistance: VIEWPOINT_RESUME_DISTANCE,
+      resumeDistance: VIEWPOINT_STOP_DISTANCE,
       clearInputs: clearInputsRef.current,
     });
   }, [sceneController]);
@@ -748,6 +747,12 @@ export default function Experience() {
     }, snapDelay);
   }, [bookPhotoActive, clearStoryTimeout, handleCaptureBaalKuwariPolaroid, reducedMotion, setStoryTimeout]);
 
+  const handleDarshanComplete = useCallback(() => {
+    setActiveDarshanPan(false);
+    setHadDarshan(true);
+    showTimedCaption('Neelkanth Darshan', 'Har Har Mahadev — darshan saath mein ho gaye!', 3000);
+  }, [showTimedCaption]);
+
   const executeWalkHotspotById = useCallback(
     (hotspotId: string) => {
       if (isDay1SceneActive && day1Phase === 'stay_meet') {
@@ -900,22 +905,6 @@ export default function Experience() {
           clearInputsRef.current();
           setActiveDarshanPan(true);
           ambientAudio.playHarHarMahadevChant();
-          if (neelkanthDarshanTimerRef.current !== null) {
-            clearStoryTimeout(neelkanthDarshanTimerRef.current);
-          }
-          neelkanthDarshanTimerRef.current = setStoryTimeout(
-            () => {
-              neelkanthDarshanTimerRef.current = null;
-              setActiveDarshanPan(false);
-              setHadDarshan(true);
-              showTimedCaption(
-                'Neelkanth Darshan',
-                'Har Har Mahadev — darshan saath mein ho gaye!',
-                3000
-              );
-            },
-            reducedMotion ? 1200 : 6800
-          );
           return;
         }
         if (hotspotId === 'scooters') {
@@ -1446,9 +1435,6 @@ export default function Experience() {
       if (viewpointToastTimerRef.current !== null) {
         clearStoryTimeout(viewpointToastTimerRef.current);
       }
-      if (neelkanthDarshanTimerRef.current !== null) {
-        clearStoryTimeout(neelkanthDarshanTimerRef.current);
-      }
       if (neelkanthCafeTimerRef.current !== null) {
         clearStoryTimeout(neelkanthCafeTimerRef.current);
       }
@@ -1647,6 +1633,12 @@ export default function Experience() {
   }, [baalKuwariSubStage, committedSceneId, roadSubStage, sceneMountToken, clearStoryTimers]);
 
   // Continuous Watch Our Story director progression across launch, drives, phone call, summary & finale phases.
+  useEffect(() => {
+    if (playMode !== 'play' || !viewpointArrived || committedSceneId !== 5 || roadSubStage !== 'driving') return;
+    const id = setStoryTimeout(handleEnterViewpoint, 1800);
+    return () => clearStoryTimeout(id);
+  }, [playMode, viewpointArrived, committedSceneId, roadSubStage, handleEnterViewpoint, setStoryTimeout, clearStoryTimeout]);
+
   useEffect(() => {
     if (
       playMode !== 'watch' ||
@@ -2083,6 +2075,7 @@ export default function Experience() {
           ateNeelkanthCafe={ateNeelkanthCafe}
           neelkanthCafeActive={neelkanthCafeActive}
           activeDarshanPan={activeDarshanPan}
+          onDarshanComplete={handleDarshanComplete}
           ateTrailheadMaggi={false}
           trailheadEatingActive={false}
           onTrailheadMaggiComplete={() => {}}
